@@ -37,23 +37,31 @@ z.backward(z_d.grad)                   # Truyền dL/dz ngược qua biên giớ
 opt_c.step()
 ```
 
-## 4. Cấu trúc thư mục
+## 4. Cơ chế lưu Checkpoint & Phục hồi (Resume)
+- **Lưu Best Model (`best_b0_vanilla.pt`)**: Tự động lưu khi mô hình đạt test accuracy cao nhất.
+- **Lưu Checkpoint ngắt quãng (`last_checkpoint.pt`)**: Tự động lưu sau mỗi epoch bao gồm cả trạng thái `opt_c`, `opt_s`, `sched_c`, `sched_s` để có thể tiếp tục train bất kỳ lúc nào nếu bị gián đoạn.
+- **Lưu Reference Model (`b0_vanilla.pt`)**: Trọng số tham chiếu cố định khi hoàn thành đủ 100 epoch (dùng cho Bước 2 — Thí nghiệm hấp thụ).
+
+## 5. Cấu trúc thư mục
 ```text
 step0/
 ├── model.py            # ClientModel, ServerModel, resnet18_cifar
 ├── data.py             # DataLoader nạp và tiền xử lý CIFAR-10
 ├── train.py            # train_epoch (SL vòng lặp), evaluate
-├── main.py             # Huấn luyện Vanilla SL (100 epoch), lưu b0_vanilla.pt
+├── main.py             # Huấn luyện Vanilla SL, lưu checkpoint, hỗ trợ resume
 ├── centralized.py      # Script Centralized Training đối chứng
 ├── download_cifar.py   # Script tải dữ liệu CIFAR-10 đa luồng có resume
 └── README.md           # Tài liệu hướng dẫn Bước 0
 ```
 
-## 5. Hướng dẫn chạy
+## 6. Hướng dẫn chạy
 ```bash
-# Chạy huấn luyện Vanilla Split Learning:
+# 1. Chạy huấn luyện Vanilla Split Learning (100 epochs):
 python step0/main.py
 
-# Hoặc chạy đối chứng Centralized Training:
+# 2. Khôi phục huấn luyện tiếp từ checkpoint gần nhất nếu bị ngắt:
+python step0/main.py --resume
+
+# 3. Chạy đối chứng Centralized Training:
 python step0/centralized.py
 ```

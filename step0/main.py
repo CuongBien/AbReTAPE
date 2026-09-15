@@ -32,7 +32,10 @@ def parse_args():
     parser.add_argument("--eval-freq", type=int, default=5, help="Test evaluation frequency (epochs, default: 5)")
     parser.add_argument("--num-workers", type=int, default=2, help="DataLoader workers (default: 2)")
     parser.add_argument("--data-dir", type=str, default=os.path.join(SCRIPT_DIR, "data"), help="CIFAR-10 data directory")
-    parser.add_argument("--output", type=str, default=os.path.join(SCRIPT_DIR, "b0_vanilla.pt"), help="Checkpoint save path")
+    parser.add_argument("--output", type=str, default=os.path.join(SCRIPT_DIR, "b0_vanilla.pt"), help="Final reference checkpoint path")
+    parser.add_argument("--save-best", type=str, default=os.path.join(SCRIPT_DIR, "best_b0_vanilla.pt"), help="Best accuracy model checkpoint path")
+    parser.add_argument("--checkpoint", type=str, default=os.path.join(SCRIPT_DIR, "last_checkpoint.pt"), help="Periodic checkpoint path for resume")
+    parser.add_argument("--resume", action="store_true", help="Resume training from last_checkpoint.pt if available")
     return parser.parse_args()
 
 
@@ -47,7 +50,9 @@ def main():
     print(f"Batch size       : {args.batch_size}", flush=True)
     print(f"Learning rate    : {args.lr}", flush=True)
     print(f"Eval frequency   : every {args.eval_freq} epochs", flush=True)
-    print(f"Checkpoint output: {args.output}", flush=True)
+    print(f"Final output     : {args.output}", flush=True)
+    print(f"Best model path  : {args.save_best}", flush=True)
+    print(f"Resume checkpoint: {args.checkpoint} (resume={args.resume})", flush=True)
     print("==================================================", flush=True)
 
     torch.manual_seed(0)
@@ -65,32 +70,78 @@ def main():
 
     criterion = nn.CrossEntropyLoss()
 
+    start_epoch = 1
+    best_acc = 0.0
+
+    # Khôi phục nếu bật cờ --resume và file checkpoint tồn tại
+    if args.resume and os.path.isfile(args.checkpoint):
+        print(f"[RESUME] Loading checkpoint from: {args.checkpoint}", flush=True)
+        ckpt = torch.load(args.checkpoint, map_location=device)
+        client.load_state_dict(ckpt['client'])
+        server.load_state_dict(ckpt['server'])
+        opt_c.load_state_dict(ckpt['opt_c'])
+        opt_s.load_state_dict(ckpt['opt_s'])
+        sched_c.load_state_dict(ckpt['sched_c'])
+        sched_s.load_state_dict(ckpt['sched_s'])
+        start_epoch = ckpt['epoch'] + 1
+        best_acc = ckpt.get('best_acc', 0.0)
+        print(f"[RESUME] Resuming from epoch {start_epoch} (Best Acc so far: {best_acc*100:.2f}%)", flush=True)
+
     print("Starting Vanilla Split Learning training...\n", flush=True)
     total_start = time.time()
 
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(start_epoch, args.epochs + 1):
         t0 = time.time()
         loss = train_epoch(client, server, trainloader, opt_c, opt_s, criterion, device)
         sched_c.step()
         sched_s.step()
         epoch_time = time.time() - t0
 
-        # Luôn in từng epoch để người dùng thấy rõ tiến trình
+        # Đánh giá độ chính xác định kỳ hoặc ở epoch đầu/cuối
         if epoch % args.eval_freq == 0 or epoch == 1 or epoch == args.epochs:
             t_eval_0 = time.time()
             acc = evaluate(client, server, testloader, device)
             eval_time = time.time() - t_eval_0
-            print(f"Epoch {epoch:3d}/{args.epochs} | Train Loss: {loss:.4f} | Test Acc: {acc*100:.2f}% | Train Time: {epoch_time:.1f}s | Eval Time: {eval_time:.1f}s", flush=True)
+            
+            # Lưu best checkpoint nếu đạt accuracy cao nhất
+            is_best = acc > best_acc
+            if is_best:
+                best_acc = acc
+                os.makedirs(os.path.dirname(os.path.abspath(args.save_best)), exist_ok=True)
+                torch.save({
+                    'epoch': epoch,
+                    'client': client.state_dict(),
+                    'server': server.state_dict(),
+                    'best_acc': best_acc,
+                }, args.save_best)
+                best_tag = " -> [BEST SAVED]"
+            else:
+                best_tag = ""
+
+            print(f"Epoch {epoch:3d}/{args.epochs} | Train Loss: {loss:.4f} | Test Acc: {acc*100:.2f}% | Train: {epoch_time:.1f}s | Eval: {eval_time:.1f}s{best_tag}", flush=True)
         else:
-            print(f"Epoch {epoch:3d}/{args.epochs} | Train Loss: {loss:.4f} | Train Time: {epoch_time:.1f}s", flush=True)
+            print(f"Epoch {epoch:3d}/{args.epochs} | Train Loss: {loss:.4f} | Train: {epoch_time:.1f}s", flush=True)
+
+        # Tự động lưu checkpoint ngắt quãng sau mỗi epoch để có thể resume bất kỳ lúc nào
+        os.makedirs(os.path.dirname(os.path.abspath(args.checkpoint)), exist_ok=True)
+        torch.save({
+            'epoch': epoch,
+            'client': client.state_dict(),
+            'server': server.state_dict(),
+            'opt_c': opt_c.state_dict(),
+            'opt_s': opt_s.state_dict(),
+            'sched_c': sched_c.state_dict(),
+            'sched_s': sched_s.state_dict(),
+            'best_acc': best_acc,
+        }, args.checkpoint)
 
     total_time = time.time() - total_start
-    print(f"\nTraining completed in {total_time/60:.2f} minutes.", flush=True)
+    print(f"\nTraining completed in {total_time/60:.2f} minutes. Best Accuracy: {best_acc*100:.2f}%", flush=True)
 
-    # Lưu trọng số tham chiếu (dùng cho Bước 2 — thí nghiệm hấp thụ)
+    # Lưu trọng số tham chiếu cuối cùng (dùng cho Bước 2 — thí nghiệm hấp thụ)
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     torch.save({'client': client.state_dict(), 'server': server.state_dict()}, args.output)
-    print(f"[DONE] Saved reference weights to: {args.output}\n", flush=True)
+    print(f"[DONE] Saved final reference weights to: {args.output}\n", flush=True)
 
 
 if __name__ == '__main__':
