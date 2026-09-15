@@ -80,6 +80,10 @@ def parse_args():
     parser.add_argument("--num-workers", type=int, default=2, help="DataLoader workers (mặc định: 2)")
     parser.add_argument("--data-dir", type=str, default=os.path.join(STEP0_DIR, "data"), help="Thư mục chứa CIFAR-10")
     parser.add_argument("--ref-ckpt", type=str, default=find_default_ref_ckpt(), help="Đường dẫn checkpoint Bước 0 làm tham chiếu")
+    parser.add_argument("--init-from-ref", action="store_true", default=True, help="Nạp trọng số b0_vanilla.pt vào Client và Server trước khi train (mặc định: True)")
+    parser.add_argument("--no-init-from-ref", dest="init_from_ref", action="store_false", help="Không nạp trọng số Bước 0, train ngẫu nhiên from scratch")
+    parser.add_argument("--freeze-client", action="store_true", default=True, help="Đóng băng Client từ Bước 0 để Server tự thích ứng hấp thụ hoán vị (mặc định: True)")
+    parser.add_argument("--train-client", dest="freeze_client", action="store_false", help="Cho phép Client cập nhật gradient cùng Server")
     parser.add_argument("--output", type=str, default=os.path.join(SCRIPT_DIR, "b2_absorption.pt"), help="File lưu kết quả hoán vị khôi phục")
     parser.add_argument("--checkpoint", type=str, default=os.path.join(SCRIPT_DIR, "last_checkpoint_b2.pt"), help="File checkpoint resume")
     parser.add_argument("--history-file", type=str, default=os.path.join(SCRIPT_DIR, "step2_history.json"), help="File lưu lịch sử JSON")
@@ -105,6 +109,8 @@ def main():
     print(f"Learning rate      : {args.lr}", flush=True)
     print(f"Permutation Seed   : {args.perm_seed}", flush=True)
     print(f"Model Tham chiếu   : {args.ref_ckpt}", flush=True)
+    print(f"Init from Ref      : {args.init_from_ref}", flush=True)
+    print(f"Freeze Client      : {args.freeze_client}", flush=True)
     print(f"Output File        : {args.output}", flush=True)
     print("==================================================\n", flush=True)
 
@@ -119,10 +125,31 @@ def main():
     client = ClientModel().to(device)
     server = ServerModel().to(device)
 
-    opt_c = torch.optim.SGD(client.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-    opt_s = torch.optim.SGD(server.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+    # Nạp weights từ Bước 0 nếu có ref_ckpt và bật init_from_ref
+    if args.init_from_ref and os.path.isfile(args.ref_ckpt):
+        print(f"[INFO] Đang nạp trọng số Client & Server từ: {args.ref_ckpt}", flush=True)
+        ckpt_ref = torch.load(args.ref_ckpt, map_location=device)
+        client_state = ckpt_ref["client"] if "client" in ckpt_ref else ckpt_ref
+        server_state = ckpt_ref["server"] if "server" in ckpt_ref else ckpt_ref
+        client.load_state_dict(client_state)
+        server.load_state_dict(server_state)
+        print("[INFO] Đã nạp thành công mô hình đã hội tụ từ Bước 0!", flush=True)
+    else:
+        print("[WARN] Khởi tạo mô hình Client & Server ngẫu nhiên từ đầu.", flush=True)
 
-    sched_c = torch.optim.lr_scheduler.MultiStepLR(opt_c, milestones=[50, 75], gamma=0.1)
+    # Đóng băng Client (nếu bật freeze_client - kịch bản chuẩn của Absorption Experiment)
+    if args.freeze_client:
+        client.eval()
+        for p in client.parameters():
+            p.requires_grad = False
+        opt_c = None
+        sched_c = None
+        print("[INFO] ĐÃ ĐÓNG BĂNG CLIENT: Giữ nguyên biểu diễn IR z của Bước 0 để kiểm tra Server tự học E^-1.", flush=True)
+    else:
+        opt_c = torch.optim.SGD(client.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+        sched_c = torch.optim.lr_scheduler.MultiStepLR(opt_c, milestones=[50, 75], gamma=0.1)
+
+    opt_s = torch.optim.SGD(server.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
     sched_s = torch.optim.lr_scheduler.MultiStepLR(opt_s, milestones=[50, 75], gamma=0.1)
 
     criterion = nn.CrossEntropyLoss()
@@ -146,9 +173,11 @@ def main():
         ckpt = torch.load(args.checkpoint, map_location=device)
         client.load_state_dict(ckpt["client"])
         server.load_state_dict(ckpt["server"])
-        opt_c.load_state_dict(ckpt["opt_c"])
+        if opt_c is not None and ckpt.get("opt_c") is not None:
+            opt_c.load_state_dict(ckpt["opt_c"])
+        if sched_c is not None and ckpt.get("sched_c") is not None:
+            sched_c.load_state_dict(ckpt["sched_c"])
         opt_s.load_state_dict(ckpt["opt_s"])
-        sched_c.load_state_dict(ckpt["sched_c"])
         sched_s.load_state_dict(ckpt["sched_s"])
         start_epoch = ckpt["epoch"] + 1
         best_acc = ckpt.get("best_acc", 0.0)
@@ -162,14 +191,16 @@ def main():
         print(f"[RESUME] Tiếp tục từ epoch {start_epoch} (Best Acc: {best_acc*100:.2f}%)", flush=True)
 
     print("\nBắt đầu huấn luyện Split Learning với Hoán vị Kênh...\n", flush=True)
+
     total_start = time.time()
     csv_file = os.path.splitext(args.history_file)[0] + ".csv"
 
     for epoch in range(start_epoch, args.epochs + 1):
         t0 = time.time()
         train_loss, train_acc = train_epoch(client, server, permute, trainloader, opt_c, opt_s, criterion, device)
-        current_lr = opt_c.param_groups[0]["lr"]
-        sched_c.step()
+        current_lr = opt_s.param_groups[0]["lr"]
+        if sched_c is not None:
+            sched_c.step()
         sched_s.step()
         epoch_time = time.time() - t0
 
@@ -240,9 +271,9 @@ def main():
             "epoch": epoch,
             "client": client.state_dict(),
             "server": server.state_dict(),
-            "opt_c": opt_c.state_dict(),
+            "opt_c": opt_c.state_dict() if opt_c is not None else None,
             "opt_s": opt_s.state_dict(),
-            "sched_c": sched_c.state_dict(),
+            "sched_c": sched_c.state_dict() if sched_c is not None else None,
             "sched_s": sched_s.state_dict(),
             "best_acc": best_acc,
             "history": history,

@@ -9,7 +9,10 @@ def train_epoch(client, server, permute, loader, opt_c, opt_s, criterion, device
     Forward:  x -> client -> z -> permute(z) -> z' -> server -> logits
     Backward: server -> dL/dz' -> permute.backward -> dL/dz -> client
     """
-    client.train()
+    if opt_c is not None:
+        client.train()
+    else:
+        client.eval()
     server.train()
     total_loss = 0.0
     correct = 0
@@ -19,11 +22,16 @@ def train_epoch(client, server, permute, loader, opt_c, opt_s, criterion, device
         x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
         batch_size = x.size(0)
 
-        opt_c.zero_grad()
         opt_s.zero_grad()
+        if opt_c is not None:
+            opt_c.zero_grad()
 
         # 1. Client tính biểu diễn trung gian z (IR)
-        z = client(x)
+        if opt_c is None:
+            with torch.no_grad():
+                z = client(x)
+        else:
+            z = client(x)
 
         # 2. Chèn hoán vị kênh cố định: z' = E(z)
         z_perm = permute(z)
@@ -39,9 +47,11 @@ def train_epoch(client, server, permute, loader, opt_c, opt_s, criterion, device
         loss.backward()
         opt_s.step()
 
-        # 6. Lan truyền ngược qua biên giới hoán vị về Client
-        z_perm.backward(z_d.grad)
-        opt_c.step()
+        # 6. Lan truyền ngược qua biên giới hoán vị về Client (nếu Client không bị đóng băng)
+        if opt_c is not None:
+            z_perm.backward(z_d.grad)
+            opt_c.step()
+
 
         total_loss += loss.item() * batch_size
         correct += (logits.argmax(1) == y).sum().item()

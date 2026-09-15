@@ -70,6 +70,13 @@ def test_step2_pipeline():
     assert not torch.equal(w_s_before, w_s_after), "LỖI: Trọng số Server không thay đổi sau train_epoch!"
     print("[TEST] Gradient lan truyền ngược qua biên giới hoán vị thành công tới cả 2 phía!")
 
+    # 2b. Kiểm tra chế độ Đóng băng Client (opt_c=None) chuẩn cho thí nghiệm hấp thụ
+    w_c_frozen = next(client.parameters()).clone().detach()
+    train_loss_frz, train_acc_frz = train_epoch(client, server, permute, loader, None, opt_s, criterion, device)
+    w_c_frozen_after = next(client.parameters()).clone().detach()
+    assert torch.equal(w_c_frozen, w_c_frozen_after), "LỖI: Trọng số Client thay đổi dù đã đóng băng (opt_c=None)!"
+    print("[TEST] Chế độ Đóng băng Client (Frozen Client) hoạt động chuẩn xác 100%!")
+
     # 3. Kiểm chứng thuật toán khôi phục hoán vị ( recover_perm )
     # Tạo trọng số tham chiếu W_ref ngẫu nhiên [128, 64, 3, 3]
     torch.manual_seed(123)

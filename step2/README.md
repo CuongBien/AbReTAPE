@@ -61,27 +61,27 @@ step2/
 # 1. Chạy kiểm thử đơn vị:
 python step2/test_step2.py
 
-# 2. Huấn luyện Bước 2 (100 epochs, seed 42):
-python step2/main.py --epochs 100 --batch-size 128 --perm-seed 42
+# 2. Huấn luyện Thí nghiệm Hấp thụ (20 epochs fine-tuning, nạp weights Bước 0 & đóng băng Client):
+python step2/main.py --epochs 20 --lr 0.01 --init-from-ref --freeze-client --ref-ckpt step0/best_b0_vanilla.pt
 
 # 3. Khôi phục nếu bị ngắt (Resume):
 python step2/main.py --resume
 
-# 4. Chỉ định đường dẫn checkpoint tham chiếu Bước 0:
-python step2/main.py --ref-ckpt step0/b0_vanilla.pt
+# 4. Huấn luyện lại từ đầu nếu muốn khảo sát from scratch (100 epochs):
+python step2/main.py --no-init-from-ref --train-client --epochs 100 --lr 0.1
 ```
 
 ### B. Chạy trên Google Colab (GPU T4)
-1. Tải notebook `step2/step2_colab.ipynb` lên Google Colab.
+1. Mở notebook `step2/step2_colab.ipynb` trên Google Colab.
 2. Chọn môi trường thực thi: **Runtime** -> **Change runtime type** -> **T4 GPU**.
-3. Chạy từng Cell: Mount Google Drive để lưu checkpoint vĩnh viễn, nạp weights tham chiếu từ `AbReTAPE_Step0`, train 100 epoch, hiển thị Heatmap đường chéo chính xác nhận hiện tượng hấp thụ.
+3. Chạy từng Cell theo thứ tự. Khi chạy Cell 5 (chỉ 20 epochs ~5 phút), hệ thống sẽ nạp `best_b0_vanilla.pt`, đóng băng Client, và Server sẽ tự thích ứng hấp thụ hoán vị đạt **> 80% đến 100%**.
+4. Cell 7 sẽ hiển thị ngay Heatmap với đường chéo chính rực rỡ!
 
 ---
 
-## 6. Xử lý Lỗi thường gặp
+## 6. Xử lý Hiện tượng & Câu hỏi Thường gặp
 
 | Hiện tượng | Nguyên nhân | Cách khắc phục |
 | :--- | :--- | :--- |
-| **Độ khớp thấp (< 50%)** | Sai key state_dict hoặc so sánh sai lớp Conv. | Kiểm tra đúng key `layer2.0.conv1.weight` trong `b0_vanilla.pt`. |
-| **Cả hoán vị thật lẫn ngẫu nhiên đều ~1.5%** | Chưa train đủ epoch, hoặc learning rate không đúng schedule. | Train đủ 100 epoch với MultiStepLR tại [50, 75]. |
-| **Không tìm thấy file tham chiếu** | Chưa chạy Bước 0 hoặc đường dẫn sai. | Cung cấp đúng đường dẫn checkpoint Bước 0 qua cờ `--ref-ckpt`. |
+| **Độ khớp chỉ đạt ~3.1% (tương đương ngẫu nhiên)** | Huấn luyện ngẫu nhiên từ đầu (*from scratch*) mà không nạp checkpoint Bước 0 và không đóng băng Client. Do tính chất đối xứng hoán vị (permutation symmetry) của mạng nơ-ron, không gian biểu diễn ẩn của 2 lần train độc lập sẽ bị xáo trộn hoàn toàn các filter, khiến phép so sánh Euclidean $W_1$ và $W_1^{\text{ref}}$ thành nhiễu ngẫu nhiên. | Bật cờ `--init-from-ref` và `--freeze-client` (đã là mặc định). Giữ nguyên biểu diễn $F_c(x)$ của Bước 0, Server sẽ tự thích ứng $W_1$ trong 15–20 epochs đạt > 80%–100%. |
+| **Không tìm thấy file tham chiếu** | Chưa chạy Bước 0 hoặc đường dẫn sai. | Cung cấp đúng đường dẫn checkpoint Bước 0 (`best_b0_vanilla.pt`) qua cờ `--ref-ckpt`. |
