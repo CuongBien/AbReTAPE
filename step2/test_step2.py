@@ -112,7 +112,37 @@ def test_step2_pipeline():
     plot_step2_curves(dummy_history, save_path=dummy_curves_file, show=False)
     assert os.path.isfile(dummy_curves_file), "LỖI: Không tạo được file đồ thị huấn luyện!"
     os.remove(dummy_curves_file)
-    print("[TEST] Module vẽ Heatmap đường chéo và đồ thị hoạt động hoàn hảo!")
+    # 5. Kiểm thử Cut-Layer Adapter (Cách 3)
+    from adapter import Adapter
+    from recover import recover_perm_from_adapter, recover_perm_covariance
+
+    adapter = Adapter(64).to(device)
+    dummy_z_perm = permute(dummy_z)
+    z_hat = adapter(dummy_z_perm)
+    assert z_hat.shape == (4, 64, 32, 32), f"Sai kích thước output của Adapter: {z_hat.shape}"
+
+    # Giả lập ma trận Adapter đã hội tụ về P_pi^T
+    P_pi_T = torch.zeros(64, 64)
+    for c in range(64):
+        P_pi_T[perm[c], c] = 1.0  # Hàng perm[c], cột c = 1.0
+    perm_from_adp = recover_perm_from_adapter(P_pi_T)
+    acc_adp = match_accuracy(perm, perm_from_adp)
+    assert acc_adp == 1.0, f"LỖI: recover_perm_from_adapter không đạt 100% trên ma trận lý tưởng ({acc_adp*100:.1f}%)!"
+    print("[TEST] Cut-Layer Adapter và thuật toán khôi phục recover_perm_from_adapter đạt chuẩn 100%!")
+
+    # 6. Kiểm thử Channel Covariance Recovery (Cách 2)
+    # Giả lập client trả về z có phương sai khác biệt giữa các kênh
+    class DummyClient(nn.Module):
+        def forward(self, x):
+            # Mỗi kênh nhân với một scale khác nhau
+            scales = torch.linspace(0.1, 10.0, 64, device=x.device).view(1, 64, 1, 1)
+            return torch.randn(x.size(0), 64, 8, 8, device=x.device) * scales
+
+    dummy_client = DummyClient().to(device)
+    cov_perm_hat, cov_acc = recover_perm_covariance(dummy_client, loader, perm, device, num_batches=2)
+    print(f"[TEST] Thống kê Phương sai Kênh (Channel Covariance): Độ khớp = {cov_acc*100:.1f}%")
+    assert cov_acc > 0.80, f"LỖI: Covariance recovery không đạt yêu cầu ({cov_acc*100:.1f}%)!"
+    print("[TEST] Cơ chế Channel Covariance Statistical Attack hoạt động chính xác!")
 
     print("\n>>> TẤT CẢ CÁC KIỂM THỬ ĐƠN VỊ BƯỚC 2 ĐỀU ĐẠT CHUẨN! <<<")
 

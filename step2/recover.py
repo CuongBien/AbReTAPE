@@ -75,3 +75,56 @@ def match_accuracy(perm_true, perm_hat):
 
     correct = sum(1 for a, b in zip(perm_true, perm_hat) if a == b)
     return float(correct) / len(perm_true)
+
+
+def recover_perm_from_adapter(A):
+    """
+    Khôi phục hoán vị kênh từ ma trận trọng số của Adapter 1x1 Conv:
+    A shape [C_out, C_in] = [64, 64].
+    A[r, c] là trọng số từ kênh vào c của z_perm tới kênh ra r của z_hat.
+    Kênh vào c chứa z[pi[c]], do đó để đưa về kênh ra r = pi[c],
+    hàng r = pi[c] sẽ có giá trị tuyệt đối lớn nhất:
+        hat_pi[c] = argmax_r |A[r, c]|
+    """
+    if not torch.is_tensor(A):
+        A = torch.tensor(A)
+    return A.abs().argmax(dim=0).tolist()
+
+
+@torch.no_grad()
+def recover_perm_covariance(client, loader, perm, device, num_batches=20):
+    """
+    Thí nghiệm bổ trợ (Cách 2) — Channel Covariance Attack:
+    Khôi phục hoán vị pi từ profile phương sai của 64 kênh trong z và z'.
+    Sigma_z' = P_pi * Sigma_z * P_pi^T.
+    Không cần huấn luyện (0 epochs), khôi phục tức thì qua thống kê phân phối!
+    """
+    client.eval()
+    all_z = []
+    batch_count = 0
+
+    for x, _ in loader:
+        x = x.to(device)
+        z = client(x)  # [B, 64, H, W]
+        # Gom spatial dimensions lại để tính phương sai từng kênh
+        z_flat = z.permute(1, 0, 2, 3).reshape(64, -1)
+        all_z.append(z_flat)
+        batch_count += 1
+        if batch_count >= num_batches:
+            break
+
+    full_z = torch.cat(all_z, dim=1)  # [64, Total_Pixels]
+    var_clean = full_z.var(dim=1).cpu().numpy()  # [64]
+
+    # z' có kênh c là kênh perm[c] của z
+    if torch.is_tensor(perm):
+        perm_list = perm.tolist()
+    else:
+        perm_list = list(perm)
+    var_perm = var_clean[perm_list]
+
+    # Với mỗi kênh c của z', tìm kênh c' của clean z có phương sai gần nhất
+    cost = np.abs(var_perm[:, None] - var_clean[None, :])  # [64, 64]
+    perm_hat = np.argmin(cost, axis=1).tolist()
+    acc = match_accuracy(perm_list, perm_hat)
+    return perm_hat, acc

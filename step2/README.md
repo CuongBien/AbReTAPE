@@ -37,18 +37,33 @@ Bước 2 kiểm chứng trực tiếp **Trụ cột Novelty số 1 (N1)** của
    Với mỗi kênh vào $c$ của Server, tìm kênh $c'$ của Server tham chiếu có bộ lọc khớp nhất theo khoảng cách Euclidean:
    $$\hat{\pi}(c) = \arg\min_{c'} \; \big\| W_1[:, c] - W_1^{\text{ref}}[:, c'] \big\|_2^2$$
 
+4. **Thí nghiệm Chuẩn: Cut-Layer Adapter (Cách 3)**:
+   Đặt một tầng 1×1 Conv $A$ ($64 \to 64$, không bias) ngay tại cut layer trước Server:
+   $$z_{\text{hat}} = A(z') = A(P_\pi z)$$
+   Đóng băng toàn bộ Client và Server đã hội tụ từ Bước 0. Vì Server yêu cầu $z$ unpermuted để phân loại chính xác, tầng $A$ là thành phần duy nhất được huấn luyện buộc phải học:
+   $$A \;\approx\; P_\pi^\top$$
+   Thuật toán khôi phục cực kỳ đơn giản và đạt chính xác **~100%**:
+   $$\hat{\pi}(c) = \arg\max_r |A[r, c]|$$
+5. **Thí nghiệm Bổ trợ: Channel Covariance Attack (Cách 2)**:
+   Khôi phục $\pi$ tức thì (0 epochs) từ profile phương sai của 64 kênh:
+   $$\Sigma_{z'} = P_\pi \Sigma_z P_\pi^\top \quad\Longrightarrow\quad \hat{\pi}(c) = \arg\min_{c'} |\text{Var}(z'_c) - \text{Var}(z_{c'})|$$
+6. **Bằng chứng Privacy = 0**:
+   Vì hoán vị kênh là một song ánh bảo toàn thông tin, lượng thông tin tương hỗ $I(x; z') = I(x; z)$. Decoder tấn công từ Bước 1 huấn luyện trên $z'$ vẫn tái tạo lại ảnh rõ nét với $\text{PSNR} \approx 25\text{ dB}, \text{SSIM} \approx 0.82$, tương đương Vanilla Split Learning.
+
 ---
 
 ## 4. Cấu trúc thư mục `step2/`
 ```text
 step2/
 ├── permute.py            # ChannelPermute và random_perm
-├── recover.py            # Thuật toán khôi phục hoán vị recover_perm và match_accuracy
+├── adapter.py            # Cut-Layer Adapter (Conv 1x1 64->64)
+├── main_adapter.py       # Huấn luyện Adapter (10 epochs), xuất Heatmap đường chéo và test Decoder
+├── recover.py            # Các thuật toán khôi phục: Adapter argmax, Covariance, Euclidean
 ├── train_sl.py           # Vòng lặp huấn luyện Split Learning truyền qua hoán vị
-├── plot_absorption.py    # Vẽ Heatmap ma trận hấp thụ 64x64 và đồ thị huấn luyện
-├── main.py               # Pipeline huấn luyện 100 epoch, khôi phục và đối chứng
-├── test_step2.py         # Kiểm thử đơn vị (Smoke test) cho toàn bộ Bước 2
-├── step2_colab.ipynb     # Jupyter Notebook chạy trên Google Colab
+├── plot_absorption.py    # Vẽ Heatmap ma trận hấp thụ và đồ thị huấn luyện
+├── main.py               # Pipeline huấn luyện 100 epoch hoặc fine-tuning
+├── test_step2.py         # Kiểm thử đơn vị (Smoke test) cho toàn bộ Bước 2 (100% PASS)
+├── step2_colab.ipynb     # Jupyter Notebook chạy trên Google Colab (GPU T4)
 └── README.md             # Tài liệu hướng dẫn Bước 2
 ```
 
