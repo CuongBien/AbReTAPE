@@ -7,6 +7,8 @@ def train_epoch(client, server, loader, opt_c, opt_s, criterion, device):
     client.train()
     server.train()
     total_loss = 0.0
+    correct = 0
+    total = 0
 
     for x, y in loader:
         x, y = x.to(device), y.to(device)
@@ -29,21 +31,30 @@ def train_epoch(client, server, loader, opt_c, opt_s, criterion, device):
         opt_c.step()
 
         total_loss += loss.item() * x.size(0)
+        correct += (logits.argmax(1) == y).sum().item()
+        total += y.size(0)
 
-    return total_loss / len(loader.dataset)
+    return total_loss / total, correct / total
 
 
 @torch.no_grad()
-def evaluate(client, server, loader, device):
+def evaluate(client, server, loader, device, criterion=None):
     client.eval()
     server.eval()
+    total_loss = 0.0
     correct = 0
     total = 0
 
     for x, y in loader:
         x, y = x.to(device), y.to(device)
         logits = server(client(x))
+        if criterion is not None:
+            loss = criterion(logits, y)
+            total_loss += loss.item() * x.size(0)
         correct += (logits.argmax(1) == y).sum().item()
         total += y.size(0)
 
-    return correct / total
+    val_loss = (total_loss / total) if criterion is not None else 0.0
+    val_acc = correct / total
+    return val_loss, val_acc
+

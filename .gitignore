@@ -44,3 +44,10 @@ checkpoints/
 scratch/
 .idea/
 .vscode/
+.ipynb_checkpoints/
+
+# Training outputs
+*.png
+history.json
+*history.json
+*.csv
