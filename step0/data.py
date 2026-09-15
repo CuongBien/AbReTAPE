@@ -26,10 +26,11 @@ def get_cifar10(data_dir='./data', batch_size=128, num_workers=2):
         root=data_dir, train=False, download=True, transform=test_tf
     )
 
+    use_cuda = torch.cuda.is_available()
     trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=batch_size, shuffle=True, num_workers=num_workers
+        trainset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=use_cuda
     )
     testloader = torch.utils.data.DataLoader(
-        testset, batch_size=batch_size, shuffle=False, num_workers=num_workers
+        testset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=use_cuda
     )
     return trainloader, testloader
