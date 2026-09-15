@@ -57,7 +57,7 @@ def find_default_ref_ckpt():
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Bước 2 (Cách 3): Cut-Layer Adapter Absorption Experiment")
-    parser.add_argument("--epochs", type=int, default=10, help="Số epochs huấn luyện Adapter (mặc định: 10)")
+    parser.add_argument("--epochs", type=int, default=15, help="Số epochs huấn luyện Adapter (mặc định: 15)")
     parser.add_argument("--batch-size", type=int, default=128, help="Batch size (mặc định: 128)")
     parser.add_argument("--lr", type=float, default=0.01, help="Learning rate Adam cho Adapter (mặc định: 0.01)")
     parser.add_argument("--perm-seed", type=int, default=42, help="Seed hoán vị kênh bí mật (mặc định: 42)")
@@ -160,6 +160,7 @@ def main():
     adapter = Adapter(64).to(device)
 
     opt = torch.optim.Adam(adapter.parameters(), lr=args.lr)
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs, eta_min=1e-4)
     criterion = nn.CrossEntropyLoss()
 
     # Đo độ chính xác ban đầu trước khi train Adapter
@@ -203,6 +204,7 @@ def main():
             total_loss += loss.item() * batch_size
             total_samples += batch_size
 
+        sched.step()
         epoch_loss = total_loss / total_samples
         epoch_time = time.time() - t0
 
