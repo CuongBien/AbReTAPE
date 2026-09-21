@@ -29,12 +29,15 @@ venv/
 .venv/
 env/
 ENV/
+_legacy_steps/
 
 # Datasets
 data/
 *.tar.gz
+*.zip
 
-# Model checkpoints
+# Outputs & Model checkpoints
+output/
 *.pt
 *.pth
 checkpoints/
