@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Bước 3: Huấn luyện và Đánh giá các Baseline phòng thủ kinh điển: B1 (Gaussian Noise) & B2 (DP-SGD)
+# Bước 3: Huấn luyện và Đánh giá các Baseline phòng thủ: B1 (Gaussian Noise), B2 (DP-SGD), B3 (NoPeek dCor)
 import os
 import sys
 import time
@@ -23,16 +23,17 @@ if PROJECT_ROOT not in sys.path:
 
 from src.models import ClientModel, ServerModel
 from src.data import get_cifar10, CIFAR10_MEAN, CIFAR10_STD
-from src.defenses import GaussianNoise, DPSGDClientOptimizer, compute_dp_epsilon
+from src.defenses import GaussianNoise, DPSGDClientOptimizer, compute_dp_epsilon, NoPeekDefense
 from src.training import train_sl_epoch, evaluate_sl
 from src.attacks import Decoder, train_inversion_epoch, evaluate_inversion
-from src.metrics import get_lpips_fn
+from src.metrics import get_lpips_fn, distance_correlation
 from src.utils import plot_tradeoff_curves, save_reconstruction_grid
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Bước 3: Đánh giá Baseline B1 (Gaussian Noise) và B2 (DP-SGD)")
-    parser.add_argument("--defense", choices=["b1", "b2", "all"], default="b1", help="Lựa chọn baseline: 'b1' (Gaussian Noise), 'b2' (DP-SGD), hoặc 'all'")
+    parser = argparse.ArgumentParser(description="Bước 3: Đánh giá Baseline B1 (Gaussian Noise), B2 (DP-SGD), B3 (NoPeek)")
+    parser.add_argument("--defense", choices=["b1", "b2", "b3", "all"], default="b3",
+                        help="Lựa chọn baseline: 'b1' (Gaussian Noise), 'b2' (DP-SGD), 'b3' (NoPeek dCor), hoặc 'all'")
     parser.add_argument("--epochs", type=int, default=10, help="Số epochs huấn luyện SL (mặc định: 10)")
     parser.add_argument("--attack-epochs", type=int, default=10, help="Số epochs huấn luyện Decoder tấn công (mặc định: 10)")
     parser.add_argument("--batch-size", type=int, default=128, help="Batch size (mặc định: 128)")
@@ -66,7 +67,6 @@ def run_b1_gaussian(args, device):
         opt_s = torch.optim.SGD(server.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
         criterion = nn.CrossEntropyLoss()
 
-        # 1. Huấn luyện Split Learning với nhiễu
         for epoch in range(1, args.epochs + 1):
             train_loss, train_acc = train_sl_epoch(client, server, trainloader, opt_c, opt_s, criterion, device, defense=noise)
             print(f"[SL Train σ={sigma}] Epoch {epoch:2d}/{args.epochs} | Loss: {train_loss:.4f} | Acc: {train_acc*100:.2f}%", flush=True)
@@ -74,7 +74,6 @@ def run_b1_gaussian(args, device):
         _, test_acc = evaluate_sl(client, server, testloader, device, defense=noise, criterion=criterion)
         print(f"[SL Result σ={sigma}] Final Test Accuracy: {test_acc*100:.2f}%")
 
-        # 2. Đánh giá tấn công Feature Inversion Attack
         print(f"[Attack] Đang huấn luyện Decoder tấn công đối phó với σ = {sigma}...")
         decoder = Decoder().to(device)
         opt_d = torch.optim.Adam(decoder.parameters(), lr=1e-3, weight_decay=1e-5)
@@ -97,7 +96,6 @@ def run_b1_gaussian(args, device):
             "lpips": lpips_val
         })
 
-    # Lưu kết quả
     res_file = os.path.join(out_dir, "results_b1.json")
     with open(res_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
@@ -140,7 +138,6 @@ def run_b2_dpsgd(args, device):
         _, test_acc = evaluate_sl(client, server, testloader, device, criterion=criterion)
         print(f"[DP-SL Result σ={s_dp}] Final Test Accuracy: {test_acc*100:.2f}% (Epsilon: {eps:.2f})")
 
-        # Đánh giá Feature Inversion Attack
         decoder = Decoder().to(device)
         opt_d = torch.optim.Adam(decoder.parameters(), lr=1e-3, weight_decay=1e-5)
         crit_d = nn.MSELoss()
@@ -172,6 +169,84 @@ def run_b2_dpsgd(args, device):
     print(f"\n[DONE] Hoàn thành Baseline B2! Kết quả lưu tại: {res_file}")
 
 
+def run_b3_nopeek(args, device):
+    out_dir = os.path.join(args.output_dir, "AbReTAPE_Step3_B3")
+    os.makedirs(out_dir, exist_ok=True)
+    alphas = [0.1, 0.5, 1.0]
+    results = []
+
+    print("\n" + "=" * 70)
+    print("BƯỚC 3 — BASELINE B3: NOPEEK (DISTANCE CORRELATION PENALTY)")
+    print(f"Thử nghiệm với các mức alpha (dCor penalty): {alphas}")
+    print("=" * 70)
+
+    trainloader, testloader = get_cifar10(args.data_dir, batch_size=args.batch_size)
+    lpips_fn = get_lpips_fn(device=device)
+
+    for alpha in alphas:
+        print(f"\n---> ĐANG CHẠY BASELINE B3: ALPHA = {alpha} <---")
+        client = ClientModel().to(device)
+        server = ServerModel().to(device)
+        nopeek = NoPeekDefense(alpha=alpha).to(device)
+
+        opt_c = torch.optim.SGD(client.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+        opt_s = torch.optim.SGD(server.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+        criterion = nn.CrossEntropyLoss()
+
+        for epoch in range(1, args.epochs + 1):
+            train_loss, train_acc = train_sl_epoch(client, server, trainloader, opt_c, opt_s, criterion, device, defense=nopeek)
+            print(f"[NoPeek α={alpha}] Epoch {epoch:2d}/{args.epochs} | Loss: {train_loss:.4f} | Acc: {train_acc*100:.2f}%", flush=True)
+
+        _, test_acc = evaluate_sl(client, server, testloader, device, criterion=criterion)
+
+        # Đo dCor trung bình trên test set
+        client.eval()
+        dcor_sum = 0.0
+        n_eval = 0
+        with torch.no_grad():
+            for x_t, _ in testloader:
+                x_t = x_t.to(device)
+                z_t = client(x_t)
+                dcor_sum += distance_correlation(x_t, z_t).item()
+                n_eval += 1
+                if n_eval >= 15:
+                    break
+        avg_dcor = dcor_sum / max(n_eval, 1)
+        print(f"[NoPeek Result α={alpha}] Test Acc: {test_acc*100:.2f}% | dCor(X, Z'): {avg_dcor:.4f}")
+
+        # Đánh giá Feature Inversion Attack
+        print(f"[Attack] Đang huấn luyện Decoder tái tạo đối phó với NoPeek (α={alpha})...")
+        decoder = Decoder().to(device)
+        opt_d = torch.optim.Adam(decoder.parameters(), lr=1e-3, weight_decay=1e-5)
+        crit_d = nn.MSELoss()
+
+        for ep in range(1, args.attack_epochs + 1):
+            train_inversion_epoch(client, decoder, trainloader, opt_d, crit_d, device)
+
+        mse, psnr, ssim, lpips_val = evaluate_inversion(
+            client, decoder, testloader, device, CIFAR10_MEAN, CIFAR10_STD, criterion=crit_d, lpips_fn=lpips_fn
+        )
+        print(f"[Security NoPeek α={alpha}] PSNR: {psnr:.2f} dB | SSIM: {ssim:.4f} | LPIPS: {lpips_val if lpips_val else 'N/A'}")
+
+        results.append({
+            "alpha": alpha,
+            "dcor": avg_dcor,
+            "test_acc": test_acc,
+            "mse": mse,
+            "psnr": psnr,
+            "ssim": ssim,
+            "lpips": lpips_val
+        })
+
+    res_file = os.path.join(out_dir, "results_b3.json")
+    with open(res_file, "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=2)
+
+    plot_file = os.path.join(out_dir, "b3_tradeoff_curves.png")
+    plot_tradeoff_curves(results, save_path=plot_file, x_key="alpha", x_label="Hệ số phạt NoPeek (alpha)")
+    print(f"\n[DONE] Hoàn thành Baseline B3 (NoPeek)! Kết quả lưu tại: {res_file}")
+
+
 def main():
     args = parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -179,6 +254,8 @@ def main():
         run_b1_gaussian(args, device)
     if args.defense in ["b2", "all"]:
         run_b2_dpsgd(args, device)
+    if args.defense in ["b3", "all"]:
+        run_b3_nopeek(args, device)
 
 
 if __name__ == "__main__":

@@ -17,9 +17,9 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from src.models import ClientModel, ServerModel, resnet18_cifar
-from src.defenses import random_perm, ChannelPermute, Adapter, GaussianNoise, DPSGDClientOptimizer, compute_dp_epsilon
+from src.defenses import random_perm, ChannelPermute, Adapter, GaussianNoise, DPSGDClientOptimizer, compute_dp_epsilon, NoPeekDefense
 from src.attacks import Decoder, recover_perm, recover_perm_from_adapter, match_accuracy
-from src.metrics import psnr_ssim, denormalize, get_lpips_fn, calculate_lpips
+from src.metrics import psnr_ssim, denormalize, get_lpips_fn, calculate_lpips, distance_correlation
 from src.training import train_sl_epoch, evaluate_sl
 from src.utils import plot_training_curves
 
@@ -120,6 +120,27 @@ def test_defenses_step3(device):
     eps = compute_dp_epsilon(epochs=10, batch_size=128, dataset_size=50000, noise_multiplier=1.0)
     assert eps > 0.0 and eps < 100.0
     print(f"  -> Kiểm tra RDP Accountant (10 epochs, sigma=1.0 -> Epsilon={eps:.2f}): ĐẠT!")
+
+    # B3: NoPeek & Distance Correlation
+    x_dcor = torch.randn(20, 3, 32, 32, device=device)
+    # dCor giữa 2 biến đồng nhất phải xấp xỉ 1.0
+    dcor_self = distance_correlation(x_dcor, x_dcor).item()
+    assert abs(dcor_self - 1.0) < 0.05, f"dCor(X, X) phải xấp xỉ 1.0, thực tế: {dcor_self}"
+    
+    # dCor giữa 2 biến ngẫu nhiên độc lập phải thấp
+    x_rand = torch.randn(20, 64, 32, 32, device=device)
+    dcor_indep = distance_correlation(x_dcor, x_rand).item()
+    assert dcor_indep < 0.5, f"dCor(X, independent) phải thấp, thực tế: {dcor_indep}"
+    print(f"  -> Kiểm tra Distance Correlation dCor (Tự tương quan: {dcor_self:.4f}, Độc lập: {dcor_indep:.4f}): ĐẠT!")
+
+    # Kiểm tra vòng lặp NoPeek SL với dCor penalty
+    nopeek = NoPeekDefense(alpha=0.5).to(device)
+    server = ServerModel().to(device)
+    opt_s = torch.optim.SGD(server.parameters(), lr=0.01)
+    y_dummy = torch.randint(0, 10, (20,), device=device)
+    crit = nn.CrossEntropyLoss()
+    train_loss, train_acc = train_sl_epoch(client, server, [(x_dcor, y_dummy)], base_opt, opt_s, crit, device, defense=nopeek)
+    print("  -> Kiểm tra NoPeek Split Learning training step với dCor penalty: ĐẠT!")
 
 
 def test_plotting():

@@ -12,6 +12,7 @@ def train_sl_epoch(client, server, loader, opt_c, opt_s, criterion, device, defe
     4. Server forward: logits = server(z_d)
     5. Server backward: loss.backward() -> tính grad_boundary = z_d.grad
     6. Client backward: grad_boundary truyền ngược qua defense về client
+       (kết hợp thêm extra penalty loss nếu defense có compute_loss như NoPeek)
     """
     client.train()
     server.train()
@@ -51,10 +52,18 @@ def train_sl_epoch(client, server, loader, opt_c, opt_s, criterion, device, defe
             # DP-SGD quản lý clipping và backward bên trong opt_c.step
             opt_c.step(x, grad_boundary)
         else:
-            if defense is not None:
+            # Kiểm tra xem cơ chế phòng thủ có phạt thêm loss (như NoPeek dCor) không
+            has_extra_loss = hasattr(defense, "compute_loss") and callable(defense.compute_loss)
+            if has_extra_loss:
+                extra_loss = defense.compute_loss(x, z)
+                if extra_loss.requires_grad:
+                    extra_loss.backward(retain_graph=True)
+
+            if defense is not None and not has_extra_loss:
                 z_trans.backward(grad_boundary)
             else:
                 z.backward(grad_boundary)
+
             opt_c.step()
 
         total_loss += loss.item() * batch_size
