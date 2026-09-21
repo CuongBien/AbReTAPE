@@ -23,6 +23,7 @@ if PROJECT_ROOT not in sys.path:
 from src.models import ClientModel
 from src.data import get_cifar10, CIFAR10_MEAN, CIFAR10_STD
 from src.attacks import Decoder, train_inversion_epoch, evaluate_inversion
+from src.training import EarlyStopping
 from src.metrics import get_lpips_fn
 from src.utils import plot_attack_curves, save_reconstruction_grid
 
@@ -48,10 +49,19 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=128, help="Batch size (mặc định: 128)")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate cho Decoder (mặc định: 1e-3)")
     parser.add_argument("--eval-freq", type=int, default=5, help="Tần suất đánh giá test set (mặc định: 5)")
-    parser.add_argument("--num-workers", type=int, default=2, help="Số luồng nạp dữ liệu (mặc định: 2)")
+    parser.add_argument("--patience", type=int, default=10, help="Số lần đánh giá chờ Early Stopping (mặc định: 10, 0 để tắt)")
+    parser.add_argument("--num-workers", type=int, default=0 if sys.platform == "win32" else 2,
+                        help="Số luồng nạp dữ liệu (mặc định: 0 trên Windows để tránh crash IPC, 2 trên Linux)")
     parser.add_argument("--client-ckpt", type=str, default=None, help="Đường dẫn file checkpoint Step 0")
     parser.add_argument("--data-dir", type=str, default=os.path.join(PROJECT_ROOT, "data"), help="Thư mục dữ liệu")
     parser.add_argument("--output-dir", type=str, default=os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step1"), help="Thư mục lưu outputs")
+    parser.add_argument("--resume", action="store_true", help="Khôi phục huấn luyện từ checkpoint gần nhất")
+    parser.add_argument("--checkpoint", type=str, default=None, help="Đường dẫn lưu/nạp checkpoint dở dang")
+    parser.add_argument("--save-best", type=str, default=None, help="Đường dẫn lưu best decoder checkpoint")
+    parser.add_argument("--output", type=str, default=None, help="Đường dẫn lưu decoder checkpoint cuối cùng")
+    parser.add_argument("--history-file", type=str, default=None, help="Đường dẫn lưu file lịch sử JSON")
+    parser.add_argument("--plot-file", type=str, default=None, help="Đường dẫn lưu file đồ thị PNG")
+    parser.add_argument("--grid-file", type=str, default=None, help="Đường dẫn lưu ảnh lưới tái tạo PNG")
     return parser.parse_args()
 
 
@@ -94,13 +104,26 @@ def main():
 
     best_psnr = 0.0
     history = []
-    best_path = os.path.join(args.output_dir, "best_b1_decoder.pt")
-    final_path = os.path.join(args.output_dir, "b1_decoder.pt")
-    history_json = os.path.join(args.output_dir, "step1_history.json")
-    plot_file = os.path.join(args.output_dir, "attack_curves.png")
-    grid_file = os.path.join(args.output_dir, "reconstruction_grid.png")
+    early_stopping = EarlyStopping(patience=args.patience, mode="max")
+    best_path = args.save_best or os.path.join(args.output_dir, "best_b1_decoder.pt")
+    last_path = args.checkpoint or os.path.join(args.output_dir, "last_checkpoint_b1.pt")
+    final_path = args.output or os.path.join(args.output_dir, "b1_decoder.pt")
+    history_json = args.history_file or os.path.join(args.output_dir, "step1_history.json")
+    plot_file = args.plot_file or os.path.join(args.output_dir, "attack_curves.png")
+    grid_file = args.grid_file or os.path.join(args.output_dir, "reconstruction_grid.png")
 
-    for epoch in range(1, args.epochs + 1):
+    start_epoch = 1
+    if args.resume and os.path.isfile(last_path):
+        ckpt = torch.load(last_path, map_location=device)
+        decoder.load_state_dict(ckpt["decoder"])
+        optimizer.load_state_dict(ckpt["optimizer"])
+        scheduler.load_state_dict(ckpt["scheduler"])
+        start_epoch = ckpt["epoch"] + 1
+        best_psnr = ckpt.get("best_psnr", 0.0)
+        history = ckpt.get("history", [])
+        print(f"[RESUME] Đã khôi phục huấn luyện Decoder từ epoch {start_epoch-1} với Best PSNR: {best_psnr:.2f} dB")
+
+    for epoch in range(start_epoch, args.epochs + 1):
         t0 = time.time()
         train_mse = train_inversion_epoch(client, decoder, trainloader, optimizer, criterion, device)
         scheduler.step()
@@ -116,6 +139,9 @@ def main():
             if test_psnr is not None and test_psnr > best_psnr:
                 best_psnr = test_psnr
                 torch.save({"decoder": decoder.state_dict(), "best_psnr": best_psnr, "epoch": epoch}, best_path)
+            if test_psnr is not None and early_stopping.step(test_psnr, epoch=epoch):
+                print(f"\n[EARLY STOPPING] Dừng sớm Decoder tại epoch {epoch} do PSNR không cải thiện sau {args.patience} lần đánh giá! Best PSNR: {best_psnr:.2f} dB")
+                break
 
         entry = {
             "epoch": epoch,
@@ -137,6 +163,15 @@ def main():
 
         with open(history_json, "w", encoding="utf-8") as f:
             json.dump(history, f, indent=2)
+
+        torch.save({
+            "decoder": decoder.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "scheduler": scheduler.state_dict(),
+            "epoch": epoch,
+            "best_psnr": best_psnr,
+            "history": history
+        }, last_path)
 
     torch.save({"decoder": decoder.state_dict(), "best_psnr": best_psnr}, final_path)
     plot_attack_curves(history, plot_file)

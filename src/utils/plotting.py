@@ -235,20 +235,52 @@ def save_reconstruction_grid(client, decoder, loader, device, mean, std,
     print(f"[PLOT] Đã xuất lưới ảnh đối chứng tại: {save_path}")
 
 
-def plot_permutation_matrix(matrix, save_path="permutation_heatmap.png", title="Ma trận Trọng số Hấp thụ"):
+def plot_permutation_matrix(matrix, W_ref=None, perm_true=None, save_path="permutation_heatmap.png", title="Ma trận Trọng số Hấp thụ"):
     """
     Vẽ Heatmap trực quan hóa ma trận hoán vị hoặc ma trận học được của Adapter.
+    Hỗ trợ cả vẽ đơn (Adapter weights) lẫn vẽ đôi đối chứng (W_hat vs W_ref theo perm_true).
     """
-    if torch.is_tensor(matrix):
-        matrix = matrix.detach().cpu().numpy()
+    if W_ref is not None and perm_true is not None:
+        from ..attacks.recover_perm import compute_cosine_similarity_matrix
+        if torch.is_tensor(perm_true):
+            perm_true = perm_true.cpu().numpy()
+        elif isinstance(perm_true, list):
+            perm_true = np.array(perm_true)
 
-    plt.figure(figsize=(9, 8))
-    plt.imshow(np.abs(matrix), cmap="viridis", aspect="auto")
-    plt.colorbar(label="Trọng số tuyệt đối |A[r, c]|")
-    plt.title(title, fontsize=13, fontweight="bold")
-    plt.xlabel("Kênh vào c (z_permuted)")
-    plt.ylabel("Kênh ra r (z_hat)")
-    plt.tight_layout()
+        sim_matrix = compute_cosine_similarity_matrix(matrix, W_ref)
+        num_channels = sim_matrix.shape[0]
+        sim_aligned = np.zeros_like(sim_matrix)
+        for c in range(num_channels):
+            target_channel = perm_true[c]
+            sim_aligned[target_channel, :] = sim_matrix[c, :]
+
+        fig, axes = plt.subplots(1, 2, figsize=(15, 6.5))
+        im1 = axes[0].imshow(sim_matrix, cmap="viridis", aspect="auto", vmin=-0.2, vmax=1.0)
+        axes[0].set_title("(a) Tương quan Chưa sắp xếp\n(Thứ tự kênh quan sát tại Server)", fontsize=12, fontweight="bold")
+        axes[0].set_xlabel("Chỉ số kênh Server Tham chiếu (W_ref)", fontsize=11)
+        axes[0].set_ylabel("Chỉ số kênh Server Huấn luyện (W)", fontsize=11)
+        fig.colorbar(im1, ax=axes[0], fraction=0.046, pad=0.04)
+
+        im2 = axes[1].imshow(sim_aligned, cmap="plasma", aspect="auto", vmin=-0.2, vmax=1.0)
+        axes[1].set_title("(b) Đã sắp xếp lại theo Hoán vị Thật $\\pi$\n(Đường chéo sáng = Hấp thụ thành công)", fontsize=12, fontweight="bold", color="darkred")
+        axes[1].set_xlabel("Chỉ số kênh Server Tham chiếu (W_ref)", fontsize=11)
+        axes[1].set_ylabel("Chỉ số kênh sau Hoán vị $\\pi$", fontsize=11)
+        fig.colorbar(im2, ax=axes[1], fraction=0.046, pad=0.04)
+
+        fig.suptitle(title, fontsize=14, fontweight="bold", y=0.98)
+        plt.tight_layout()
+    else:
+        if torch.is_tensor(matrix):
+            matrix = matrix.detach().cpu().numpy()
+
+        plt.figure(figsize=(9, 8))
+        plt.imshow(np.abs(matrix), cmap="viridis", aspect="auto")
+        plt.colorbar(label="Trọng số tuyệt đối |A[r, c]|")
+        plt.title(title, fontsize=13, fontweight="bold")
+        plt.xlabel("Kênh vào c (z_permuted)")
+        plt.ylabel("Kênh ra r (z_hat)")
+        plt.tight_layout()
+
     os.makedirs(os.path.dirname(os.path.abspath(save_path)), exist_ok=True)
     plt.savefig(save_path, dpi=200, bbox_inches="tight")
     plt.close()

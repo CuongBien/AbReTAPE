@@ -24,7 +24,7 @@ if PROJECT_ROOT not in sys.path:
 
 from src.models import ClientModel, ServerModel, resnet18_cifar
 from src.data import get_cifar10
-from src.training import train_sl_epoch, evaluate_sl, train_centralized_epoch, evaluate_centralized
+from src.training import train_sl_epoch, evaluate_sl, train_centralized_epoch, evaluate_centralized, EarlyStopping
 from src.utils import plot_training_curves
 
 
@@ -34,26 +34,33 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=128, help="Batch size (mặc định: 128)")
     parser.add_argument("--lr", type=float, default=0.1, help="Learning rate (mặc định: 0.1)")
     parser.add_argument("--eval-freq", type=int, default=1, help="Tần suất đánh giá test set (mặc định: 1)")
-    parser.add_argument("--num-workers", type=int, default=2, help="Số luồng nạp dữ liệu (mặc định: 2)")
+    parser.add_argument("--num-workers", type=int, default=0 if sys.platform == "win32" else 2,
+                        help="Số luồng nạp dữ liệu (mặc định: 0 trên Windows để tránh crash IPC, 2 trên Linux)")
+    parser.add_argument("--patience", type=int, default=15, help="Số epochs chờ Early Stopping (mặc định: 15, 0 để tắt)")
     parser.add_argument("--centralized", action="store_true", help="Chạy chế độ Centralized Training đối chứng thay vì SL")
     parser.add_argument("--data-dir", type=str, default=os.path.join(PROJECT_ROOT, "data"), help="Thư mục dữ liệu")
     parser.add_argument("--output-dir", type=str, default=os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step0"), help="Thư mục lưu outputs")
     parser.add_argument("--resume", action="store_true", help="Khôi phục huấn luyện từ checkpoint gần nhất")
+    parser.add_argument("--checkpoint", type=str, default=None, help="Đường dẫn lưu/nạp checkpoint dở dang")
+    parser.add_argument("--save-best", type=str, default=None, help="Đường dẫn lưu best model checkpoint")
+    parser.add_argument("--output", type=str, default=None, help="Đường dẫn lưu model checkpoint cuối cùng")
+    parser.add_argument("--history-file", type=str, default=None, help="Đường dẫn lưu file lịch sử JSON")
+    parser.add_argument("--plot-file", type=str, default=None, help="Đường dẫn lưu file đồ thị PNG")
     return parser.parse_args()
 
 
 def run_centralized(args, device):
     os.makedirs(args.output_dir, exist_ok=True)
-    best_path = os.path.join(args.output_dir, "best_b0_centralized.pt")
-    last_path = os.path.join(args.output_dir, "last_checkpoint_centralized.pt")
-    final_path = os.path.join(args.output_dir, "b0_centralized.pt")
-    history_json = os.path.join(args.output_dir, "centralized_history.json")
+    best_path = args.save_best or os.path.join(args.output_dir, "best_b0_centralized.pt")
+    last_path = args.checkpoint or os.path.join(args.output_dir, "last_checkpoint_centralized.pt")
+    final_path = args.output or os.path.join(args.output_dir, "b0_centralized.pt")
+    history_json = args.history_file or os.path.join(args.output_dir, "centralized_history.json")
     history_csv = os.path.join(args.output_dir, "centralized_history.csv")
-    plot_file = os.path.join(args.output_dir, "centralized_curves.png")
+    plot_file = args.plot_file or os.path.join(args.output_dir, "centralized_curves.png")
 
     print("=" * 70)
     print(f"BƯỚC 0: CENTRALIZED TRAINING ĐỐI CHỨNG (CIFAR-10, ResNet-18)")
-    print(f"Thiết bị: {device} | Epochs: {args.epochs} | Batch: {args.batch-size} | LR: {args.lr}")
+    print(f"Thiết bị: {device} | Epochs: {args.epochs} | Batch: {args.batch_size} | LR: {args.lr}")
     print("=" * 70)
 
     trainloader, testloader = get_cifar10(args.data_dir, batch_size=args.batch_size, num_workers=args.num_workers)
@@ -65,6 +72,7 @@ def run_centralized(args, device):
     start_epoch = 1
     best_acc = 0.0
     history = []
+    early_stopping = EarlyStopping(patience=args.patience, mode="max")
 
     if args.resume and os.path.isfile(last_path):
         ckpt = torch.load(last_path, map_location=device)
@@ -88,6 +96,9 @@ def run_centralized(args, device):
             if test_acc > best_acc:
                 best_acc = test_acc
                 torch.save({"model": model.state_dict(), "best_acc": best_acc, "epoch": epoch}, best_path)
+            if early_stopping.step(test_acc, epoch=epoch):
+                print(f"\n[EARLY STOPPING] Dừng sớm tại epoch {epoch} do test acc không cải thiện sau {args.patience} lần đánh giá! Best Acc: {best_acc*100:.2f}% (Epoch {early_stopping.best_epoch})")
+                break
 
         entry = {
             "epoch": epoch,
@@ -124,11 +135,11 @@ def run_centralized(args, device):
 
 def run_split_learning(args, device):
     os.makedirs(args.output_dir, exist_ok=True)
-    best_path = os.path.join(args.output_dir, "best_b0_vanilla.pt")
-    last_path = os.path.join(args.output_dir, "last_checkpoint.pt")
-    final_path = os.path.join(args.output_dir, "b0_vanilla.pt")
-    history_json = os.path.join(args.output_dir, "history.json")
-    plot_file = os.path.join(args.output_dir, "training_curves.png")
+    best_path = args.save_best or os.path.join(args.output_dir, "best_b0_vanilla.pt")
+    last_path = args.checkpoint or os.path.join(args.output_dir, "last_checkpoint.pt")
+    final_path = args.output or os.path.join(args.output_dir, "b0_vanilla.pt")
+    history_json = args.history_file or os.path.join(args.output_dir, "history.json")
+    plot_file = args.plot_file or os.path.join(args.output_dir, "training_curves.png")
 
     print("=" * 70)
     print(f"BƯỚC 0: VANILLA SPLIT LEARNING (CIFAR-10, ResNet-18)")
@@ -151,6 +162,7 @@ def run_split_learning(args, device):
     start_epoch = 1
     best_acc = 0.0
     history = []
+    early_stopping = EarlyStopping(patience=args.patience, mode="max")
 
     if args.resume and os.path.isfile(last_path):
         ckpt = torch.load(last_path, map_location=device)
@@ -178,6 +190,9 @@ def run_split_learning(args, device):
             if test_acc > best_acc:
                 best_acc = test_acc
                 torch.save({"client": client.state_dict(), "server": server.state_dict(), "best_acc": best_acc, "epoch": epoch}, best_path)
+            if early_stopping.step(test_acc, epoch=epoch):
+                print(f"\n[EARLY STOPPING] Dừng sớm tại epoch {epoch} do test acc không cải thiện sau {args.patience} lần đánh giá! Best Acc: {best_acc*100:.2f}% (Epoch {early_stopping.best_epoch})")
+                break
 
         entry = {
             "epoch": epoch,

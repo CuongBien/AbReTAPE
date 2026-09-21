@@ -32,7 +32,7 @@ ENV/
 _legacy_steps/
 
 # Datasets
-data/
+/data/
 *.tar.gz
 *.zip
 

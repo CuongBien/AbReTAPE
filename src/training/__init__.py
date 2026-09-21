@@ -1,5 +1,6 @@
 from .split_learning import train_sl_epoch, evaluate_sl, train_epoch, evaluate
 from .centralized import train_centralized_epoch, evaluate_centralized
+from .early_stopping import EarlyStopping
 
 __all__ = [
     "train_sl_epoch",
@@ -8,4 +9,5 @@ __all__ = [
     "evaluate",
     "train_centralized_epoch",
     "evaluate_centralized",
+    "EarlyStopping",
 ]
