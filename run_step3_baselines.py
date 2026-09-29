@@ -72,16 +72,20 @@ def parse_args():
     parser.add_argument("--alphas", type=str, default=None, help="Danh sách alpha ngăn cách bởi dấu phẩy (vd: 0.1,0.5,1.0)")
 
     # B4 params
-    parser.add_argument("--block-size", type=int, default=4, help="Kích thước block cho Block Scramble (B4, mặc định: 4)")
+    parser.add_argument("--block-size", type=int, default=None, help="Kích thước block đơn lẻ cho Block Scramble (B4)")
+    parser.add_argument("--block-sizes", type=str, default=None, help="Danh sách block sizes ngăn cách bởi dấu phẩy (vd: 2,4,8)")
 
     # B5 params
-    parser.add_argument("--distortion-scale", type=float, default=0.2, help="Hệ số méo dạng cho Deformable (B5, mặc định: 0.2)")
+    parser.add_argument("--distortion-scale", type=float, default=None, help="Hệ số méo dạng đơn lẻ cho Deformable (B5)")
+    parser.add_argument("--distortion-scales", type=str, default=None, help="Danh sách distortion scales ngăn cách bởi dấu phẩy (vd: 0.1,0.2,0.3)")
 
     # B6 params
-    parser.add_argument("--bottleneck-channels", type=int, default=16, help="Số kênh bottleneck cho ADP-AE (B6, mặc định: 16)")
+    parser.add_argument("--bottleneck-channels", type=int, default=None, help="Số kênh bottleneck đơn lẻ cho ADP-AE (B6)")
+    parser.add_argument("--bottleneck-channels-list", type=str, default=None, help="Danh sách bottleneck channels (vd: 8,16,32)")
 
     # AR-TAPE params
-    parser.add_argument("--subspace-dim", type=int, default=32, help="Số chiều không gian con k cho AR-TAPE (mặc định: 32)")
+    parser.add_argument("--subspace-dim", type=int, default=None, help="Số chiều không gian con k đơn lẻ cho AR-TAPE (P_task)")
+    parser.add_argument("--subspace-dims", type=str, default=None, help="Danh sách subspace dims ngăn cách bởi dấu phẩy (vd: 16,32,48)")
 
     parser.add_argument("--data-dir", type=str, default=os.path.join(PROJECT_ROOT, "data"), help="Thư mục dữ liệu")
     parser.add_argument("--output-dir", type=str, default=os.path.join(PROJECT_ROOT, "output"), help="Thư mục lưu outputs")
@@ -730,15 +734,22 @@ def run_generic_cut_defense(args, device, defense_name, defense_builder, out_dir
     out_dir = resolve_output_dir(args.output_dir, out_dir_name)
     os.makedirs(out_dir, exist_ok=True)
 
+    param_tag = f"{param_key}_{param_val}"
     attack_epochs = args.decoder_epochs if args.decoder_epochs is not None else args.attack_epochs
     res_file = os.path.join(out_dir, f"results_{defense_name}.json")
     results = []
-    if args.resume and os.path.isfile(res_file):
+    if os.path.isfile(res_file):
         try:
             with open(res_file, "r", encoding="utf-8") as f:
                 results = json.load(f)
         except Exception:
             results = []
+
+    recons_path = os.path.join(out_dir, f"{defense_name}_reconstruction_comparison_{param_tag}.png")
+    completed_vals = [r.get(param_key) for r in results if param_key in r and "psnr" in r]
+    if args.resume and param_val in completed_vals and os.path.isfile(recons_path):
+        print(f"\n[RESUME] {defense_name.upper()} với {param_key} = {param_val} đã hoàn thành toàn bộ trước đó. Bỏ qua.")
+        return
 
     print("\n" + "=" * 70)
     print(f"BƯỚC 3 — {defense_name.upper()}: {x_label} = {param_val}")
@@ -762,8 +773,8 @@ def run_generic_cut_defense(args, device, defense_name, defense_builder, out_dir
     criterion = nn.CrossEntropyLoss()
     early_stopping_sl = EarlyStopping(patience=args.patience, mode="max")
 
-    ckpt_last = os.path.join(out_dir, f"{defense_name}_last.pt")
-    ckpt_best = os.path.join(out_dir, f"{defense_name}_best.pt")
+    ckpt_last = os.path.join(out_dir, f"{defense_name}_last_{param_tag}.pt")
+    ckpt_best = os.path.join(out_dir, f"{defense_name}_best_{param_tag}.pt")
     start_epoch = 1
     best_sl_acc = 0.0
 
@@ -780,7 +791,7 @@ def run_generic_cut_defense(args, device, defense_name, defense_builder, out_dir
         start_epoch = ckpt["epoch"] + 1
         best_sl_acc = ckpt.get("best_sl_acc", 0.0)
         early_stopping_sl.best_score = best_sl_acc
-        print(f"[RESUME] Đã khôi phục {defense_name} từ epoch {start_epoch-1} (Best Acc: {best_sl_acc*100:.2f}%)")
+        print(f"[RESUME] Đã khôi phục {defense_name} ({param_tag}) từ epoch {start_epoch-1} (Best Acc: {best_sl_acc*100:.2f}%)")
 
     if start_epoch <= args.epochs:
         for epoch in range(start_epoch, args.epochs + 1):
@@ -796,7 +807,7 @@ def run_generic_cut_defense(args, device, defense_name, defense_builder, out_dir
                     if def_params:
                         save_dict["defense"] = defense.state_dict()
                     torch.save(save_dict, ckpt_best)
-                print(f"[{defense_name.upper()}] Epoch {epoch:2d}/{args.epochs} | Loss: {train_loss:.4f} | Train Acc: {train_acc*100:.2f}% | Test Acc: {t_acc*100:.2f}% (Best: {best_sl_acc*100:.2f}%)", flush=True)
+                print(f"[{defense_name.upper()} {param_tag}] Epoch {epoch:2d}/{args.epochs} | Loss: {train_loss:.4f} | Train Acc: {train_acc*100:.2f}% | Test Acc: {t_acc*100:.2f}% (Best: {best_sl_acc*100:.2f}%)", flush=True)
                 save_last = {
                     "epoch": epoch,
                     "client": client.state_dict(),
@@ -814,7 +825,7 @@ def run_generic_cut_defense(args, device, defense_name, defense_builder, out_dir
                     print(f"\n[EARLY STOPPING] Dừng sớm {defense_name} tại epoch {epoch} do test acc không cải thiện!")
                     break
             else:
-                print(f"[{defense_name.upper()}] Epoch {epoch:2d}/{args.epochs} | Loss: {train_loss:.4f} | Train Acc: {train_acc*100:.2f}%", flush=True)
+                print(f"[{defense_name.upper()} {param_tag}] Epoch {epoch:2d}/{args.epochs} | Loss: {train_loss:.4f} | Train Acc: {train_acc*100:.2f}%", flush=True)
 
     if os.path.isfile(ckpt_best):
         best_dict = torch.load(ckpt_best, map_location=device)
@@ -824,7 +835,7 @@ def run_generic_cut_defense(args, device, defense_name, defense_builder, out_dir
             defense.load_state_dict(best_dict["defense"])
 
     _, test_acc = evaluate_sl(client, server, testloader, device, defense=defense, criterion=criterion)
-    print(f"[{defense_name.upper()} Result] Final Test Accuracy: {test_acc*100:.2f}%")
+    print(f"[{defense_name.upper()} {param_tag} Result] Final Test Accuracy: {test_acc*100:.2f}%")
 
     # Đo dCor
     client.eval()
@@ -843,15 +854,15 @@ def run_generic_cut_defense(args, device, defense_name, defense_builder, out_dir
     avg_dcor = dcor_sum / max(n_eval, 1)
 
     # Train Inversion Decoder
-    print(f"[Attack] Đang huấn luyện Decoder tấn công đối phó với {defense_name.upper()}...")
+    print(f"[Attack] Đang huấn luyện Decoder tấn công đối phó với {defense_name.upper()} ({param_tag})...")
     decoder = Decoder().to(device)
     opt_d = torch.optim.Adam(decoder.parameters(), lr=args.decoder_lr, weight_decay=1e-5)
     sched_d = CosineAnnealingLR(opt_d, T_max=attack_epochs)
     crit_d = nn.MSELoss()
     early_stopping_d = EarlyStopping(patience=args.patience, mode="max")
 
-    ckpt_dec_last = os.path.join(out_dir, f"{defense_name}_dec_last.pt")
-    ckpt_dec_best = os.path.join(out_dir, f"{defense_name}_dec_best.pt")
+    ckpt_dec_last = os.path.join(out_dir, f"{defense_name}_dec_last_{param_tag}.pt")
+    ckpt_dec_best = os.path.join(out_dir, f"{defense_name}_dec_best_{param_tag}.pt")
     start_dec_ep = 1
     best_attack_psnr = 0.0
 
@@ -863,7 +874,7 @@ def run_generic_cut_defense(args, device, defense_name, defense_builder, out_dir
         start_dec_ep = dec_ckpt["epoch"] + 1
         best_attack_psnr = dec_ckpt.get("best_psnr", 0.0)
         early_stopping_d.best_score = best_attack_psnr
-        print(f"[RESUME] Đã khôi phục Decoder {defense_name} từ epoch {start_dec_ep-1} (Best PSNR: {best_attack_psnr:.2f} dB)")
+        print(f"[RESUME] Đã khôi phục Decoder {defense_name} ({param_tag}) từ epoch {start_dec_ep-1} (Best PSNR: {best_attack_psnr:.2f} dB)")
 
     if start_dec_ep <= attack_epochs:
         for ep in range(start_dec_ep, attack_epochs + 1):
@@ -876,7 +887,7 @@ def run_generic_cut_defense(args, device, defense_name, defense_builder, out_dir
                 if cur_psnr is not None and cur_psnr > best_attack_psnr:
                     best_attack_psnr = cur_psnr
                     torch.save({"decoder": decoder.state_dict(), "best_psnr": best_attack_psnr, "epoch": ep}, ckpt_dec_best)
-                print(f"[Attack {defense_name.upper()}] Epoch {ep:2d}/{attack_epochs} | PSNR: {cur_psnr:.2f} dB (Best: {best_attack_psnr:.2f} dB)", flush=True)
+                print(f"[Attack {defense_name.upper()} {param_tag}] Epoch {ep:2d}/{attack_epochs} | PSNR: {cur_psnr:.2f} dB (Best: {best_attack_psnr:.2f} dB)", flush=True)
                 torch.save({
                     "epoch": ep,
                     "decoder": decoder.state_dict(),
@@ -895,11 +906,12 @@ def run_generic_cut_defense(args, device, defense_name, defense_builder, out_dir
     mse, psnr, ssim, lpips_val = evaluate_inversion(
         client, decoder, testloader, device, CIFAR10_MEAN, CIFAR10_STD, defense=defense, criterion=crit_d, lpips_fn=lpips_fn
     )
-    print(f"[Security {defense_name.upper()}] PSNR: {psnr:.2f} dB | SSIM: {ssim:.4f} | LPIPS: {lpips_val if lpips_val else 'N/A'} | dCor: {avg_dcor:.4f}")
+    print(f"[Security {defense_name.upper()} {param_tag}] PSNR: {psnr:.2f} dB | SSIM: {ssim:.4f} | LPIPS: {lpips_val if lpips_val else 'N/A'} | dCor: {avg_dcor:.4f}")
 
-    # Lưu ảnh tái tạo
-    recons_path = os.path.join(out_dir, f"{defense_name}_reconstruction_comparison.png")
+    # Lưu ảnh tái tạo riêng cho từng tham số và ảnh mặc định
     save_reconstruction_grid(client, decoder, testloader, device, CIFAR10_MEAN, CIFAR10_STD, defense=defense, save_path=recons_path, num_images=8)
+    recons_default = os.path.join(out_dir, f"{defense_name}_reconstruction_comparison.png")
+    save_reconstruction_grid(client, decoder, testloader, device, CIFAR10_MEAN, CIFAR10_STD, defense=defense, save_path=recons_default, num_images=8)
 
     cur_entry = {
         param_key: param_val,
@@ -912,57 +924,90 @@ def run_generic_cut_defense(args, device, defense_name, defense_builder, out_dir
     }
     results = [r for r in results if r.get(param_key) != param_val]
     results.append(cur_entry)
+    results.sort(key=lambda r: r.get(param_key, 0.0))
     save_defense_results(out_dir, defense_name, results, x_key=param_key, x_label=x_label)
-    print(f"[DONE] Hoàn thành {defense_name.upper()}! Kết quả lưu tại: {res_file}")
+    print(f"[DONE] Hoàn thành {defense_name.upper()} ({param_tag})! Kết quả lưu tại: {res_file}")
     return cur_entry
 
 
 def run_b4_block_scramble(args, device):
-    run_generic_cut_defense(
-        args, device,
-        defense_name="b4",
-        defense_builder=lambda: BlockScrambleDefense(block_size=args.block_size),
-        out_dir_name="AbReTAPE_Step3_B4",
-        param_key="block_size",
-        param_val=args.block_size,
-        x_label="Block Size"
-    )
+    if args.block_sizes is not None:
+        sizes = [int(s.strip()) for s in args.block_sizes.split(",")]
+    elif args.block_size is not None and not args.sweep:
+        sizes = [args.block_size]
+    else:
+        sizes = [2, 4, 8]
+
+    for bs in sizes:
+        run_generic_cut_defense(
+            args, device,
+            defense_name="b4",
+            defense_builder=lambda bs=bs: BlockScrambleDefense(block_size=bs),
+            out_dir_name="AbReTAPE_Step3_B4",
+            param_key="block_size",
+            param_val=bs,
+            x_label="Block Size"
+        )
 
 
 def run_b5_deformable(args, device):
-    run_generic_cut_defense(
-        args, device,
-        defense_name="b5",
-        defense_builder=lambda: DeformableOperatorDefense(channels=64, distortion_scale=args.distortion_scale),
-        out_dir_name="AbReTAPE_Step3_B5",
-        param_key="distortion_scale",
-        param_val=args.distortion_scale,
-        x_label="Distortion Scale"
-    )
+    if args.distortion_scales is not None:
+        scales = [float(s.strip()) for s in args.distortion_scales.split(",")]
+    elif args.distortion_scale is not None and not args.sweep:
+        scales = [args.distortion_scale]
+    else:
+        scales = [0.1, 0.2, 0.3]
+
+    for scale in scales:
+        run_generic_cut_defense(
+            args, device,
+            defense_name="b5",
+            defense_builder=lambda sc=scale: DeformableOperatorDefense(channels=64, distortion_scale=sc),
+            out_dir_name="AbReTAPE_Step3_B5",
+            param_key="distortion_scale",
+            param_val=scale,
+            x_label="Distortion Scale"
+        )
 
 
 def run_b6_adp(args, device):
-    run_generic_cut_defense(
-        args, device,
-        defense_name="b6",
-        defense_builder=lambda: ADPAutoEncoderDefense(in_channels=64, bottleneck_channels=args.bottleneck_channels),
-        out_dir_name="AbReTAPE_Step3_B6",
-        param_key="bottleneck_channels",
-        param_val=args.bottleneck_channels,
-        x_label="Bottleneck Channels"
-    )
+    if args.bottleneck_channels_list is not None:
+        b_list = [int(s.strip()) for s in args.bottleneck_channels_list.split(",")]
+    elif args.bottleneck_channels is not None and not args.sweep:
+        b_list = [args.bottleneck_channels]
+    else:
+        b_list = [8, 16, 32]
+
+    for b_ch in b_list:
+        run_generic_cut_defense(
+            args, device,
+            defense_name="b6",
+            defense_builder=lambda bc=b_ch: ADPAutoEncoderDefense(in_channels=64, bottleneck_channels=bc),
+            out_dir_name="AbReTAPE_Step3_B6",
+            param_key="bottleneck_channels",
+            param_val=b_ch,
+            x_label="Bottleneck Channels"
+        )
 
 
 def run_ar_tape(args, device):
-    run_generic_cut_defense(
-        args, device,
-        defense_name="ar_tape",
-        defense_builder=lambda: AR_TAPE(in_channels=64, subspace_dim=args.subspace_dim),
-        out_dir_name="AbReTAPE_Proposed",
-        param_key="subspace_dim",
-        param_val=args.subspace_dim,
-        x_label="Subspace Dim (k)"
-    )
+    if args.subspace_dims is not None:
+        dims = [int(s.strip()) for s in args.subspace_dims.split(",")]
+    elif args.subspace_dim is not None and not args.sweep:
+        dims = [args.subspace_dim]
+    else:
+        dims = [16, 32, 48]
+
+    for k in dims:
+        run_generic_cut_defense(
+            args, device,
+            defense_name="ar_tape",
+            defense_builder=lambda dim=k: AR_TAPE(in_channels=64, subspace_dim=dim),
+            out_dir_name="AbReTAPE_Proposed",
+            param_key="subspace_dim",
+            param_val=k,
+            x_label="Subspace Dim (k)"
+        )
 
 
 def main():
