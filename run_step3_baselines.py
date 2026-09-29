@@ -23,7 +23,16 @@ if PROJECT_ROOT not in sys.path:
 
 from src.models import ClientModel, ServerModel
 from src.data import get_cifar10, CIFAR10_MEAN, CIFAR10_STD
-from src.defenses import GaussianNoise, DPSGDClientOptimizer, compute_dp_epsilon, NoPeekDefense
+from src.defenses import (
+    GaussianNoise,
+    DPSGDClientOptimizer,
+    compute_dp_epsilon,
+    NoPeekDefense,
+    BlockScrambleDefense,
+    DeformableOperatorDefense,
+    ADPAutoEncoderDefense,
+    AR_TAPE
+)
 from src.training import train_sl_epoch, evaluate_sl, EarlyStopping
 from src.attacks import Decoder, train_inversion_epoch, evaluate_inversion
 from src.metrics import get_lpips_fn, distance_correlation
@@ -31,9 +40,9 @@ from src.utils import plot_tradeoff_curves, save_reconstruction_grid
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Bước 3: Đánh giá Baseline B1 (Gaussian Noise), B2 (DP-SGD), B3 (NoPeek)")
-    parser.add_argument("--defense", choices=["b1", "b2", "b3", "all"], default="b3",
-                        help="Lựa chọn baseline: 'b1' (Gaussian Noise), 'b2' (DP-SGD), 'b3' (NoPeek dCor), hoặc 'all'")
+    parser = argparse.ArgumentParser(description="Bước 3: Đánh giá Baseline B1-B6 và AR-TAPE")
+    parser.add_argument("--defense", choices=["b1", "b2", "b3", "b4", "b5", "b6", "ar_tape", "all"], default="b3",
+                        help="Lựa chọn: 'b1', 'b2', 'b3', 'b4', 'b5', 'b6', 'ar_tape', hoặc 'all'")
     parser.add_argument("--epochs", type=int, default=10, help="Số epochs huấn luyện SL (mặc định: 10)")
     parser.add_argument("--attack-epochs", type=int, default=10, help="Số epochs huấn luyện Decoder tấn công (mặc định: 10)")
     parser.add_argument("--decoder-epochs", type=int, default=None, help="Alias cho --attack-epochs")
@@ -61,6 +70,18 @@ def parse_args():
     # B3 params
     parser.add_argument("--alpha", type=float, default=None, help="Hệ số phạt dCor cho NoPeek (B3)")
     parser.add_argument("--alphas", type=str, default=None, help="Danh sách alpha ngăn cách bởi dấu phẩy (vd: 0.1,0.5,1.0)")
+
+    # B4 params
+    parser.add_argument("--block-size", type=int, default=4, help="Kích thước block cho Block Scramble (B4, mặc định: 4)")
+
+    # B5 params
+    parser.add_argument("--distortion-scale", type=float, default=0.2, help="Hệ số méo dạng cho Deformable (B5, mặc định: 0.2)")
+
+    # B6 params
+    parser.add_argument("--bottleneck-channels", type=int, default=16, help="Số kênh bottleneck cho ADP-AE (B6, mặc định: 16)")
+
+    # AR-TAPE params
+    parser.add_argument("--subspace-dim", type=int, default=32, help="Số chiều không gian con k cho AR-TAPE (mặc định: 32)")
 
     parser.add_argument("--data-dir", type=str, default=os.path.join(PROJECT_ROOT, "data"), help="Thư mục dữ liệu")
     parser.add_argument("--output-dir", type=str, default=os.path.join(PROJECT_ROOT, "output"), help="Thư mục lưu outputs")
@@ -705,6 +726,245 @@ def run_b3_nopeek(args, device):
     print(f"\n[DONE] Hoàn thành Baseline B3 (NoPeek)! Kết quả lưu tại: {res_file}")
 
 
+def run_generic_cut_defense(args, device, defense_name, defense_builder, out_dir_name, param_key, param_val, x_label):
+    out_dir = resolve_output_dir(args.output_dir, out_dir_name)
+    os.makedirs(out_dir, exist_ok=True)
+
+    attack_epochs = args.decoder_epochs if args.decoder_epochs is not None else args.attack_epochs
+    res_file = os.path.join(out_dir, f"results_{defense_name}.json")
+    results = []
+    if args.resume and os.path.isfile(res_file):
+        try:
+            with open(res_file, "r", encoding="utf-8") as f:
+                results = json.load(f)
+        except Exception:
+            results = []
+
+    print("\n" + "=" * 70)
+    print(f"BƯỚC 3 — {defense_name.upper()}: {x_label} = {param_val}")
+    print(f"SL Epochs: {args.epochs} | Attack Epochs: {attack_epochs} | LR: {args.lr}")
+    print(f"Thư mục lưu kết quả: {out_dir}")
+    print("=" * 70)
+
+    trainloader, testloader = get_cifar10(args.data_dir, batch_size=args.batch_size, num_workers=args.num_workers)
+    lpips_fn = get_lpips_fn(device=device)
+
+    client = ClientModel().to(device)
+    server = ServerModel().to(device)
+    defense = defense_builder().to(device)
+
+    def_params = list(defense.parameters())
+    c_params = list(client.parameters()) + def_params
+    opt_c = torch.optim.SGD(c_params, lr=args.lr, momentum=0.9, weight_decay=5e-4)
+    opt_s = torch.optim.SGD(server.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+    sched_c = CosineAnnealingLR(opt_c, T_max=args.epochs)
+    sched_s = CosineAnnealingLR(opt_s, T_max=args.epochs)
+    criterion = nn.CrossEntropyLoss()
+    early_stopping_sl = EarlyStopping(patience=args.patience, mode="max")
+
+    ckpt_last = os.path.join(out_dir, f"{defense_name}_last.pt")
+    ckpt_best = os.path.join(out_dir, f"{defense_name}_best.pt")
+    start_epoch = 1
+    best_sl_acc = 0.0
+
+    if args.resume and os.path.isfile(ckpt_last):
+        ckpt = torch.load(ckpt_last, map_location=device)
+        client.load_state_dict(ckpt["client"])
+        server.load_state_dict(ckpt["server"])
+        if "defense" in ckpt and def_params:
+            defense.load_state_dict(ckpt["defense"])
+        opt_c.load_state_dict(ckpt["opt_c"])
+        opt_s.load_state_dict(ckpt["opt_s"])
+        sched_c.load_state_dict(ckpt["sched_c"])
+        sched_s.load_state_dict(ckpt["sched_s"])
+        start_epoch = ckpt["epoch"] + 1
+        best_sl_acc = ckpt.get("best_sl_acc", 0.0)
+        early_stopping_sl.best_score = best_sl_acc
+        print(f"[RESUME] Đã khôi phục {defense_name} từ epoch {start_epoch-1} (Best Acc: {best_sl_acc*100:.2f}%)")
+
+    if start_epoch <= args.epochs:
+        for epoch in range(start_epoch, args.epochs + 1):
+            train_loss, train_acc = train_sl_epoch(client, server, trainloader, opt_c, opt_s, criterion, device, defense=defense)
+            sched_c.step()
+            sched_s.step()
+
+            if epoch % args.eval_freq == 0 or epoch == args.epochs:
+                _, t_acc = evaluate_sl(client, server, testloader, device, defense=defense, criterion=criterion)
+                if t_acc > best_sl_acc:
+                    best_sl_acc = t_acc
+                    save_dict = {"client": client.state_dict(), "server": server.state_dict(), "best_sl_acc": best_sl_acc, "epoch": epoch}
+                    if def_params:
+                        save_dict["defense"] = defense.state_dict()
+                    torch.save(save_dict, ckpt_best)
+                print(f"[{defense_name.upper()}] Epoch {epoch:2d}/{args.epochs} | Loss: {train_loss:.4f} | Train Acc: {train_acc*100:.2f}% | Test Acc: {t_acc*100:.2f}% (Best: {best_sl_acc*100:.2f}%)", flush=True)
+                save_last = {
+                    "epoch": epoch,
+                    "client": client.state_dict(),
+                    "server": server.state_dict(),
+                    "opt_c": opt_c.state_dict(),
+                    "opt_s": opt_s.state_dict(),
+                    "sched_c": sched_c.state_dict(),
+                    "sched_s": sched_s.state_dict(),
+                    "best_sl_acc": best_sl_acc,
+                }
+                if def_params:
+                    save_last["defense"] = defense.state_dict()
+                torch.save(save_last, ckpt_last)
+                if early_stopping_sl.step(t_acc, epoch=epoch):
+                    print(f"\n[EARLY STOPPING] Dừng sớm {defense_name} tại epoch {epoch} do test acc không cải thiện!")
+                    break
+            else:
+                print(f"[{defense_name.upper()}] Epoch {epoch:2d}/{args.epochs} | Loss: {train_loss:.4f} | Train Acc: {train_acc*100:.2f}%", flush=True)
+
+    if os.path.isfile(ckpt_best):
+        best_dict = torch.load(ckpt_best, map_location=device)
+        client.load_state_dict(best_dict["client"])
+        server.load_state_dict(best_dict["server"])
+        if "defense" in best_dict and def_params:
+            defense.load_state_dict(best_dict["defense"])
+
+    _, test_acc = evaluate_sl(client, server, testloader, device, defense=defense, criterion=criterion)
+    print(f"[{defense_name.upper()} Result] Final Test Accuracy: {test_acc*100:.2f}%")
+
+    # Đo dCor
+    client.eval()
+    if defense is not None:
+        defense.eval()
+    dcor_sum = 0.0
+    n_eval = 0
+    with torch.no_grad():
+        for x_t, _ in testloader:
+            x_t = x_t.to(device)
+            z_t = defense(client(x_t))
+            dcor_sum += distance_correlation(x_t, z_t).item()
+            n_eval += 1
+            if n_eval >= 15:
+                break
+    avg_dcor = dcor_sum / max(n_eval, 1)
+
+    # Train Inversion Decoder
+    print(f"[Attack] Đang huấn luyện Decoder tấn công đối phó với {defense_name.upper()}...")
+    decoder = Decoder().to(device)
+    opt_d = torch.optim.Adam(decoder.parameters(), lr=args.decoder_lr, weight_decay=1e-5)
+    sched_d = CosineAnnealingLR(opt_d, T_max=attack_epochs)
+    crit_d = nn.MSELoss()
+    early_stopping_d = EarlyStopping(patience=args.patience, mode="max")
+
+    ckpt_dec_last = os.path.join(out_dir, f"{defense_name}_dec_last.pt")
+    ckpt_dec_best = os.path.join(out_dir, f"{defense_name}_dec_best.pt")
+    start_dec_ep = 1
+    best_attack_psnr = 0.0
+
+    if args.resume and os.path.isfile(ckpt_dec_last):
+        dec_ckpt = torch.load(ckpt_dec_last, map_location=device)
+        decoder.load_state_dict(dec_ckpt["decoder"])
+        opt_d.load_state_dict(dec_ckpt["opt_d"])
+        sched_d.load_state_dict(dec_ckpt["sched_d"])
+        start_dec_ep = dec_ckpt["epoch"] + 1
+        best_attack_psnr = dec_ckpt.get("best_psnr", 0.0)
+        early_stopping_d.best_score = best_attack_psnr
+        print(f"[RESUME] Đã khôi phục Decoder {defense_name} từ epoch {start_dec_ep-1} (Best PSNR: {best_attack_psnr:.2f} dB)")
+
+    if start_dec_ep <= attack_epochs:
+        for ep in range(start_dec_ep, attack_epochs + 1):
+            train_inversion_epoch(client, decoder, trainloader, opt_d, crit_d, device, defense=defense)
+            sched_d.step()
+            if ep % args.eval_freq == 0 or ep == attack_epochs:
+                _, cur_psnr, _, _ = evaluate_inversion(
+                    client, decoder, testloader, device, CIFAR10_MEAN, CIFAR10_STD, defense=defense, criterion=crit_d, lpips_fn=None
+                )
+                if cur_psnr is not None and cur_psnr > best_attack_psnr:
+                    best_attack_psnr = cur_psnr
+                    torch.save({"decoder": decoder.state_dict(), "best_psnr": best_attack_psnr, "epoch": ep}, ckpt_dec_best)
+                print(f"[Attack {defense_name.upper()}] Epoch {ep:2d}/{attack_epochs} | PSNR: {cur_psnr:.2f} dB (Best: {best_attack_psnr:.2f} dB)", flush=True)
+                torch.save({
+                    "epoch": ep,
+                    "decoder": decoder.state_dict(),
+                    "opt_d": opt_d.state_dict(),
+                    "sched_d": sched_d.state_dict(),
+                    "best_psnr": best_attack_psnr,
+                }, ckpt_dec_last)
+                if cur_psnr is not None and early_stopping_d.step(cur_psnr, epoch=ep):
+                    print(f"[EARLY STOPPING] Dừng sớm Decoder tại epoch {ep} do PSNR không cải thiện!")
+                    break
+
+    if os.path.isfile(ckpt_dec_best):
+        best_dec_dict = torch.load(ckpt_dec_best, map_location=device)
+        decoder.load_state_dict(best_dec_dict["decoder"])
+
+    mse, psnr, ssim, lpips_val = evaluate_inversion(
+        client, decoder, testloader, device, CIFAR10_MEAN, CIFAR10_STD, defense=defense, criterion=crit_d, lpips_fn=lpips_fn
+    )
+    print(f"[Security {defense_name.upper()}] PSNR: {psnr:.2f} dB | SSIM: {ssim:.4f} | LPIPS: {lpips_val if lpips_val else 'N/A'} | dCor: {avg_dcor:.4f}")
+
+    # Lưu ảnh tái tạo
+    recons_path = os.path.join(out_dir, f"{defense_name}_reconstruction_comparison.png")
+    save_reconstruction_grid(client, decoder, testloader, device, CIFAR10_MEAN, CIFAR10_STD, defense=defense, save_path=recons_path, num_images=8)
+
+    cur_entry = {
+        param_key: param_val,
+        "dcor": avg_dcor,
+        "test_acc": test_acc,
+        "mse": mse,
+        "psnr": psnr,
+        "ssim": ssim,
+        "lpips": lpips_val
+    }
+    results = [r for r in results if r.get(param_key) != param_val]
+    results.append(cur_entry)
+    save_defense_results(out_dir, defense_name, results, x_key=param_key, x_label=x_label)
+    print(f"[DONE] Hoàn thành {defense_name.upper()}! Kết quả lưu tại: {res_file}")
+    return cur_entry
+
+
+def run_b4_block_scramble(args, device):
+    run_generic_cut_defense(
+        args, device,
+        defense_name="b4",
+        defense_builder=lambda: BlockScrambleDefense(block_size=args.block_size),
+        out_dir_name="AbReTAPE_Step3_B4",
+        param_key="block_size",
+        param_val=args.block_size,
+        x_label="Block Size"
+    )
+
+
+def run_b5_deformable(args, device):
+    run_generic_cut_defense(
+        args, device,
+        defense_name="b5",
+        defense_builder=lambda: DeformableOperatorDefense(channels=64, distortion_scale=args.distortion_scale),
+        out_dir_name="AbReTAPE_Step3_B5",
+        param_key="distortion_scale",
+        param_val=args.distortion_scale,
+        x_label="Distortion Scale"
+    )
+
+
+def run_b6_adp(args, device):
+    run_generic_cut_defense(
+        args, device,
+        defense_name="b6",
+        defense_builder=lambda: ADPAutoEncoderDefense(in_channels=64, bottleneck_channels=args.bottleneck_channels),
+        out_dir_name="AbReTAPE_Step3_B6",
+        param_key="bottleneck_channels",
+        param_val=args.bottleneck_channels,
+        x_label="Bottleneck Channels"
+    )
+
+
+def run_ar_tape(args, device):
+    run_generic_cut_defense(
+        args, device,
+        defense_name="ar_tape",
+        defense_builder=lambda: AR_TAPE(in_channels=64, subspace_dim=args.subspace_dim),
+        out_dir_name="AbReTAPE_Proposed",
+        param_key="subspace_dim",
+        param_val=args.subspace_dim,
+        x_label="Subspace Dim (k)"
+    )
+
+
 def main():
     args = parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -714,6 +974,14 @@ def main():
         run_b2_dpsgd(args, device)
     if args.defense in ["b3", "all"]:
         run_b3_nopeek(args, device)
+    if args.defense in ["b4", "all"]:
+        run_b4_block_scramble(args, device)
+    if args.defense in ["b5", "all"]:
+        run_b5_deformable(args, device)
+    if args.defense in ["b6", "all"]:
+        run_b6_adp(args, device)
+    if args.defense in ["ar_tape", "all"]:
+        run_ar_tape(args, device)
 
 
 if __name__ == "__main__":
