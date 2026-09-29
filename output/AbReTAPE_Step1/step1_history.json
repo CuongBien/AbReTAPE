@@ -1,0 +1,272 @@
+[
+  {
+    "epoch": 1,
+    "train_mse": 0.13133503007411956,
+    "test_mse": 0.018117982071638106,
+    "test_psnr": 32.09656053024295,
+    "test_ssim": 0.9752435225486755,
+    "test_lpips": 0.003591964005306363,
+    "epoch_time": 19.534374713897705
+  },
+  {
+    "epoch": 2,
+    "train_mse": 0.014585188612043857,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 9.751774787902832
+  },
+  {
+    "epoch": 3,
+    "train_mse": 0.0101008514803648,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.154057741165161
+  },
+  {
+    "epoch": 4,
+    "train_mse": 0.008382113711833955,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.379801034927368
+  },
+  {
+    "epoch": 5,
+    "train_mse": 0.007279802740216255,
+    "test_mse": 0.00847682536765933,
+    "test_psnr": 35.29065833775002,
+    "test_ssim": 0.9884877809524536,
+    "test_lpips": 0.0013415782667696476,
+    "epoch_time": 18.50353169441223
+  },
+  {
+    "epoch": 6,
+    "train_mse": 0.006640880322754383,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.062382459640503
+  },
+  {
+    "epoch": 7,
+    "train_mse": 0.0057085703666508196,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.113354921340942
+  },
+  {
+    "epoch": 8,
+    "train_mse": 0.005334909515827894,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.08840537071228
+  },
+  {
+    "epoch": 9,
+    "train_mse": 0.004895737465620041,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.21812629699707
+  },
+  {
+    "epoch": 10,
+    "train_mse": 0.0048849061861634254,
+    "test_mse": 0.0037519021451473235,
+    "test_psnr": 38.97128944420202,
+    "test_ssim": 0.9931941747665405,
+    "test_lpips": 0.0006883482063189148,
+    "epoch_time": 19.270689725875854
+  },
+  {
+    "epoch": 11,
+    "train_mse": 0.004517004274502396,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.459993600845337
+  },
+  {
+    "epoch": 12,
+    "train_mse": 0.004192620416805148,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.197957992553711
+  },
+  {
+    "epoch": 13,
+    "train_mse": 0.004012262765616179,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.382770776748657
+  },
+  {
+    "epoch": 14,
+    "train_mse": 0.003840375245064497,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.165667057037354
+  },
+  {
+    "epoch": 15,
+    "train_mse": 0.0038786838582158087,
+    "test_mse": 0.0035891130529344083,
+    "test_psnr": 39.25270786647185,
+    "test_ssim": 0.994244721031189,
+    "test_lpips": 0.0006000084321014583,
+    "epoch_time": 18.771767377853394
+  },
+  {
+    "epoch": 16,
+    "train_mse": 0.003574408383369446,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.154934167861938
+  },
+  {
+    "epoch": 17,
+    "train_mse": 0.0033838325101882218,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.08578085899353
+  },
+  {
+    "epoch": 18,
+    "train_mse": 0.003458512006253004,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.723841905593872
+  },
+  {
+    "epoch": 19,
+    "train_mse": 0.0031807039825618266,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.500993251800537
+  },
+  {
+    "epoch": 20,
+    "train_mse": 0.0032659716230630876,
+    "test_mse": 0.0037696862351149323,
+    "test_psnr": 38.867056426200314,
+    "test_ssim": 0.994280523109436,
+    "test_lpips": 0.0004917922725901008,
+    "epoch_time": 19.29868793487549
+  },
+  {
+    "epoch": 21,
+    "train_mse": 0.002991069076359272,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.361445903778076
+  },
+  {
+    "epoch": 22,
+    "train_mse": 0.0030509912887215613,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.581953525543213
+  },
+  {
+    "epoch": 23,
+    "train_mse": 0.0028950856576114895,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.066726446151733
+  },
+  {
+    "epoch": 24,
+    "train_mse": 0.0027484898275882005,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.059827089309692
+  },
+  {
+    "epoch": 25,
+    "train_mse": 0.002705251501426101,
+    "test_mse": 0.0024292236771434545,
+    "test_psnr": 40.93258860226974,
+    "test_ssim": 0.9954900702476501,
+    "test_lpips": 0.0003809606596827507,
+    "epoch_time": 18.807042598724365
+  },
+  {
+    "epoch": 26,
+    "train_mse": 0.0027296780440211298,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.244169473648071
+  },
+  {
+    "epoch": 27,
+    "train_mse": 0.002605413892492652,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.140400409698486
+  },
+  {
+    "epoch": 28,
+    "train_mse": 0.0025642992082983256,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.1451895236969
+  },
+  {
+    "epoch": 29,
+    "train_mse": 0.002536339323669672,
+    "test_mse": null,
+    "test_psnr": null,
+    "test_ssim": null,
+    "test_lpips": null,
+    "epoch_time": 10.760565042495728
+  },
+  {
+    "epoch": 30,
+    "train_mse": 0.002531149231493473,
+    "test_mse": 0.004174278083443642,
+    "test_psnr": 38.30999025653814,
+    "test_ssim": 0.9952589102745056,
+    "test_lpips": 0.0006571185979992151,
+    "epoch_time": 19.16990852355957
+  }
+]

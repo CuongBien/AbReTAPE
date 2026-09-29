@@ -37,10 +37,10 @@ _legacy_steps/
 *.zip
 
 # Outputs & Model checkpoints
-output/
-*.pt
-*.pth
-checkpoints/
+# output/
+# *.pt
+# *.pth
+# checkpoints/
 
 # Logs & scratch
 *.log
@@ -50,7 +50,8 @@ scratch/
 .ipynb_checkpoints/
 
 # Training outputs
-*.png
-history.json
-*history.json
-*.csv
+# *.png
+# history.json
+# *history.json
+# *.csv
+cifar-10-python.tar.1.gz
