@@ -37,10 +37,10 @@ _legacy_steps/
 *.zip
 
 # Outputs & Model checkpoints
-# output/
-# *.pt
-# *.pth
-# checkpoints/
+output/**/*.pt
+!output/AbReTAPE_Step0/b0_vanilla.pt
+!output/AbReTAPE_Step1/best_b1_decoder.pt
+checkpoints/
 
 # Logs & scratch
 *.log

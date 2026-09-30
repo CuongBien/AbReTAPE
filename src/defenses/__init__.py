@@ -5,7 +5,7 @@ from .dpsgd import DPSGDClientOptimizer, compute_dp_epsilon, compute_rdp_subsamp
 from .nopeek import NoPeekDefense
 from .block_scramble import BlockScrambleDefense
 from .deformable import DeformableOperatorDefense
-from .adp_ae import ADPAutoEncoderDefense
+from .adp_ae import ADPAutoEncoderDefense, PerturbAE
 from .ar_tape import AR_TAPE, SubspaceProjector
 
 __all__ = [
@@ -20,6 +20,7 @@ __all__ = [
     "BlockScrambleDefense",
     "DeformableOperatorDefense",
     "ADPAutoEncoderDefense",
+    "PerturbAE",
     "AR_TAPE",
     "SubspaceProjector",
 ]
