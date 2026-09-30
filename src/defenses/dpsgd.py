@@ -24,11 +24,13 @@ def compute_rdp_subsampled_gaussian(q, sigma, alpha):
         return math.log(1.0 + term2) / (alpha - 1.0)
 
 
-def compute_dp_epsilon(epochs, batch_size=128, dataset_size=50000, noise_multiplier=1.0, delta=1e-5):
+def compute_dp_epsilon(epochs, batch_size=128, dataset_size=50000, noise_multiplier=1.0, delta=1e-5, sigma=None):
     """
     Tính ngân sách bảo mật (epsilon, delta)-DP tích lũy sau toàn bộ các epochs huấn luyện.
     Dùng phương pháp tối ưu hóa bậc alpha trên RDP.
     """
+    if sigma is not None:
+        noise_multiplier = float(sigma)
     if noise_multiplier <= 0:
         return float("inf")
     
@@ -57,17 +59,57 @@ class DPSGDClientOptimizer:
     3. Thêm nhiễu Gauss N(0, sigma_DP^2 * C^2 * I).
     4. Cập nhật trọng số Client qua optimizer bên dưới.
     """
-    def __init__(self, client, optimizer, max_grad_norm=1.0, noise_multiplier=1.0, micro_batch_size=None):
-        self.client = client
-        self.optimizer = optimizer
+    def __init__(self, client, optimizer=None, max_grad_norm=1.0, noise_multiplier=1.0, micro_batch_size=None,
+                 lr=0.01, sigma_dp=None, clip_norm=None, **kwargs):
+        if sigma_dp is not None:
+            noise_multiplier = float(sigma_dp)
+        if clip_norm is not None:
+            max_grad_norm = float(clip_norm)
+
         self.max_grad_norm = float(max_grad_norm)
         self.noise_multiplier = float(noise_multiplier)
         self.micro_batch_size = micro_batch_size
 
+        if isinstance(client, nn.Module):
+            self.client = client
+            self.params = [p for p in client.parameters() if p.requires_grad]
+            if optimizer is None:
+                self.optimizer = torch.optim.SGD(self.params, lr=lr)
+            else:
+                self.optimizer = optimizer
+        elif hasattr(client, "__iter__"):
+            self.client = None
+            self.params = list(client)
+            if isinstance(optimizer, torch.optim.Optimizer):
+                self.optimizer = optimizer
+            elif isinstance(optimizer, (int, float)):
+                self.optimizer = torch.optim.SGD(self.params, lr=optimizer)
+            else:
+                self.optimizer = torch.optim.SGD(self.params, lr=lr)
+        else:
+            self.client = client
+            self.optimizer = optimizer
+            self.params = [p for p in client.parameters() if p.requires_grad] if hasattr(client, "parameters") else []
+
     def zero_grad(self):
         self.optimizer.zero_grad()
 
-    def step(self, x, grad_z):
+    def step(self, x=None, grad_z=None):
+        if x is None or grad_z is None or self.client is None:
+            # Chế độ kiểm thử / tiêu chuẩn sau khi loss.backward() đã chạy
+            total_norm = torch.nn.utils.clip_grad_norm_(
+                self.params, 
+                max_norm=self.max_grad_norm
+            )
+            total_norm_val = float(total_norm.item() if isinstance(total_norm, torch.Tensor) else total_norm)
+            if self.noise_multiplier > 0.0:
+                for p in self.params:
+                    if p.grad is not None:
+                        noise = torch.randn_like(p.grad) * (self.noise_multiplier * self.max_grad_norm)
+                        p.grad.add_(noise)
+            self.optimizer.step()
+            return {"grad_norm": total_norm_val, "noise_norm": 0.0}
+
         batch_size = x.size(0)
         use_micro_batch = (
             self.micro_batch_size is not None 

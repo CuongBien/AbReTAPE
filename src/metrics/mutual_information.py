@@ -12,17 +12,15 @@ class MutualInformationEstimator(nn.Module):
     hoặc InfoNCE lower-bound:
     I(X; Z') >= E_p [T(x, z)] - log E_q [exp(T(x, z_rand))]
     """
-    def __init__(self, x_dim=3*32*32, z_dim=64*32*32, hidden_dim=256):
+    def __init__(self, x_dim=None, z_dim=None, hidden_dim=256, **kwargs):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(min(x_dim, 512) + min(z_dim, 512), hidden_dim),
+            nn.LazyLinear(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 1)
         )
-        self.proj_x = nn.AdaptiveAvgPool2d((4, 4)) if x_dim > 512 else nn.Identity()
-        self.proj_z = nn.AdaptiveAvgPool2d((4, 4)) if z_dim > 512 else nn.Identity()
 
     def forward(self, x, z):
         # Thu gọn chiều không gian để ước lượng ổn định
