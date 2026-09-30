@@ -29,11 +29,11 @@
 | **B5** | Deformable Operator | $distortion = 0.1$ | 94.39% | -0.32% | 26.12 | 0.8945 | 0.0180 | 0.6472 | ❌ Biến dạng nhẹ, Decoder đảo ngược dễ |
 | **B5** | Deformable Operator | $distortion = 0.2$ | 93.66% | -1.05% | 22.83 | 0.7759 | 0.0534 | 0.6163 | ❌ Tái tạo được hình dáng đại thể |
 | **B5** | Deformable Operator | $distortion = 0.3$ | 93.22% | -1.49% | 20.92 | 0.6734 | 0.0708 | 0.5774 | ⚠️ Méo hình nhưng ranh giới đối tượng còn |
-| **B6 (P1)** | **ADP-AE (Inference Only)** | $\alpha = 0.05$ | 94.37% | -0.28% | 15.42 | 0.7757 | 0.0488 | — | 🎭 **Ảo giác phòng thủ** (Phá Decoder cũ) |
+| **B6 (P1)** | **ADP-AE (Inference Only)** | $\alpha = 0.05$ | 94.37% | -0.28% | 15.42 | 0.7757 | 0.0488 | **0.7569** | 🎭 **Ảo giác phòng thủ** (Phá Decoder cũ, dCor vẫn cao) |
 | **B6 (P2/3)** | **ADP-AE (SL Retraining)** | $\alpha = 0.05$ | 93.71% | -0.94% | **40.85** | **0.9952** | **0.0004** | 0.7616 | 💥 **Sụp đổ hoàn toàn**: Privacy = 0 |
-| **B6 (P1)** | **ADP-AE (Inference Only)** | $\alpha = 0.1$ | 93.69% | -0.96% | 10.27 | 0.7129 | 0.1220 | — | 🎭 **Ảo giác phòng thủ** (PSNR giảm 74.7%) |
+| **B6 (P1)** | **ADP-AE (Inference Only)** | $\alpha = 0.1$ | 93.69% | -0.96% | 10.27 | 0.7129 | 0.1220 | **0.7200** | 🎭 **Ảo giác phòng thủ** (PSNR giảm 74.7%, dCor vẫn cao) |
 | **B6 (P2/3)** | **ADP-AE (SL Retraining)** | $\alpha = 0.1$ | 94.09% | -0.56% | **44.02** | **0.9976** | **0.0001** | 0.7181 | 💥 **Sụp đổ hoàn toàn**: PSNR > B0 gốc! |
-| **B6 (P1)** | **ADP-AE (Inference Only)** | $\alpha = 0.2$ | 92.51% | -2.14% | 6.36 | 0.3700 | 0.3335 | — | 🎭 **Ảo giác phòng thủ** (PSNR giảm 84.3%) |
+| **B6 (P1)** | **ADP-AE (Inference Only)** | $\alpha = 0.2$ | 92.51% | -2.14% | 6.36 | 0.3700 | 0.3335 | **0.7264** | 🎭 **Ảo giác phòng thủ** (PSNR giảm 84.3%, dCor vẫn cao) |
 | **B6 (P2/3)** | **ADP-AE (SL Retraining)** | $\alpha = 0.2$ | 94.13% | -0.52% | **43.85** | **0.9976** | **0.0001** | 0.7381 | 💥 **Sụp đổ hoàn toàn**: Decoder thích ứng |
 
 *Ghi chú:*

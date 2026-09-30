@@ -176,7 +176,7 @@
     "psnr": 15.41518899616967,
     "ssim": 0.7757193583488464,
     "lpips": 0.048797096729278566,
-    "dcor": null
+    "dcor": 0.7568754355112711
   },
   "B6_ADP_alpha_0.05_Phase2": {
     "method": "B6: ADP-AE (Phase 2/3: Adaptive Inversion)",
@@ -194,7 +194,7 @@
     "psnr": 10.265611413880464,
     "ssim": 0.7128810409545898,
     "lpips": 0.12204942200183869,
-    "dcor": null
+    "dcor": 0.7200433611869812
   },
   "B6_ADP_alpha_0.1_Phase2": {
     "method": "B6: ADP-AE (Phase 2/3: Adaptive Inversion)",
@@ -212,7 +212,7 @@
     "psnr": 6.36008955727053,
     "ssim": 0.3700478699684143,
     "lpips": 0.33352614250183105,
-    "dcor": null
+    "dcor": 0.7263645529747009
   },
   "B6_ADP_alpha_0.2_Phase2": {
     "method": "B6: ADP-AE (Phase 2/3: Adaptive Inversion)",

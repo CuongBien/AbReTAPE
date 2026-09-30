@@ -14,7 +14,8 @@
     "ssim": 0.3700478699684143,
     "lpips": 0.33352614250183105,
     "utility_drop_percent": 2.1399999999999975,
-    "psnr_reduction_percent": 84.31312299035103
+    "psnr_reduction_percent": 84.31312299035103,
+    "dcor": 0.7263645529747009
   },
   "phase2_absorption": {
     "test_acc": 0.9413,

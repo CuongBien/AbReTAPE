@@ -397,6 +397,21 @@ def main():
     p1_acc = evaluate_sl_with_ae(client_b0, server_b0, ae, testloader, device)
     p1_mse, p1_psnr, p1_ssim, p1_lpips = evaluate_inversion_with_ae(client_b0, decoder_b1, ae, testloader, device, lpips_fn=lpips_fn)
     
+    # Đo dCor ở Phase 1
+    client_b0.eval()
+    ae.eval()
+    p1_dcor_sum, p1_n_eval = 0.0, 0
+    with torch.no_grad():
+        for x_t, _ in testloader:
+            x_t = x_t.to(device)
+            z_b0_t = client_b0(x_t)
+            z_p1_t = z_b0_t + ae(z_b0_t)
+            p1_dcor_sum += distance_correlation(x_t, z_p1_t).item()
+            p1_n_eval += 1
+            if p1_n_eval >= 15:
+                break
+    p1_dcor = p1_dcor_sum / max(p1_n_eval, 1)
+
     p1_grid_path = os.path.join(args.output_dir, f"b6_phase1_reconstruction_alpha_{args.alpha}.png")
     class AEWrapper(nn.Module):
         def __init__(self, m):
@@ -410,7 +425,7 @@ def main():
     print(f"[Phase 1 Kết quả - ADP Inference]")
     print(f"Task Accuracy: {p1_acc*100:.2f}% (Drop: {(b0_acc - p1_acc)*100:.2f}% | Kỳ vọng: ~4%)")
     print(f"Reconstruction PSNR: {p1_psnr:.2f} dB (Drop: {b0_psnr - p1_psnr:.2f} dB | Giảm: {((b0_psnr - p1_psnr)/b0_psnr)*100:.1f}%)")
-    print(f"Reconstruction SSIM: {p1_ssim:.4f} (Drop: {b0_ssim - p1_ssim:.4f})")
+    print(f"Reconstruction SSIM: {p1_ssim:.4f} (Drop: {b0_ssim - p1_ssim:.4f}) | dCor(X, Z'): {p1_dcor:.4f}")
     print(f"-> Kết luận Phase 1: ADP hoạt động đúng như công bố trong inference (phá decoder cũ mà giữ accuracy).")
     print("-" * 70)
 
@@ -503,6 +518,7 @@ def main():
             "psnr": p1_psnr,
             "ssim": p1_ssim,
             "lpips": p1_lpips,
+            "dcor": p1_dcor,
             "utility_drop_percent": (b0_acc - p1_acc) * 100,
             "psnr_reduction_percent": ((b0_psnr - p1_psnr) / b0_psnr) * 100
         },
