@@ -33,7 +33,7 @@ CHECKLIST = [
     {"phase": "Tier 1: Baselines", "item": "B3: NoPeek dCor Sweep (alpha=0.1, 0.5, 1.0)", "status": "DONE"},
     {"phase": "Tier 1: Baselines", "item": "B4: Block Scrambling Sweep (block_size=2, 4, 8)", "status": "DONE"},
     {"phase": "Tier 1: Baselines", "item": "B5: Deformable Operator Sweep (distortion=0.1, 0.2, 0.3)", "status": "DONE"},
-    {"phase": "Tier 1: Baselines", "item": "B6: ADP AutoEncoder Defense plug-in module", "status": "READY"},
+    {"phase": "Tier 1: Baselines", "item": "B6: ADP AutoEncoder Defense plug-in module", "status": "DONE"},
     {"phase": "Novelty N2", "item": "Cơ chế AR-TAPE (Subspace Projection P_task + Non-invertible Encoder)", "status": "READY"},
     {"phase": "Attacks", "item": "Stress-test FSHA (Feature Space Hijacking Attack) module", "status": "READY"},
     {"phase": "Metrics", "item": "Bộ đo Clinical (AUC-ROC, Sens@90%Spec, Youden's J, Macro F1)", "status": "DONE"},
