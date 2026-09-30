@@ -132,6 +132,18 @@ def parse_args():
         default=os.path.join(PROJECT_ROOT, "output", "AbReTAPE_FSHA"),
         help="Thư mục xuất kết quả FSHA (mặc định: output/AbReTAPE_FSHA)",
     )
+    parser.add_argument(
+        "--backup-dir",
+        type=str,
+        default=None,
+        help="Thư mục sao lưu tức thời lên Google Drive sau mỗi kịch bản (vd: /content/drive/MyDrive/AbReTAPE_FSHA)",
+    )
+    parser.add_argument(
+        "--auto-shutdown-colab",
+        action="store_true",
+        default=False,
+        help="Tự động ngắt kết nối và thu hồi máy ảo Google Colab (runtime.unassign) ngay khi chạy xong để tiết kiệm Compute Units",
+    )
     return parser.parse_args()
 
 
@@ -653,167 +665,211 @@ def print_summary_table(records):
     print("=" * 112 + "\n", flush=True)
 
 
+def sync_directory(src_dir, dst_dir):
+    """
+    Sao lưu tức thời toàn bộ tệp kết quả (.json, .csv, .png, .pt) sang thư mục đích (Google Drive)
+    và ép hệ điều hành flush buffer xuống đĩa (os.sync).
+    """
+    if not dst_dir or not os.path.isdir(src_dir):
+        return
+    import shutil
+    try:
+        os.makedirs(dst_dir, exist_ok=True)
+        for item in os.listdir(src_dir):
+            s_path = os.path.join(src_dir, item)
+            d_path = os.path.join(dst_dir, item)
+            if os.path.isfile(s_path):
+                shutil.copy2(s_path, d_path)
+        if hasattr(os, "sync"):
+            os.sync()
+        print(f"  [DRIVE SYNC] Đã sao lưu kết quả an toàn sang: {dst_dir}", flush=True)
+    except Exception as e:
+        print(f"  [WARN] Lỗi khi sao lưu sang {dst_dir}: {e}", flush=True)
+
+
 def main():
     args = parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     out_dir = args.output_dir
     os.makedirs(out_dir, exist_ok=True)
 
+    # Nếu có --resume và --backup-dir (Google Drive), khôi phục các file có sẵn từ Drive về out_dir trước khi chạy
+    if args.resume and args.backup_dir and os.path.isdir(args.backup_dir):
+        print(f"[DRIVE RESTORE] Đang kiểm tra và khôi phục dữ liệu từ: {args.backup_dir} -> {out_dir}")
+        sync_directory(args.backup_dir, out_dir)
+
     print("=" * 85)
     print("BƯỚC 4: TRIỂN KHAI TẤN CÔNG CHỦ ĐỘNG FSHA (PASQUINI ET AL., CCS 2021)")
     print(f"Thiết bị chạy: {device} ({torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'})")
     print(f"Không gian mục tiêu d_target: {args.target_dim} | Pha 1 Fitting: {args.fit_epochs} ep | Pha 2 Hijacking: {args.epochs} ep")
     print(f"Thư mục kết quả: {out_dir}")
+    if args.backup_dir:
+        print(f"Thư mục sao lưu Google Drive: {args.backup_dir}")
     print("=" * 85, flush=True)
 
-    # 1. Nạp tập dữ liệu chia tách Private (Client) / Public (Server)
-    priv_loader, pub_loader, test_loader = get_cifar10_fsha_splits(
-        data_dir=args.data_dir,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
-        priv_ratio=args.priv_ratio,
-        seed=42,
-    )
-    print(
-        f"[Data Split] Client D_private: {len(priv_loader.dataset)} mẫu | "
-        f"Server D_public (Auxiliary): {len(pub_loader.dataset)} mẫu | "
-        f"Test set: {len(test_loader.dataset)} mẫu",
-        flush=True,
-    )
-
-    b0_ckpt = find_default_ckpt(
-        args.b0_ckpt,
-        [
-            os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step0", "b0_vanilla.pt"),
-            os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step0", "best_b0_vanilla.pt"),
-            os.path.join(PROJECT_ROOT, "b0_vanilla.pt"),
-        ],
-    )
-    b1_dec_ckpt = find_default_ckpt(
-        args.b1_dec_ckpt,
-        [
-            os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step1", "best_b1_decoder.pt"),
-            os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step1", "b1_decoder.pt"),
-            os.path.join(PROJECT_ROOT, "best_b1_decoder.pt"),
-        ],
-    )
-
-    lpips_fn = get_lpips_fn(device=device)
-
-    # 2. PHA 1 — FITTING: Xây dựng hoặc nạp lại Khóa Giải Mã của Server (Pilot AutoEncoder)
-    pilot_ae = FSHAPilotAutoEncoder(
-        in_channels=3, latent_channels=64, target_dim=args.target_dim, hidden_dim=128
-    ).to(device)
-    pilot_server = ServerModel().to(device)
-    pilot_ckpt_path = os.path.join(out_dir, f"pilot_ae_fitted_d{args.target_dim}.pt")
-
-    if os.path.isfile(pilot_ckpt_path) and not args.refit_pilot:
-        print(f"\n[Phase 1 Fitting] Tìm thấy checkpoint Khóa Giải Mã tại: {pilot_ckpt_path}. Đang nạp...")
-        p_ckpt = torch.load(pilot_ckpt_path, map_location=device)
-        pilot_ae.load_state_dict(p_ckpt["pilot_ae"])
-        if p_ckpt.get("pilot_server") is not None:
-            pilot_server.load_state_dict(p_ckpt["pilot_server"])
-        pilot_ae.eval()
-        pilot_server.eval()
-        for p in pilot_ae.parameters():
-            p.requires_grad = False
-        for p in pilot_server.parameters():
-            p.requires_grad = False
-        print("[Phase 1 Fitting] Đã nạp xong Pilot AE & Pilot Server!", flush=True)
-    else:
-        print(f"\n[Phase 1 Fitting] Bắt đầu huấn luyện Pilot AE (d_target={args.target_dim}) trên D_public...")
-        fit_fsha_pilot(
-            pilot_ae=pilot_ae,
-            pilot_server=pilot_server,
-            pub_loader=pub_loader,
-            test_loader=test_loader,
-            epochs=args.fit_epochs,
-            lr=args.pilot_lr,
-            device=device,
-            b0_ckpt=b0_ckpt,
-            b1_dec_ckpt=b1_dec_ckpt,
-            save_path=pilot_ckpt_path,
+    try:
+        # 1. Nạp tập dữ liệu chia tách Private (Client) / Public (Server)
+        priv_loader, pub_loader, test_loader = get_cifar10_fsha_splits(
+            data_dir=args.data_dir,
+            batch_size=args.batch_size,
+            num_workers=args.num_workers,
+            priv_ratio=args.priv_ratio,
+            seed=42,
+        )
+        print(
+            f"[Data Split] Client D_private: {len(priv_loader.dataset)} mẫu | "
+            f"Server D_public (Auxiliary): {len(pub_loader.dataset)} mẫu | "
+            f"Test set: {len(test_loader.dataset)} mẫu",
+            flush=True,
         )
 
-    # 3. Xác định danh sách các Baseline cần chạy theo --milestone hoặc --defense
-    if args.milestone is not None:
-        m = args.milestone.lower()
-        if m == "m1":
-            target_defenses = ["b0"]
-        elif m == "m2":
-            target_defenses = ["b1", "b2"]
-        elif m == "m3":
-            target_defenses = ["b3"]
-        elif m == "m4":
-            target_defenses = ["b4", "b5", "b6"]
+        b0_ckpt = find_default_ckpt(
+            args.b0_ckpt,
+            [
+                os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step0", "b0_vanilla.pt"),
+                os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step0", "best_b0_vanilla.pt"),
+                os.path.join(PROJECT_ROOT, "b0_vanilla.pt"),
+            ],
+        )
+        b1_dec_ckpt = find_default_ckpt(
+            args.b1_dec_ckpt,
+            [
+                os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step1", "best_b1_decoder.pt"),
+                os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step1", "b1_decoder.pt"),
+                os.path.join(PROJECT_ROOT, "best_b1_decoder.pt"),
+            ],
+        )
+
+        lpips_fn = get_lpips_fn(device=device)
+
+        # 2. PHA 1 — FITTING: Xây dựng hoặc nạp lại Khóa Giải Mã của Server (Pilot AutoEncoder)
+        pilot_ae = FSHAPilotAutoEncoder(
+            in_channels=3, latent_channels=64, target_dim=args.target_dim, hidden_dim=128
+        ).to(device)
+        pilot_server = ServerModel().to(device)
+        pilot_ckpt_path = os.path.join(out_dir, f"pilot_ae_fitted_d{args.target_dim}.pt")
+
+        if os.path.isfile(pilot_ckpt_path) and not args.refit_pilot:
+            print(f"\n[Phase 1 Fitting] Tìm thấy checkpoint Khóa Giải Mã tại: {pilot_ckpt_path}. Đang nạp...")
+            p_ckpt = torch.load(pilot_ckpt_path, map_location=device)
+            pilot_ae.load_state_dict(p_ckpt["pilot_ae"])
+            if p_ckpt.get("pilot_server") is not None:
+                pilot_server.load_state_dict(p_ckpt["pilot_server"])
+            pilot_ae.eval()
+            pilot_server.eval()
+            for p in pilot_ae.parameters():
+                p.requires_grad = False
+            for p in pilot_server.parameters():
+                p.requires_grad = False
+            print("[Phase 1 Fitting] Đã nạp xong Pilot AE & Pilot Server!", flush=True)
         else:
-            target_defenses = ["b0", "b1", "b2", "b3", "b4", "b5", "b6"]
-    else:
-        if args.defense.lower() == "all":
-            target_defenses = ["b0", "b1", "b2", "b3", "b4", "b5", "b6"]
-        else:
-            target_defenses = [args.defense.lower()]
-
-    master_json_path = os.path.join(out_dir, "fsha_comprehensive_results.json")
-    all_records = []
-    if args.resume and os.path.isfile(master_json_path):
-        try:
-            with open(master_json_path, "r", encoding="utf-8") as f:
-                all_records = json.load(f)
-        except Exception:
-            all_records = []
-
-    completed_ids = {r.get("scenario_id") for r in all_records if "scenario_id" in r}
-
-    # 4. PHA 2 — HIJACKING: Thực thi FSHA trên từng kịch bản
-    for def_code in target_defenses:
-        scenarios = build_scenarios_for_defense(def_code, args, device)
-        def_records = [r for r in all_records if r.get("defense", "").lower() == def_code]
-
-        for sc in scenarios:
-            sc_id = sc["scenario_id"]
-            if args.resume and sc_id in completed_ids:
-                print(f"\n[RESUME] Kịch bản '{sc_id}' đã hoàn tất trước đó. Bỏ qua.")
-                continue
-
-            rec = run_single_fsha_scenario(
-                scenario_id=sc_id,
-                defense_code=sc["defense_code"],
-                method_name=sc["method_name"],
-                param_label=sc["param_label"],
-                param_key=sc["param_key"],
-                param_val=sc["param_val"],
-                defense_module=sc["defense_module"],
-                grad_scale=sc["grad_scale"],
-                args=args,
+            print(f"\n[Phase 1 Fitting] Bắt đầu huấn luyện Pilot AE (d_target={args.target_dim}) trên D_public...")
+            fit_fsha_pilot(
                 pilot_ae=pilot_ae,
                 pilot_server=pilot_server,
-                priv_loader=priv_loader,
                 pub_loader=pub_loader,
                 test_loader=test_loader,
-                lpips_fn=lpips_fn,
-                b0_ckpt=b0_ckpt,
-                out_dir=out_dir,
+                epochs=args.fit_epochs,
+                lr=args.pilot_lr,
                 device=device,
-                use_dpsgd=sc.get("use_dpsgd", False),
-                sigma_dp=sc.get("sigma_dp", 1.0),
-                init_perturb=sc.get("init_perturb", 0.02),
+                b0_ckpt=b0_ckpt,
+                b1_dec_ckpt=b1_dec_ckpt,
+                save_path=pilot_ckpt_path,
             )
-            def_records.append(rec)
-            all_records = [r for r in all_records if r.get("scenario_id") != sc_id] + [rec]
+            sync_directory(out_dir, args.backup_dir)
 
-            save_json_and_csv(out_dir, f"results_fsha_{def_code}", def_records)
-            save_json_and_csv(out_dir, "fsha_comprehensive_results", all_records)
+        # 3. Xác định danh sách các Baseline cần chạy theo --milestone hoặc --defense
+        if args.milestone is not None:
+            m = args.milestone.lower()
+            if m == "m1":
+                target_defenses = ["b0"]
+            elif m == "m2":
+                target_defenses = ["b1", "b2"]
+            elif m == "m3":
+                target_defenses = ["b3"]
+            elif m == "m4":
+                target_defenses = ["b4", "b5", "b6"]
+            else:
+                target_defenses = ["b0", "b1", "b2", "b3", "b4", "b5", "b6"]
+        else:
+            if args.defense.lower() == "all":
+                target_defenses = ["b0", "b1", "b2", "b3", "b4", "b5", "b6"]
+            else:
+                target_defenses = [args.defense.lower()]
 
-        if len(def_records) > 1:
-            p_key = scenarios[0]["param_key"]
-            tradeoff_plot = os.path.join(out_dir, f"fsha_{def_code}_tradeoff.png")
+        master_json_path = os.path.join(out_dir, "fsha_comprehensive_results.json")
+        all_records = []
+        if args.resume and os.path.isfile(master_json_path):
             try:
-                plot_tradeoff_curves(def_records, save_path=tradeoff_plot, x_key=p_key, x_label=p_key)
+                with open(master_json_path, "r", encoding="utf-8") as f:
+                    all_records = json.load(f)
             except Exception:
-                pass
+                all_records = []
 
-    print_summary_table(all_records)
+        completed_ids = {r.get("scenario_id") for r in all_records if "scenario_id" in r}
+
+        # 4. PHA 2 — HIJACKING: Thực thi FSHA trên từng kịch bản
+        for def_code in target_defenses:
+            scenarios = build_scenarios_for_defense(def_code, args, device)
+            def_records = [r for r in all_records if r.get("defense", "").lower() == def_code]
+
+            for sc in scenarios:
+                sc_id = sc["scenario_id"]
+                if args.resume and sc_id in completed_ids:
+                    print(f"\n[RESUME] Kịch bản '{sc_id}' đã hoàn tất trước đó. Bỏ qua.")
+                    continue
+
+                rec = run_single_fsha_scenario(
+                    scenario_id=sc_id,
+                    defense_code=sc["defense_code"],
+                    method_name=sc["method_name"],
+                    param_label=sc["param_label"],
+                    param_key=sc["param_key"],
+                    param_val=sc["param_val"],
+                    defense_module=sc["defense_module"],
+                    grad_scale=sc["grad_scale"],
+                    args=args,
+                    pilot_ae=pilot_ae,
+                    pilot_server=pilot_server,
+                    priv_loader=priv_loader,
+                    pub_loader=pub_loader,
+                    test_loader=test_loader,
+                    lpips_fn=lpips_fn,
+                    b0_ckpt=b0_ckpt,
+                    out_dir=out_dir,
+                    device=device,
+                    use_dpsgd=sc.get("use_dpsgd", False),
+                    sigma_dp=sc.get("sigma_dp", 1.0),
+                    init_perturb=sc.get("init_perturb", 0.15),
+                )
+                def_records.append(rec)
+                all_records = [r for r in all_records if r.get("scenario_id") != sc_id] + [rec]
+
+                save_json_and_csv(out_dir, f"results_fsha_{def_code}", def_records)
+                save_json_and_csv(out_dir, "fsha_comprehensive_results", all_records)
+                sync_directory(out_dir, args.backup_dir)
+
+            if len(def_records) > 1:
+                p_key = scenarios[0]["param_key"]
+                tradeoff_plot = os.path.join(out_dir, f"fsha_{def_code}_tradeoff.png")
+                try:
+                    plot_tradeoff_curves(def_records, save_path=tradeoff_plot, x_key=p_key, x_label=p_key)
+                except Exception:
+                    pass
+                sync_directory(out_dir, args.backup_dir)
+
+        print_summary_table(all_records)
+    finally:
+        sync_directory(out_dir, args.backup_dir)
+        if args.auto_shutdown_colab:
+            print("\n[AUTO-SHUTDOWN] Đang chờ 5 giây để đồng bộ hoàn tất Google Drive trước khi tắt Colab Runtime...", flush=True)
+            time.sleep(5)
+            try:
+                from google.colab import runtime
+                print("[AUTO-SHUTDOWN] Đang gọi runtime.unassign() để giải phóng GPU!", flush=True)
+                runtime.unassign()
+            except Exception as e:
+                print(f"[WARN] Không thể gọi google.colab.runtime.unassign(): {e}", flush=True)
 
 
 if __name__ == "__main__":
