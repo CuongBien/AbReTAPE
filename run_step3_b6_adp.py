@@ -39,7 +39,7 @@ def parse_args():
     parser.add_argument("--epochs", type=int, default=10, help="Số epochs huấn luyện Split Learning trong Phase 2 (mặc định: 10)")
     parser.add_argument("--decoder-epochs", type=int, default=10, help="Số epochs huấn luyện Decoder tấn công thích ứng (mặc định: 10)")
     parser.add_argument("--batch-size", type=int, default=128, help="Batch size (mặc định: 128)")
-    parser.add_argument("--lr", type=float, default=0.05, help="Learning rate cho Split Learning trong Phase 2 (mặc định: 0.05)")
+    parser.add_argument("--lr", type=float, default=0.01, help="Learning rate cho Split Learning trong Phase 2 (mặc định: 0.01)")
     parser.add_argument("--ae-lr", type=float, default=1e-3, help="Learning rate cho PerturbAE (mặc định: 1e-3)")
     parser.add_argument("--decoder-lr", type=float, default=1e-3, help="Learning rate cho Decoder (mặc định: 1e-3)")
     parser.add_argument("--eval-freq", type=int, default=5, help="Tần suất đánh giá (mặc định: 5)")
@@ -238,11 +238,13 @@ def train_sl_phase2(client, server, ae, trainloader, testloader, epochs, lr, pat
             # Backward Server
             opt_s.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(server.parameters(), max_norm=1.0)
             opt_s.step()
 
             # Backward Client xuyên qua AE đóng băng
             opt_c.zero_grad()
             z_p.backward(z_d.grad)
+            torch.nn.utils.clip_grad_norm_(client.parameters(), max_norm=1.0)
             opt_c.step()
 
             total_loss += loss.item() * batch_size
