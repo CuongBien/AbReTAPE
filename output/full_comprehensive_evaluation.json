@@ -108,5 +108,65 @@
     "ssim": 0.9037879983901977,
     "lpips": 0.011127856415510177,
     "dcor": 0.047897943797822036
+  },
+  "B4_block_size_2": {
+    "method": "B4: Block Scramble",
+    "config": "block_size=2",
+    "test_acc": 0.9172,
+    "mse": 0.619694854259491,
+    "psnr": 16.541235772433502,
+    "ssim": 0.29840686740875244,
+    "lpips": 0.13111104300022125,
+    "dcor": 0.7161785999933878
+  },
+  "B4_block_size_4": {
+    "method": "B4: Block Scramble",
+    "config": "block_size=4",
+    "test_acc": 0.9261,
+    "mse": 0.7636056833267212,
+    "psnr": 15.615146801176467,
+    "ssim": 0.3015154553413391,
+    "lpips": 0.12687364740371704,
+    "dcor": 0.6824238618214925
+  },
+  "B4_block_size_8": {
+    "method": "B4: Block Scramble",
+    "config": "block_size=8",
+    "test_acc": 0.9351,
+    "mse": 0.6578543529510498,
+    "psnr": 16.213490241592616,
+    "ssim": 0.4059177511692047,
+    "lpips": 0.09938534638881684,
+    "dcor": 0.5890884915987651
+  },
+  "B5_distortion_scale_0.1": {
+    "method": "B5: Deformable Operator",
+    "config": "distortion_scale=0.1",
+    "test_acc": 0.9439,
+    "mse": 0.06892559773921966,
+    "psnr": 26.121334945698973,
+    "ssim": 0.8945108619689941,
+    "lpips": 0.01802419902384281,
+    "dcor": 0.6472454190254211
+  },
+  "B5_distortion_scale_0.2": {
+    "method": "B5: Deformable Operator",
+    "config": "distortion_scale=0.2",
+    "test_acc": 0.9366,
+    "mse": 0.14482589554786682,
+    "psnr": 22.831648985969345,
+    "ssim": 0.7759415167808533,
+    "lpips": 0.05341713072657585,
+    "dcor": 0.616277794043223
+  },
+  "B5_distortion_scale_0.3": {
+    "method": "B5: Deformable Operator",
+    "config": "distortion_scale=0.3",
+    "test_acc": 0.9322,
+    "mse": 0.22361774320602418,
+    "psnr": 20.920363395865106,
+    "ssim": 0.6733829736709595,
+    "lpips": 0.07078160346746444,
+    "dcor": 0.5774272759755452
   }
 }
