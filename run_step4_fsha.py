@@ -81,8 +81,8 @@ def parse_args():
         default="b0",
         help="Lựa chọn cơ chế phòng thủ mục tiêu (mặc định: b0)",
     )
-    parser.add_argument("--fit-epochs", type=int, default=10, help="Số epochs Pha 1 Fitting cho Pilot AE (mặc định: 10)")
-    parser.add_argument("--epochs", type=int, default=15, help="Số epochs Pha 2 Hijacking (mặc định: 15)")
+    parser.add_argument("--fit-epochs", type=int, default=30, help="Số epochs Pha 1 Fitting cho Pilot AE (mặc định: 30 theo chuẩn đối xứng với Bước 1/3)")
+    parser.add_argument("--epochs", type=int, default=30, help="Số epochs Pha 2 Hijacking (mặc định: 30 để ghi nhận đầy đủ hiện tượng làm chậm của DP-SGD)")
     parser.add_argument("--batch-size", type=int, default=128, help="Batch size (mặc định: 128)")
     parser.add_argument("--target-dim", type=int, default=32, help="Chiều không gian mục tiêu d_target của Pilot AE (mặc định: 32)")
     parser.add_argument("--client-lr", type=float, default=0.005, help="Learning rate của Client trong Pha 2 (mặc định: 0.005)")
@@ -93,7 +93,7 @@ def parse_args():
     parser.add_argument("--loss-type", choices=["softplus", "wgan-gp", "bce"], default="softplus", help="Hàm mục tiêu GAN cho Discriminator")
     parser.add_argument("--task-grad-weight", type=float, default=0.0, help="Trọng số trộn gradient tác vụ (0.0 = Pure FSHA chuẩn Pasquini)")
     parser.add_argument("--client-init", choices=["b0", "scratch"], default="b0", help="Khởi tạo Client từ b0 anchor (bị nhiễu nhẹ) hoặc scratch")
-    parser.add_argument("--eval-freq", type=int, default=3, help="Tần suất đánh giá theo epoch (mặc định: 3)")
+    parser.add_argument("--eval-freq", type=int, default=5, help="Tần suất đánh giá theo epoch (mặc định: 5)")
     parser.add_argument("--priv-ratio", type=float, default=0.5, help="Tỷ lệ dữ liệu riêng tư Client / tổng tập train (mặc định: 0.5)")
     parser.add_argument("--num-workers", type=int, default=0 if sys.platform == "win32" else 2, help="Số luồng DataLoader")
     parser.add_argument("--sweep", action="store_true", default=False, help="Chạy quét toàn bộ dải siêu tham số của từng baseline")
