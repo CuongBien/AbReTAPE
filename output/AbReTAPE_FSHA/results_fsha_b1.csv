@@ -1,0 +1,4 @@
+scenario_id,defense,method,param_label,sigma,grad_scale,test_acc,delta_acc_vs_b0,mse,psnr,ssim,lpips,dcor_before,dcor_after,psnr_before,collapse_epoch_20db,collapse_epoch_25db,best_epoch,verdict,recon_image
+b1_gauss_sigma0.1_gs15.0,B1,Gaussian Noise Injection,"sigma=0.1, grad_scale=15.0",0.1,15.0,0.917,-0.0301,0.32644,19.99,0.8613,0.0629,0.7225,0.704,26.85,,,15,Sụp đổ trước FSHA (Tái tạo thành công),fsha_recon_b1_gauss_sigma0.1_gs15.0.png
+b1_gauss_sigma0.5_gs15.0,B1,Gaussian Noise Injection,"sigma=0.5, grad_scale=15.0",0.5,15.0,0.933,-0.0141,0.39718,19.2,0.8445,0.0481,0.6591,0.651,17.04,,,30,Sụp đổ trước FSHA (Tái tạo thành công),fsha_recon_b1_gauss_sigma0.5_gs15.0.png
+b1_gauss_sigma1.0_gs15.0,B1,Gaussian Noise Injection,"sigma=1.0, grad_scale=15.0",1.0,15.0,0.9328,-0.0143,0.21467,21.49,0.8631,0.0345,0.4379,0.6558,11.34,20,,30,Sụp đổ trước FSHA (Tái tạo thành công),fsha_recon_b1_gauss_sigma1.0_gs15.0.png
