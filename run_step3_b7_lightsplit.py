@@ -183,13 +183,13 @@ def evaluate_decoder_attack(decoder, client, proj, testloader, device, lpips_fn=
 
             x_rec = decoder(z_hat)
             loss_mse = mse_fn(x_rec, x).item()
-            p, s = psnr_ssim(x_rec, x)
+            p, s = psnr_ssim(x, x_rec, CIFAR10_MEAN, CIFAR10_STD)
 
             total_mse += loss_mse * b
             total_psnr += p * b
             total_ssim += s * b
             if lpips_fn is not None:
-                lp_val = calculate_lpips(x_rec, x, lpips_fn, device=device)
+                lp_val = calculate_lpips(x, x_rec, CIFAR10_MEAN, CIFAR10_STD, lpips_fn)
                 total_lpips += lp_val * b
             total_samples += b
 
@@ -340,7 +340,7 @@ def main():
 
     save_reconstruction_grid(
         client, decoder, testloader, device,
-        mean=CIFAR10_MEAN, std=CIFAR10_STD,
+        CIFAR10_MEAN, CIFAR10_STD,
         defense=LightSplitWrapper(proj),
         save_path=grid_img_path, num_images=8
     )
