@@ -3,10 +3,12 @@
 # BƯỚC 3: BASELINE B7 — FIXED ORTHOGONAL PROJECTION (LIGHTSPLIT-STYLE, arXiv:2605.13265)
 # ==============================================================================
 # Cơ chế phòng thủ chiếu trực giao cố định tại Cut-Layer 1:
-# - Client: z in R^{B x 65536} -> z_t = R^T z in R^{B x k} (k in {512, 1024, 2048})
+# - Client: z in R^{B x 65536} -> z_t = R^T z in R^{B x k} (k in {128, 256, 512, 1024, 2048})
 # - Server Mode F: z_hat = R z_t (0 tham số bổ sung) -> reshape (64, 32, 32) -> Server B0
 # - Server Mode L: MLP k -> m -> 65536 có BN -> reshape (64, 32, 32) -> Server B0
-# - Threat Model: Attacker biết ma trận R, lift z_hat = R z_t và huấn luyện Decoder
+# - Threat Model:
+#   * Attacker 1 (Conv Lift): Lift z_hat = R z_t rồi dùng Conv Decoder
+#   * Attacker 2 (Learned Adaptive): Học mạng MLP k -> m -> D giải xáo trộn + Conv Decoder
 # ==============================================================================
 import os
 import sys
@@ -38,9 +40,35 @@ from src.utils import save_reconstruction_grid
 D_DIM = 64 * 32 * 32  # 65,536
 
 
+class LearnedAdaptiveDecoder(nn.Module):
+    """
+    Attacker 2 (Kerckhoffs Strong Adaptive Attacker):
+    Học mạng MLP unprojector k -> hidden_dim -> D để giải xáo trộn không gian,
+    sau đó reshape về (B, 64, 32, 32) và đưa vào Conv Decoder.
+    """
+    def __init__(self, k, D=65536, hidden_dim=512):
+        super().__init__()
+        self.k = k
+        self.D = D
+        self.unprojector = nn.Sequential(
+            nn.Linear(k, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden_dim, D),
+            nn.BatchNorm1d(D)
+        )
+        self.conv_decoder = Decoder(in_channels=64, out_channels=3)
+
+    def forward(self, zt):
+        if zt.dim() > 2:
+            zt = zt.view(zt.size(0), -1)
+        z_unproj = self.unprojector(zt).view(-1, 64, 32, 32)
+        return self.conv_decoder(z_unproj)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Baseline B7: LightSplit-style Fixed Orthogonal Projection")
-    parser.add_argument("--k", type=int, default=1024, choices=[256, 512, 1024, 2048, 4096],
+    parser.add_argument("--k", type=int, default=1024, choices=[128, 256, 512, 1024, 2048, 4096],
                         help="Số chiều không gian con chiếu k (mặc định: 1024, CR=64x)")
     parser.add_argument("--mode", type=str, default="F", choices=["F", "L"],
                         help="Chế độ server: F (không tham số) hoặc L (MLP có BN, mặc định: F)")
@@ -54,6 +82,9 @@ def parse_args():
     parser.add_argument("--lr", type=float, default=0.1, help="Learning rate cho SGD (mặc định: 0.1)")
     parser.add_argument("--scheduler", type=str, default="cosine", choices=["cosine", "multistep"],
                         help="Bộ điều chỉnh LR: cosine hoặc multistep ([50, 75])")
+    parser.add_argument("--attacker-mode", type=str, default="conv", choices=["conv", "learned"],
+                        help="Cơ chế Decoder: 'conv' (lift z_hat -> ConvDecoder) hoặc 'learned' (MLP unprojector + ConvDecoder)")
+    parser.add_argument("--attacker-m", type=int, default=512, help="Chiều ẩn MLP cho Learned Attacker (mặc định: 512)")
     parser.add_argument("--decoder-epochs", type=int, default=30, help="Số epochs huấn luyện Decoder tấn công (mặc định: 30)")
     parser.add_argument("--decoder-lr", type=float, default=1e-3, help="Learning rate cho Decoder Adam (mặc định: 1e-3)")
     parser.add_argument("--eval-freq", type=int, default=5, help="Tần suất đánh giá test accuracy (mặc định: 5)")
@@ -105,15 +136,14 @@ def train_sl_epoch(client, proj, server, trainloader, opt_c, opt_s, device, wcc_
         loss.backward()
         opt_s.step()
 
-        # 4. Backward Client qua phép chiếu trực giao
+        # 4. Backward Client qua phép chiếu trực giao (gộp gradient nếu có WCC loss)
         opt_c.zero_grad()
-        zt.backward(zt_detached.grad)
-
-        # Biến thể nếu có dùng WCC loss
         if wcc_lam > 0.0:
             loss_wcc = wcc_loss(zt, y)
-            (wcc_lam * loss_wcc).backward()
-
+            total_client_loss = (zt * zt_detached.grad).sum() + wcc_lam * loss_wcc
+            total_client_loss.backward()
+        else:
+            zt.backward(zt_detached.grad)
         opt_c.step()
 
         total_loss += loss.item() * b
@@ -123,9 +153,10 @@ def train_sl_epoch(client, proj, server, trainloader, opt_c, opt_s, device, wcc_
     return total_loss / total, correct / total
 
 
-def train_decoder_attack(decoder, client, proj, trainloader, testloader, epochs, lr, device, eval_freq=5):
+def train_decoder_attack(decoder, client, proj, trainloader, testloader, epochs, lr, device, attacker_mode="conv", eval_freq=5):
     print("\n" + "=" * 70)
-    print(f"HUẤN LUYỆN DECODER TẤN CÔNG (Attacker biết ma trận R, lift z_hat = R z_t)")
+    mode_desc = "Conv Lift (DecoderConv trên R z_t)" if attacker_mode == "conv" else "Learned Adaptive (MLP k->m->D giải xáo trộn + ConvDecoder)"
+    print(f"HUẤN LUYỆN DECODER TẤN CÔNG [{mode_desc}]")
     print(f"Tổng số epochs: {epochs} | LR: {lr} (Adam) | Loss: MSE")
     print("=" * 70)
 
@@ -145,10 +176,13 @@ def train_decoder_attack(decoder, client, proj, trainloader, testloader, epochs,
             with torch.no_grad():
                 z = client(x)
                 zt = proj(z)
-                # Attacker lift: z_hat = R z_t, reshape (B, 64, 32, 32)
-                z_hat = proj.lift(zt).view(b, 64, 32, 32)
 
-            x_rec = decoder(z_hat)
+            if attacker_mode == "learned":
+                x_rec = decoder(zt)
+            else:
+                z_hat = proj.lift(zt).view(b, 64, 32, 32)
+                x_rec = decoder(z_hat)
+
             loss = mse(x_rec, x)
 
             opt.zero_grad()
@@ -162,12 +196,12 @@ def train_decoder_attack(decoder, client, proj, trainloader, testloader, epochs,
         avg_loss = total_loss / total_samples
 
         if epoch % eval_freq == 0 or epoch == epochs:
-            print(f"[Decoder Attack] Epoch {epoch:2d}/{epochs:2d} ({dt:.1f}s) | Train MSE: {avg_loss:.5f}")
+            print(f"[{attacker_mode.upper()} Decoder] Epoch {epoch:2d}/{epochs:2d} ({dt:.1f}s) | Train MSE: {avg_loss:.5f}")
 
     return decoder
 
 
-def evaluate_decoder_attack(decoder, client, proj, testloader, device, lpips_fn=None):
+def evaluate_decoder_attack(decoder, client, proj, testloader, device, attacker_mode="conv", lpips_fn=None):
     decoder.eval()
     client.eval()
     mse_fn = nn.MSELoss()
@@ -179,9 +213,13 @@ def evaluate_decoder_attack(decoder, client, proj, testloader, device, lpips_fn=
             b = x.size(0)
             z = client(x)
             zt = proj(z)
-            z_hat = proj.lift(zt).view(b, 64, 32, 32)
 
-            x_rec = decoder(z_hat)
+            if attacker_mode == "learned":
+                x_rec = decoder(zt)
+            else:
+                z_hat = proj.lift(zt).view(b, 64, 32, 32)
+                x_rec = decoder(z_hat)
+
             loss_mse = mse_fn(x_rec, x).item()
             p, s = psnr_ssim(x, x_rec, CIFAR10_MEAN, CIFAR10_STD)
 
@@ -205,15 +243,16 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    tag = f"k{args.k}_{args.mode}_s{args.seed}"
-    sl_ckpt_path = os.path.join(args.output_dir, f"b7_sl_{tag}.pt")
-    dec_ckpt_path = os.path.join(args.output_dir, f"b7_decoder_{tag}.pt")
-    grid_img_path = os.path.join(args.output_dir, f"b7_reconstruction_{tag}.png")
-    json_path = os.path.join(args.output_dir, f"results_b7_{tag}.json")
+    base_tag = f"k{args.k}_{args.mode}_s{args.seed}"
+    dec_tag = f"{base_tag}_{args.attacker_mode}" if args.attacker_mode != "conv" else base_tag
+    sl_ckpt_path = os.path.join(args.output_dir, f"b7_sl_{base_tag}.pt")
+    dec_ckpt_path = os.path.join(args.output_dir, f"b7_decoder_{dec_tag}.pt")
+    grid_img_path = os.path.join(args.output_dir, f"b7_reconstruction_{dec_tag}.png")
+    json_path = os.path.join(args.output_dir, f"results_b7_{dec_tag}.json")
 
     print("\n" + "=" * 80)
     print("BƯỚC 3 — BASELINE B7: LIGHTSPLIT FIXED ORTHOGONAL PROJECTION (arXiv:2605.13265)")
-    print(f"Device: {device} | k={args.k} (CR={D_DIM//args.k}x) | Mode: {args.mode} | Seed: {args.seed}")
+    print(f"Device: {device} | k={args.k} (CR={D_DIM//args.k}x) | Mode: {args.mode} | Seed: {args.seed} | Attacker: {args.attacker_mode}")
     print(f"Output: {args.output_dir}")
     print("=" * 80)
 
@@ -242,8 +281,13 @@ def main():
         print(f"\n[RESUME] Tìm thấy checkpoint SL tại {sl_ckpt_path}. Đang nạp...")
         ckpt = torch.load(sl_ckpt_path, map_location=device)
         client.load_state_dict(ckpt["client"])
-        server.load_state_dict(ckpt["server"])
-        test_acc = evaluate_sl(client, proj, server, testloader, device)
+        if "base_server" in ckpt:
+            server.base_server.load_state_dict(ckpt["base_server"])
+            if server.encoder and "encoder" in ckpt and ckpt["encoder"] is not None:
+                server.encoder.load_state_dict(ckpt["encoder"])
+        else:
+            server.load_state_dict(ckpt["server"])
+        test_acc = ckpt.get("test_acc", evaluate_sl(client, proj, server, testloader, device))
         print(f"[RESUME] Nạp thành công. Test Accuracy: {test_acc*100:.2f}%")
     else:
         torch.manual_seed(args.train_seed)
@@ -276,9 +320,11 @@ def main():
                 print(f"[B7 SL] Epoch {epoch:3d}/{args.epochs:3d} ({dt:.1f}s) | Train Loss: {loss:.4f} | Train Acc: {acc*100:.2f}% | Test Acc: {t_acc*100:.2f}% (Best: {best_acc*100:.2f}%)")
 
         test_acc = evaluate_sl(client, proj, server, testloader, device)
+        # Lưu gọn: không lưu buffer R vào state_dict để nén từ 580MB xuống ~45MB
         torch.save({
             "client": client.state_dict(),
-            "server": server.state_dict(),
+            "base_server": server.base_server.state_dict(),
+            "encoder": server.encoder.state_dict() if server.encoder else None,
             "k": args.k,
             "mode": args.mode,
             "seed": args.seed,
@@ -287,27 +333,33 @@ def main():
         print(f"[B7] Đã lưu checkpoint SL tại: {sl_ckpt_path} với Test Acc: {test_acc*100:.2f}%")
 
     # =========================================================================
-    # GIAI ĐOẠN 2: HUẤN LUYỆN DECODER TẤN CÔNG (ATTACKER BIẾT R)
+    # GIAI ĐOẠN 2: HUẤN LUYỆN DECODER TẤN CÔNG
     # =========================================================================
-    decoder = Decoder().to(device)
+    if args.attacker_mode == "learned":
+        decoder = LearnedAdaptiveDecoder(k=args.k, D=D_DIM, hidden_dim=args.attacker_m).to(device)
+    else:
+        decoder = Decoder().to(device)
+
     if args.resume and os.path.isfile(dec_ckpt_path):
         print(f"\n[RESUME] Tìm thấy checkpoint Decoder tại {dec_ckpt_path}. Đang nạp...")
         decoder.load_state_dict(torch.load(dec_ckpt_path, map_location=device))
     else:
         decoder = train_decoder_attack(
             decoder, client, proj, trainloader, testloader,
-            epochs=args.decoder_epochs, lr=args.decoder_lr, device=device, eval_freq=args.eval_freq
+            epochs=args.decoder_epochs, lr=args.decoder_lr, device=device,
+            attacker_mode=args.attacker_mode, eval_freq=args.eval_freq
         )
         torch.save(decoder.state_dict(), dec_ckpt_path)
-        print(f"[B7] Đã lưu checkpoint Decoder tại: {dec_ckpt_path}")
+        print(f"[B7] Đã lưu checkpoint Decoder ({args.attacker_mode}) tại: {dec_ckpt_path}")
 
     # =========================================================================
     # GIAI ĐOẠN 3: ĐÁNH GIÁ METRICS & XUẤT ẢNH TÁI TẠO
     # =========================================================================
-    print("\n==> [ĐÁNH GIÁ] Đang tính toán PSNR, SSIM, LPIPS và dCor...")
+    print(f"\n==> [ĐÁNH GIÁ: {args.attacker_mode.upper()}] Đang tính toán PSNR, SSIM, LPIPS và dCor...")
     lpips_fn = get_lpips_fn(device=device)
     dec_mse, dec_psnr, dec_ssim, dec_lpips = evaluate_decoder_attack(
-        decoder, client, proj, testloader, device, lpips_fn=lpips_fn
+        decoder, client, proj, testloader, device,
+        attacker_mode=args.attacker_mode, lpips_fn=lpips_fn
     )
 
     # Đo khoảng cách tương quan dCor(X, Z_hat) và dCor(X, Z_t)
@@ -338,10 +390,11 @@ def main():
             zt = self.p(z)
             return self.p.lift(zt).view(b, 64, 32, 32)
 
+    defense_grid = proj if args.attacker_mode == "learned" else LightSplitWrapper(proj)
     save_reconstruction_grid(
         client, decoder, testloader, device,
         CIFAR10_MEAN, CIFAR10_STD,
-        defense=LightSplitWrapper(proj),
+        defense=defense_grid,
         save_path=grid_img_path, num_images=8
     )
 
@@ -349,7 +402,7 @@ def main():
     # TỔNG KẾT KẾT QUẢ VÀ LƯU JSON
     # =========================================================================
     print("\n" + "=" * 80)
-    print(f"KẾT QUẢ TỔNG KẾT BASELINE B7: LIGHTSPLIT (k={args.k}, Mode={args.mode})")
+    print(f"KẾT QUẢ TỔNG KẾT BASELINE B7: LIGHTSPLIT (k={args.k}, Mode={args.mode}, Attacker={args.attacker_mode})")
     print("=" * 80)
     print(f"Test Accuracy:         {test_acc*100:.2f}% (B0 Vanilla: 94.71% | Delta: {(test_acc - 0.9471)*100:+.2f}%)")
     print(f"Reconstruction PSNR:   {dec_psnr:.2f} dB (B0: 40.93 dB | Delta: {dec_psnr - 40.93:+.2f} dB)")
@@ -364,6 +417,7 @@ def main():
         "k": args.k,
         "compression_ratio": D_DIM // args.k,
         "mode": args.mode,
+        "attacker_mode": args.attacker_mode,
         "seed": args.seed,
         "orthogonality_error": ortho_err,
         "vram_gib": mem_gib,
@@ -387,9 +441,9 @@ def main():
         try:
             with open(full_eval_path, "r", encoding="utf-8") as f:
                 full_eval = json.load(f)
-            key_name = f"B7_LightSplit_k_{args.k}_{args.mode}_s{args.seed}"
+            key_name = f"B7_LightSplit_k_{args.k}_{args.mode}_s{args.seed}_{args.attacker_mode}" if args.attacker_mode != "conv" else f"B7_LightSplit_k_{args.k}_{args.mode}_s{args.seed}"
             full_eval[key_name] = {
-                "method": f"B7: LightSplit (Fixed Orthogonal Proj, Mode {args.mode})",
+                "method": f"B7: LightSplit (Fixed Orthogonal Proj, Mode {args.mode}, {args.attacker_mode.capitalize()} Attacker)",
                 "config": f"k={args.k} (CR={D_DIM//args.k}x), seed={args.seed}",
                 "test_acc": test_acc,
                 "mse": dec_mse,

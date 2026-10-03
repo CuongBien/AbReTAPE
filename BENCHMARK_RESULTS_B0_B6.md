@@ -1,4 +1,4 @@
-# BẢNG TỔNG HỢP TOÀN DIỆN KẾT QUẢ THỰC NGHIỆM BASELINES B0 — B6
+# BẢNG TỔNG HỢP TOÀN DIỆN KẾT QUẢ THỰC NGHIỆM BASELINES B0 — B7
 ## Đề tài: AR-TAPE (Absorption-Resistant Task-Aware Perceptual Encoding for Split Learning)
 
 > **Dataset:** CIFAR-10 (Resolution: 32x32x3, Train: 50,000, Test: 10,000)  
@@ -7,7 +7,7 @@
 
 ---
 
-## 1. Bảng Tổng Hợp Benchmark Đầy Đủ (Toàn Bộ 23 Kịch Bản)
+## 1. Bảng Tổng Hợp Benchmark Đầy Đủ (Toàn Bộ 29 Kịch Bản B0 — B7)
 
 | Baseline ID | Phương pháp | Cấu hình / Tham số | Test Acc (%) | $\Delta$ Acc (%) | PSNR (dB) $\downarrow$ | SSIM $\downarrow$ | LPIPS $\uparrow$ | $d\text{Cor}(X, Z) \downarrow$ | Nhận định An toàn |
 |:---|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---|
@@ -35,6 +35,12 @@
 | **B6 (P2/3)** | **ADP-AE (SL Retraining)** | $\alpha = 0.1$ | 94.09% | -0.56% | **44.02** | **0.9976** | **0.0001** | 0.7181 | 💥 **Sụp đổ hoàn toàn**: PSNR > B0 gốc! |
 | **B6 (P1)** | **ADP-AE (Inference Only)** | $\alpha = 0.2$ | 92.51% | -2.14% | 6.36 | 0.3700 | 0.3335 | **0.7264** | 🎭 **Ảo giác phòng thủ** (PSNR giảm 84.3%, dCor vẫn cao) |
 | **B6 (P2/3)** | **ADP-AE (SL Retraining)** | $\alpha = 0.2$ | 94.13% | -0.52% | **43.85** | **0.9976** | **0.0001** | 0.7381 | 💥 **Sụp đổ hoàn toàn**: Decoder thích ứng |
+| **B7-F (Nén gắt)** | **LightSplit (Mode F)** | $k=512, \text{CR}=128\times$, s42 | 88.54% | -6.17% | **15.27** | **0.2848** | **0.1521** | **0.5319** | ✅ **Bảo mật cao** (Non-invertible, SSIM < 0.30) |
+| **B7-F (Chuẩn 1)** | **LightSplit (Mode F)** | $k=1024, \text{CR}=64\times$, s42 | 91.53% | -3.18% | **15.92** | **0.3787** | **0.1153** | **0.5005** | 🛡️ **Kháng Adaptive Inversion** (SSIM 0.3787) |
+| **B7-F (Chuẩn 2)** | **LightSplit (Mode F)** | $k=1024, \text{CR}=64\times$, s7 | 91.37% | -3.34% | **15.45** | **0.3494** | **0.1298** | **0.4973** | 🛡️ Seed 2 (Test Acc lệch $\pm 0.15\%$) |
+| **B7-F (Chuẩn 3)** | **LightSplit (Mode F)** | $k=1024, \text{CR}=64\times$, s2024 | 91.66% | -3.05% | **15.94** | **0.3785** | **0.1200** | **0.5159** | 🛡️ Seed 3 (Cực kỳ ổn định) |
+| **B7-F (Nén nhẹ)** | **LightSplit (Mode F)** | $k=2048, \text{CR}=32\times$, s42 | 92.73% | -1.98% | **17.21** | **0.5138** | **0.0838** | **0.5156** | ⚠️ Bảo mật trung bình (SSIM 0.5138) |
+| **B7-L (Learned)** | **LightSplit (Mode L)** | $k=1024, \text{CR}=64\times$, MLP 512 | 89.34% | -5.37% | **16.50** | **0.4044** | **0.1216** | **0.5750** | ⚠️ Rò rỉ $d\text{Cor}$ cao hơn Mode F (0.575) |
 
 *Ghi chú:*
 - $\Delta$ Acc = Test Acc(Defense) - Test Acc(B0 Anchor 94.65%).

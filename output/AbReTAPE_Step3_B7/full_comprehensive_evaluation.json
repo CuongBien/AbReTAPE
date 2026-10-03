@@ -223,16 +223,6 @@
     "lpips": 0.00013867539084749296,
     "dcor": 0.7381136854489644
   },
-  "B7_LightSplit_k_1024_F_s2024": {
-    "method": "B7: LightSplit (Fixed Orthogonal Proj, Mode F)",
-    "config": "k=1024 (CR=64x), seed=2024",
-    "test_acc": 0.9166,
-    "mse": 0.683609213256836,
-    "psnr": 15.938444355202186,
-    "ssim": 0.37854671096801756,
-    "lpips": 0.12001446040868759,
-    "dcor": 0.51593496799469
-  },
   "B7_LightSplit_k_1024_F_s42": {
     "method": "B7: LightSplit (Fixed Orthogonal Proj, Mode F)",
     "config": "k=1024 (CR=64x), seed=42",
@@ -243,25 +233,15 @@
     "lpips": 0.11525856889486313,
     "dcor": 0.5004983166853587
   },
-  "B7_LightSplit_k_1024_F_s7": {
+  "B7_LightSplit_k_512_F_s42": {
     "method": "B7: LightSplit (Fixed Orthogonal Proj, Mode F)",
-    "config": "k=1024 (CR=64x), seed=7",
-    "test_acc": 0.9137,
-    "mse": 0.7671552603721619,
-    "psnr": 15.451494187002988,
-    "ssim": 0.34942545609474185,
-    "lpips": 0.12975340200662613,
-    "dcor": 0.4973180135091146
-  },
-  "B7_LightSplit_k_1024_L_s42": {
-    "method": "B7: LightSplit (Fixed Orthogonal Proj, Mode L)",
-    "config": "k=1024 (CR=64x), seed=42",
-    "test_acc": 0.8934,
-    "mse": 0.6033588985443116,
-    "psnr": 16.496950124290365,
-    "ssim": 0.40439589405059817,
-    "lpips": 0.12159161994457245,
-    "dcor": 0.5749543944994608
+    "config": "k=512 (CR=128x), seed=42",
+    "test_acc": 0.8854,
+    "mse": 0.804486092376709,
+    "psnr": 15.271982748832984,
+    "ssim": 0.2848494112968445,
+    "lpips": 0.152080078125,
+    "dcor": 0.5319207827250163
   },
   "B7_LightSplit_k_2048_F_s42": {
     "method": "B7: LightSplit (Fixed Orthogonal Proj, Mode F)",
@@ -273,14 +253,34 @@
     "lpips": 0.08384756721258163,
     "dcor": 0.5156293471654256
   },
-  "B7_LightSplit_k_512_F_s42": {
+  "B7_LightSplit_k_1024_F_s7": {
     "method": "B7: LightSplit (Fixed Orthogonal Proj, Mode F)",
-    "config": "k=512 (CR=128x), seed=42",
-    "test_acc": 0.8854,
-    "mse": 0.804486092376709,
-    "psnr": 15.271982748832984,
-    "ssim": 0.2848494112968445,
-    "lpips": 0.152080078125,
-    "dcor": 0.5319207827250163
+    "config": "k=1024 (CR=64x), seed=7",
+    "test_acc": 0.9137,
+    "mse": 0.7671552603721619,
+    "psnr": 15.451494187002988,
+    "ssim": 0.34942545609474185,
+    "lpips": 0.12975340200662613,
+    "dcor": 0.4973180135091146
+  },
+  "B7_LightSplit_k_1024_F_s2024": {
+    "method": "B7: LightSplit (Fixed Orthogonal Proj, Mode F)",
+    "config": "k=1024 (CR=64x), seed=2024",
+    "test_acc": 0.9166,
+    "mse": 0.683609213256836,
+    "psnr": 15.938444355202186,
+    "ssim": 0.37854671096801756,
+    "lpips": 0.12001446040868759,
+    "dcor": 0.51593496799469
+  },
+  "B7_LightSplit_k_1024_L_s42": {
+    "method": "B7: LightSplit (Fixed Orthogonal Proj, Mode L)",
+    "config": "k=1024 (CR=64x), seed=42",
+    "test_acc": 0.8934,
+    "mse": 0.6033588985443116,
+    "psnr": 16.496950124290365,
+    "ssim": 0.40439589405059817,
+    "lpips": 0.12159161994457245,
+    "dcor": 0.5749543944994608
   }
 }
