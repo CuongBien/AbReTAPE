@@ -395,6 +395,7 @@ def run_single_fsha_scenario(
                 "epoch_time": ep_time,
             })
 
+    last_eval_m = eval_m if ('eval_m' in locals() and eval_m is not None) else init_metrics
     final_metrics = best_metrics if best_metrics is not None else init_metrics
 
     # Lưu lưới ảnh trực quan hóa và đồ thị hội tụ tấn công
@@ -421,8 +422,10 @@ def run_single_fsha_scenario(
     is_broken = final_metrics["psnr"] >= 18.0 or final_metrics["ssim"] >= 0.60
     if is_broken:
         verdict = "Sụp đổ trước FSHA (Tái tạo thành công)"
-    elif final_metrics["test_acc"] < 0.70:
+    elif last_eval_m["test_acc"] < 0.70:
         verdict = "Chặn được tái tạo nhưng Utility sụp đổ nặng"
+    elif last_eval_m["test_acc"] < 0.85:
+        verdict = "Chặn được tái tạo nhưng Utility suy giảm"
     else:
         verdict = "Kháng được FSHA & Giữ vững Utility"
 
@@ -433,14 +436,17 @@ def run_single_fsha_scenario(
         "param_label": param_label,
         param_key: param_val,
         "grad_scale": grad_scale,
-        "test_acc": round(final_metrics["test_acc"], 4),
-        "delta_acc_vs_b0": round(final_metrics["test_acc"] - B0_REF_ACC, 4),
+        "test_acc": round(last_eval_m["test_acc"], 4),
+        "test_acc_at_peak_psnr": round(final_metrics["test_acc"], 4),
+        "delta_acc_vs_b0": round(last_eval_m["test_acc"] - B0_REF_ACC, 4),
         "mse": round(final_metrics["mse"], 5),
         "psnr": round(final_metrics["psnr"], 2),
         "ssim": round(final_metrics["ssim"], 4),
         "lpips": round(final_metrics["lpips"], 4) if final_metrics["lpips"] is not None else None,
+        "psnr_final": round(last_eval_m["psnr"], 2),
+        "ssim_final": round(last_eval_m["ssim"], 4),
         "dcor_before": round(init_metrics["dcor"], 4),
-        "dcor_after": round(final_metrics["dcor"], 4),
+        "dcor_after": round(last_eval_m["dcor"], 4),
         "psnr_before": round(init_metrics["psnr"], 2),
         "collapse_epoch_20db": collapse_epoch_20db,
         "collapse_epoch_25db": collapse_epoch_25db,
@@ -652,23 +658,30 @@ def build_scenarios_for_defense(defense_code, args, device):
         else:
             b7_ks = [512, 1024, 2048] if args.sweep else [1024]
 
-        gs = args.grad_scale if args.grad_scale is not None else 5.0
+        if args.grad_scales:
+            g_scales = [float(x.strip()) for x in args.grad_scales.split(",")]
+        elif args.grad_scale is not None:
+            g_scales = [args.grad_scale]
+        else:
+            g_scales = [5.0]
+
         mode = args.b7_mode
         seed = args.b7_seed
 
-        for k in b7_ks:
-            scenarios.append({
-                "scenario_id": f"b7_lightsplit_k{k}_{mode}_s{seed}_gs{gs}",
-                "defense_code": "b7",
-                "method_name": f"LightSplit (Fixed Ortho Proj, Mode {mode})",
-                "param_label": f"k={k} (CR={65536//k}x), gs={gs}",
-                "param_key": "k",
-                "param_val": k,
-                "defense_module": LightSplitFSHADefense(k=k, seed=seed, device=device).to(device),
-                "grad_scale": gs,
-                "use_dpsgd": False,
-                "init_perturb": 0.15,
-            })
+        for gs in g_scales:
+            for k in b7_ks:
+                scenarios.append({
+                    "scenario_id": f"b7_lightsplit_k{k}_{mode}_s{seed}_gs{gs}",
+                    "defense_code": "b7",
+                    "method_name": f"LightSplit (Fixed Ortho Proj, Mode {mode})",
+                    "param_label": f"k={k} (CR={65536//k}x), gs={gs}",
+                    "param_key": "k" if len(b7_ks) > 1 else "grad_scale",
+                    "param_val": k if len(b7_ks) > 1 else gs,
+                    "defense_module": LightSplitFSHADefense(k=k, seed=seed, device=device).to(device),
+                    "grad_scale": gs,
+                    "use_dpsgd": False,
+                    "init_perturb": 0.15,
+                })
 
     elif d == "ar_tape":
         if args.subspace_dims:
@@ -907,6 +920,11 @@ def main():
 
             if len(def_records) > 1:
                 p_key = scenarios[0]["param_key"]
+                unique_p = set(r.get(p_key) for r in def_records if p_key in r)
+                unique_gs = set(r.get("grad_scale") for r in def_records if "grad_scale" in r)
+                if len(unique_p) <= 1 and len(unique_gs) > 1:
+                    p_key = "grad_scale"
+
                 tradeoff_plot = os.path.join(out_dir, f"fsha_{def_code}_tradeoff.png")
                 try:
                     plot_tradeoff_curves(def_records, save_path=tradeoff_plot, x_key=p_key, x_label=p_key)
