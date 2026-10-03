@@ -282,5 +282,15 @@
     "ssim": 0.2848494112968445,
     "lpips": 0.152080078125,
     "dcor": 0.5319207827250163
+  },
+  "B7_LightSplit_k_1024_F_s42_learned": {
+    "method": "B7: LightSplit (Fixed Orthogonal Proj, Mode F, Learned Attacker)",
+    "config": "k=1024 (CR=64x), seed=42",
+    "test_acc": 0.9153,
+    "mse": 0.38260034999847414,
+    "psnr": 18.62838521560733,
+    "ssim": 0.5384758571624756,
+    "lpips": 0.12818766958713532,
+    "dcor": 0.5004983166853587
   }
 }

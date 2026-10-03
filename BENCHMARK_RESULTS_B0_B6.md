@@ -41,6 +41,7 @@
 | **B7-F (Chuẩn 3)** | **LightSplit (Mode F)** | $k=1024, \text{CR}=64\times$, s2024 | 91.66% | -3.05% | **15.94** | **0.3785** | **0.1200** | **0.5159** | 🛡️ Seed 3 (Cực kỳ ổn định) |
 | **B7-F (Nén nhẹ)** | **LightSplit (Mode F)** | $k=2048, \text{CR}=32\times$, s42 | 92.73% | -1.98% | **17.21** | **0.5138** | **0.0838** | **0.5156** | ⚠️ Bảo mật trung bình (SSIM 0.5138) |
 | **B7-L (Learned)** | **LightSplit (Mode L)** | $k=1024, \text{CR}=64\times$, MLP 512 | 89.34% | -5.37% | **16.50** | **0.4044** | **0.1216** | **0.5750** | ⚠️ Rò rỉ $d\text{Cor}$ cao hơn Mode F (0.575) |
+| **B7-F (Attacker 2)** | **LightSplit (Learned Attacker)** | $k=1024, \text{CR}=64\times$, MLP Unprojector | 91.53% | -3.18% | **18.63** | **0.5385** | **0.1282** | **0.5005** | 🛡️ Kẻ tấn công MLP mạnh hơn vẫn dưới 19dB |
 
 *Ghi chú:*
 - $\Delta$ Acc = Test Acc(Defense) - Test Acc(B0 Anchor 94.65%).
@@ -156,11 +157,17 @@ Thành phần hình học và cấu trúc trực quan của ảnh $X$ chủ yế
 | **B6** | ADP-AE ($\alpha=0.05$, gs=5) | 93.71% | **93.56%** | 40.85 dB | **21.94 dB** | 0.9952 | **0.8813** | 0.7087 | Ep 1 / — | 💥 **Sụp đổ**: Vi phôi bị FSHA ép về Pilot Subspace |
 | **B6** | ADP-AE ($\alpha=0.10$, gs=5) | 94.09% | **93.35%** | 44.02 dB | **21.31 dB** | 0.9976 | **0.8796** | 0.6964 | Ep 20 / — | 💥 **Sụp đổ**: SSIM 0.88, PSNR > 21dB |
 | **B6** | ADP-AE ($\alpha=0.20$, gs=5) | 94.13% | **93.42%** | 43.85 dB | **20.39 dB** | 0.9976 | **0.8672** | 0.7054 | Ep 20 / — | 💥 **Sụp đổ**: Tái tạo nguyên vẹn chi tiết |
+| **B7** | LightSplit ($k=512$, gs=5.0) | 88.54% | **44.65%** | 15.27 dB | **11.92 dB** | 0.2848 | **0.0720** | 0.6603 | — / — | 🛡️ **Khóa chết FSHA (SSIM 0.07)** nhưng Utility sụp đổ (-43.9% Acc) |
+| **B7** | LightSplit ($k=1024$, gs=5.0) | 91.53% | **48.90%** | 15.92 dB | **12.24 dB** | 0.3787 | **0.0985** | 0.6502 | — / — | 🛡️ **Khóa chết FSHA (SSIM 0.09)** nhưng Utility sụp đổ (-42.6% Acc) |
+| **B7** | LightSplit ($k=2048$, gs=5.0) | 92.73% | **24.86%** | 17.21 dB | **12.37 dB** | 0.5138 | **0.1083** | 0.6648 | — / — | 🛡️ **Khóa chết FSHA (SSIM 0.10)** nhưng Utility sụp đổ (-67.9% Acc) |
 
-### 5.2. Ba Phát Hiện Khoa Học Đột Phá Dưới Góc Nhìn FSHA
+### 5.2. Bốn Phát Hiện Khoa Học Đột Phá Dưới Góc Nhìn FSHA
 1. **Phát hiện 1 — FSHA tự giải mã cơ chế xáo trộn B4:**  
    Trong khi kẻ tấn công thụ động bó tay trước phép tráo mảnh Block Scrambling ($\text{SSIM} < 0.40$), kẻ tấn công chủ động FSHA ép Client Encoder tự học phép hoán vị nghịch đảo $P^{-1}$ để phân phối $Z$ ăn khớp với Pilot AE. Kết quả SSIM nhảy vọt từ **$0.2984 \to 0.9492$** (tái tạo hoàn hảo).
 2. **Phát hiện 2 — B3 NoPeek bế tắc tại Pareto Frontier:**  
    Để kéo SSIM từ $0.86 \to 0.11$, NoPeek phải nâng $\alpha$ từ $1.0 \to 500.0$, nhưng cái giá phải trả là **Test Acc rơi từ $92.5\% \to 10.0\%$** (mất sạch khả năng phân loại).
 3. **Phát hiện 3 — B6 ADP-AE thất bại trước cả 2 lớp đe dọa:**  
    Bị Adaptive Decoder giải mã ở $44.02\text{ dB}$ (Thụ động) và bị FSHA chiếm quyền điều khiển ở $\text{SSIM} = 0.88$ (Chủ động), chính thức khép lại mọi giả thuyết cho rằng cắm AE là đủ an toàn.
+4. **Phát hiện 4 — B7 LightSplit khóa chết FSHA nhưng trả giá bằng Utility (Động lực tối hậu cho AR-TAPE):**  
+   B7 là baseline duy nhất triệt tiêu hoàn toàn khả năng tái tạo của FSHA ($\text{PSNR} < 12.4\text{ dB}$, $\text{SSIM} < 0.10$). Tuy nhiên, do ma trận $R$ chiếu ngẫu nhiên không phân biệt đặc trưng tác vụ (**Task-Agnostic**), gradient đối kháng của FSHA đã phá vỡ hoàn toàn năng lực phân loại của Client, kéo Test Acc tụt dốc thảm hại từ $91.53\% \to 48.90\%$. Đây chính là **bằng chứng thực nghiệm cốt tử chứng minh sự cần thiết của AR-TAPE**: Phép chiếu phải có tính **Task-Aware ($\mathbf{P}_{\text{task}}$)** để vừa khóa chết FSHA ở mức $\text{SSIM} < 0.10$, vừa giữ vững trọn vẹn Test Acc $\ge 94\%$!
+
