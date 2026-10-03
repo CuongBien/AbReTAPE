@@ -156,10 +156,11 @@ Thành phần hình học và cấu trúc trực quan của ảnh $X$ chủ yế
 | **B5** | Deformable ($s=0.3$, gs=5) | 93.22% | **56.56%** | 20.92 dB | **11.77 dB** | 0.6734 | **0.1125** | 0.7078 | — / — | 🚫 **Sụp đổ Utility**: Acc giảm 38.15%, vô dụng |
 | **B6** | ADP-AE ($\alpha=0.05$, gs=5) | 93.71% | **93.56%** | 40.85 dB | **21.94 dB** | 0.9952 | **0.8813** | 0.7087 | Ep 1 / — | 💥 **Sụp đổ**: Vi phôi bị FSHA ép về Pilot Subspace |
 | **B6** | ADP-AE ($\alpha=0.10$, gs=5) | 94.09% | **93.35%** | 44.02 dB | **21.31 dB** | 0.9976 | **0.8796** | 0.6964 | Ep 20 / — | 💥 **Sụp đổ**: SSIM 0.88, PSNR > 21dB |
-| **B6** | ADP-AE ($\alpha=0.20$, gs=5) | 94.13% | **93.42%** | 43.85 dB | **20.39 dB** | 0.9976 | **0.8672** | 0.7054 | Ep 20 / — | 💥 **Sụp đổ**: Tái tạo nguyên vẹn chi tiết |
-| **B7** | LightSplit ($k=512$, gs=5.0) | 88.54% | **44.65%** | 15.27 dB | **11.92 dB** | 0.2848 | **0.0720** | 0.6603 | — / — | 🛡️ **Khóa chết FSHA (SSIM 0.07)** nhưng Utility sụp đổ (-43.9% Acc) |
-| **B7** | LightSplit ($k=1024$, gs=5.0) | 91.53% | **48.90%** | 15.92 dB | **12.24 dB** | 0.3787 | **0.0985** | 0.6502 | — / — | 🛡️ **Khóa chết FSHA (SSIM 0.09)** nhưng Utility sụp đổ (-42.6% Acc) |
-| **B7** | LightSplit ($k=2048$, gs=5.0) | 92.73% | **24.86%** | 17.21 dB | **12.37 dB** | 0.5138 | **0.1083** | 0.6648 | — / — | 🛡️ **Khóa chết FSHA (SSIM 0.10)** nhưng Utility sụp đổ (-67.9% Acc) |
+| **B7** | LightSplit ($k=512$, gs=5.0) | 88.54% | **68.00%** | 15.27 dB | **11.92 dB** | 0.2848 | **0.0720** | 0.6603 | — / — | 🛡️ **Khóa chết FSHA (SSIM 0.07)**, Utility giảm (-20.5% Acc) |
+| **B7** | LightSplit ($k=1024$, gs=1.0) | 91.53% | **64.92%** | 15.92 dB | **12.40 dB** | 0.3787 | **0.0939** | 0.5987 | — / — | 🛡️ **Khóa chết FSHA (SSIM 0.09)** dù ở gradient tự nhiên ($gs=1$) |
+| **B7** | LightSplit ($k=1024$, gs=2.0) | 91.53% | **69.74%** | 15.92 dB | **12.05 dB** | 0.3787 | **0.0756** | 0.5862 | — / — | 🛡️ **Khóa chết FSHA (SSIM 0.07)**, Acc phục hồi lên 69.74% |
+| **B7** | LightSplit ($k=1024$, gs=5.0) | 91.53% | **65.54%** | 15.92 dB | **12.24 dB** | 0.3787 | **0.0985** | 0.6502 | — / — | 🛡️ **Khóa chết FSHA (SSIM 0.09)**, Acc hội tụ đạt 65.54% |
+| **B7** | LightSplit ($k=2048$, gs=5.0) | 92.73% | **73.81%** | 17.21 dB | **12.37 dB** | 0.5138 | **0.1083** | 0.6648 | — / — | 🛡️ **Khóa chết FSHA (SSIM 0.10)**, Acc hội tụ đạt 73.81% |
 
 ### 5.2. Bốn Phát Hiện Khoa Học Đột Phá Dưới Góc Nhìn FSHA
 1. **Phát hiện 1 — FSHA tự giải mã cơ chế xáo trộn B4:**  
