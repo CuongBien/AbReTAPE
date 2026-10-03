@@ -32,6 +32,7 @@ from src.defenses import (
     BlockScrambleDefense,
     DeformableOperatorDefense,
     ADPAutoEncoderDefense,
+    FixedOrthoProjection,
     AR_TAPE,
 )
 from src.attacks.fsha import (
@@ -47,6 +48,28 @@ from src.metrics import get_lpips_fn, distance_correlation
 from src.utils.visualize import save_reconstruction_grid, plot_attack_curves, plot_tradeoff_curves
 
 B0_REF_ACC = 0.9471
+
+
+class LightSplitFSHADefense(nn.Module):
+    """
+    Wrapper của B7 LightSplit (Fixed Orthogonal Projection) cho FSHA:
+    - Client: z in R^{B x 64 x 32 x 32} -> z_t = z @ R in R^{B x k} (CR = 65536 / k).
+    - Server Lift (Mode F): z_hat = z_t @ R^T in R^{B x 65536} -> reshape (64, 32, 32).
+    - Trả về z_hat để Discriminator phân biệt và truyền ngược gradient.
+    - Gradient đối kháng truyền ngược về Client tự động bị chiếu qua R R^T,
+      chỉ có k chiều trực chuẩn có thể điều khiển Client, 65536 - k chiều bị triệt tiêu (= 0).
+    """
+    def __init__(self, k=1024, seed=42, device=None):
+        super().__init__()
+        self.k = k
+        self.seed = seed
+        self.proj = FixedOrthoProjection(D=64 * 32 * 32, k=k, seed=seed, device=device)
+
+    def forward(self, z):
+        b = z.size(0)
+        zt = self.proj(z)
+        z_hat = self.proj.lift(zt).view(b, 64, 32, 32)
+        return z_hat
 
 
 class FSHADecoderView(nn.Module):
@@ -71,13 +94,13 @@ def parse_args():
     )
     parser.add_argument(
         "--milestone",
-        choices=["m1", "m2", "m3", "m4", "all"],
+        choices=["m1", "m2", "m3", "m4", "m5", "all"],
         default=None,
-        help="Chạy theo từng mũi đo trong kế hoạch: m1 (B0), m2 (B1+B2), m3 (B3), m4 (B4+B5+B6), hoặc all",
+        help="Chạy theo từng mũi đo trong kế hoạch: m1 (B0), m2 (B1+B2), m3 (B3), m4 (B4+B5+B6), m5 (B7), hoặc all",
     )
     parser.add_argument(
         "--defense",
-        choices=["b0", "b1", "b2", "b3", "b4", "b5", "b6", "ar_tape", "all"],
+        choices=["b0", "b1", "b2", "b3", "b4", "b5", "b6", "b7", "ar_tape", "all"],
         default="b0",
         help="Lựa chọn cơ chế phòng thủ mục tiêu (mặc định: b0)",
     )
@@ -119,6 +142,11 @@ def parse_args():
 
     parser.add_argument("--b6-alpha", type=float, default=None, help="B6 ADP-AE: Biên độ nhiễu loạn alpha")
     parser.add_argument("--b6-alphas", type=str, default=None, help="B6 ADP-AE: Danh sách alpha (mặc định sweep: 0.05,0.1,0.2)")
+
+    parser.add_argument("--b7-k", type=int, default=None, help="B7 LightSplit: Số chiều nén chiếu trực giao k")
+    parser.add_argument("--b7-ks", type=str, default=None, help="B7 LightSplit: Danh sách k (mặc định sweep: 512,1024,2048)")
+    parser.add_argument("--b7-mode", choices=["F", "L"], default="F", help="B7 LightSplit: Chế độ F (Fixed) hoặc L (Learned)")
+    parser.add_argument("--b7-seed", type=int, default=42, help="B7 LightSplit: Seed ma trận trực chuẩn R (mặc định: 42)")
 
     parser.add_argument("--subspace-dim", type=int, default=None, help="AR-TAPE: Số chiều không gian con tác vụ k")
     parser.add_argument("--subspace-dims", type=str, default=None, help="AR-TAPE: Danh sách k (mặc định sweep: 16,32,48)")
@@ -616,6 +644,32 @@ def build_scenarios_for_defense(defense_code, args, device):
                 "init_perturb": 0.10,
             })
 
+    elif d == "b7":
+        if args.b7_ks:
+            b7_ks = [int(x.strip()) for x in args.b7_ks.split(",")]
+        elif args.b7_k is not None:
+            b7_ks = [args.b7_k]
+        else:
+            b7_ks = [512, 1024, 2048] if args.sweep else [1024]
+
+        gs = args.grad_scale if args.grad_scale is not None else 5.0
+        mode = args.b7_mode
+        seed = args.b7_seed
+
+        for k in b7_ks:
+            scenarios.append({
+                "scenario_id": f"b7_lightsplit_k{k}_{mode}_s{seed}_gs{gs}",
+                "defense_code": "b7",
+                "method_name": f"LightSplit (Fixed Ortho Proj, Mode {mode})",
+                "param_label": f"k={k} (CR={65536//k}x), gs={gs}",
+                "param_key": "k",
+                "param_val": k,
+                "defense_module": LightSplitFSHADefense(k=k, seed=seed, device=device).to(device),
+                "grad_scale": gs,
+                "use_dpsgd": False,
+                "init_perturb": 0.15,
+            })
+
     elif d == "ar_tape":
         if args.subspace_dims:
             s_dims = [int(x.strip()) for x in args.subspace_dims.split(",")]
@@ -789,11 +843,13 @@ def main():
                 target_defenses = ["b3"]
             elif m == "m4":
                 target_defenses = ["b4", "b5", "b6"]
+            elif m == "m5":
+                target_defenses = ["b7"]
             else:
-                target_defenses = ["b0", "b1", "b2", "b3", "b4", "b5", "b6"]
+                target_defenses = ["b0", "b1", "b2", "b3", "b4", "b5", "b6", "b7"]
         else:
             if args.defense.lower() == "all":
-                target_defenses = ["b0", "b1", "b2", "b3", "b4", "b5", "b6"]
+                target_defenses = ["b0", "b1", "b2", "b3", "b4", "b5", "b6", "b7"]
             else:
                 target_defenses = [args.defense.lower()]
 
