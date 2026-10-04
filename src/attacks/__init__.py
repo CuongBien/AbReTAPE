@@ -44,4 +44,17 @@ __all__ = [
     "warmup_fsha_discriminator",
     "train_fsha_hijack_epoch",
     "evaluate_fsha",
+    "CoAdaptedPassiveAttacker",
+    "get_coadapted_data_splits",
+    "evaluate_coadapted_inversion",
+    "train_fresh_matched_steps",
+    "train_fresh_epochs",
 ]
+
+from .coadapted import (
+    CoAdaptedPassiveAttacker,
+    get_coadapted_data_splits,
+    evaluate_coadapted_inversion,
+    train_fresh_matched_steps,
+    train_fresh_epochs,
+)
