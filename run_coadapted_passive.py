@@ -36,7 +36,7 @@ from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 
 from src.models import ClientModel, ServerModel
 from src.data import CIFAR10_MEAN, CIFAR10_STD
-from src.defenses import BlockScrambleDefense, FixedOrthoProjection
+from src.defenses import BlockScrambleDefense, FixedOrthoProjection, GaussianNoise, ADPAutoEncoderDefense
 from src.attacks import (
     Decoder,
     get_coadapted_data_splits,
@@ -72,8 +72,12 @@ def parse_args():
                         help="Kích thước tập con test cố định để đánh giá nhanh (mặc định: 2000)")
     parser.add_argument("--eval-freq", type=int, default=5,
                         help="Tần suất đánh giá mỗi N epochs (mặc định: 5)")
+    parser.add_argument("--b1-sigma", type=float, default=0.5,
+                        help="Hệ số nhiễu sigma cho B1 Gaussian Noise (mặc định: 0.5)")
     parser.add_argument("--b4-block-size", type=int, default=4,
                         help="Kích thước block cho B4 Block Scramble (mặc định: 4)")
+    parser.add_argument("--b6-alpha", type=float, default=0.1,
+                        help="Hệ số alpha cho B6 ADP-AE (mặc định: 0.1)")
     parser.add_argument("--b7-k", type=int, default=1024,
                         help="Số chiều chiếu k cho B7 LightSplit (mặc định: 1024)")
     parser.add_argument("--num-workers", type=int, default=0 if sys.platform == "win32" else 2,
@@ -228,6 +232,25 @@ def plot_coadapted_curves(history, save_path):
     plt.close()
 
 
+class LightSplitModeFDefense(nn.Module):
+    """
+    Wrapper của Baseline B7: Fixed Orthogonal Projection (LightSplit Mode F):
+    - Client: z in R^{B x 64 x 32 x 32} -> z_t = z @ R in R^{B x k}
+    - Server Lift (Mode F, 0 tham số): z_hat = z_t @ R^T in R^{B x 65536} -> reshape (64, 32, 32)
+    """
+    def __init__(self, k=1024, seed=42, device=None):
+        super().__init__()
+        self.k = k
+        self.seed = seed
+        self.proj = FixedOrthoProjection(D=64 * 32 * 32, k=k, seed=seed, device=device)
+
+    def forward(self, z):
+        b = z.size(0)
+        zt = self.proj(z)
+        z_hat = self.proj.lift(zt).view(b, 64, 32, 32)
+        return z_hat
+
+
 def run_single_scenario(def_name, seed, args, device, lpips_fn):
     scenario_id = f"{def_name}_seed{seed}"
     print("\n" + "=" * 90)
@@ -260,10 +283,14 @@ def run_single_scenario(def_name, seed, args, device, lpips_fn):
 
     if def_name == "b0":
         defense = None
+    elif def_name == "b1":
+        defense = GaussianNoise(sigma=args.b1_sigma).to(device)
     elif def_name == "b4":
         defense = BlockScrambleDefense(block_size=args.b4_block_size, seed=seed).to(device)
+    elif def_name == "b6":
+        defense = ADPAutoEncoderDefense(in_channels=64, alpha=args.b6_alpha).to(device)
     elif def_name == "b7":
-        defense = FixedOrthoProjection(k=args.b7_k, seed=seed, mode="F", device=device).to(device)
+        defense = LightSplitModeFDefense(k=args.b7_k, seed=seed, device=device).to(device)
     else:
         raise ValueError(f"Không hỗ trợ baseline: {def_name}")
 
