@@ -862,5 +862,653 @@
         "lpips": 0.1385
       }
     ]
+  },
+  {
+    "scenario_id": "b6_seed42",
+    "defense": "B6",
+    "seed": 42,
+    "sl_epochs": 100,
+    "task_test_acc": 94.86,
+    "total_steps": 2000,
+    "coadapt_final_psnr": 35.06,
+    "coadapt_final_ssim": 0.9837,
+    "coadapt_final_lpips": 0.0019,
+    "coadapt_peak_psnr": 35.12,
+    "coadapt_peak_ssim": 0.984,
+    "coadapt_peak_epoch": 100,
+    "fresh_matched_psnr": 35.91,
+    "fresh_matched_ssim": 0.988,
+    "fresh_matched_lpips": 0.0015,
+    "fresh_30ep_psnr": 33.97,
+    "fresh_30ep_ssim": 0.9829,
+    "fresh_30ep_lpips": 0.0024,
+    "delta_ssim_vs_matched": -0.0043,
+    "delta_ssim_peak_vs_matched": -0.004,
+    "delta_psnr_vs_matched": -0.85,
+    "verdict": "B\u1ea5t bi\u1ebfn v\u1edbi Co-adaptation (Ch\u00eanh l\u1ec7ch kh\u00f4ng \u0111\u00e1ng k\u1ec3)",
+    "grid_image": "grid_coadapted_vs_fresh_b6_s42.png",
+    "history_coadapt": [
+      {
+        "epoch": 1,
+        "sl_loss": 1.7302,
+        "test_acc": 0.4185,
+        "co_recon_loss": 0.91059,
+        "psnr": 18.78,
+        "ssim": 0.7234,
+        "lpips": null
+      },
+      {
+        "epoch": 5,
+        "sl_loss": 0.6606,
+        "test_acc": 0.675,
+        "co_recon_loss": 0.24391,
+        "psnr": 22.8,
+        "ssim": 0.8742,
+        "lpips": null
+      },
+      {
+        "epoch": 10,
+        "sl_loss": 0.471,
+        "test_acc": 0.786,
+        "co_recon_loss": 0.1502,
+        "psnr": 24.39,
+        "ssim": 0.9022,
+        "lpips": null
+      },
+      {
+        "epoch": 15,
+        "sl_loss": 0.4145,
+        "test_acc": 0.781,
+        "co_recon_loss": 0.13698,
+        "psnr": 25.65,
+        "ssim": 0.9246,
+        "lpips": null
+      },
+      {
+        "epoch": 20,
+        "sl_loss": 0.3639,
+        "test_acc": 0.8385,
+        "co_recon_loss": 0.09492,
+        "psnr": 26.44,
+        "ssim": 0.9362,
+        "lpips": null
+      },
+      {
+        "epoch": 25,
+        "sl_loss": 0.349,
+        "test_acc": 0.7885,
+        "co_recon_loss": 0.08992,
+        "psnr": 27.26,
+        "ssim": 0.9441,
+        "lpips": null
+      },
+      {
+        "epoch": 30,
+        "sl_loss": 0.3244,
+        "test_acc": 0.846,
+        "co_recon_loss": 0.08675,
+        "psnr": 27.21,
+        "ssim": 0.9422,
+        "lpips": null
+      },
+      {
+        "epoch": 35,
+        "sl_loss": 0.2853,
+        "test_acc": 0.8635,
+        "co_recon_loss": 0.10129,
+        "psnr": 28.15,
+        "ssim": 0.9501,
+        "lpips": null
+      },
+      {
+        "epoch": 40,
+        "sl_loss": 0.2708,
+        "test_acc": 0.863,
+        "co_recon_loss": 0.1245,
+        "psnr": 27.49,
+        "ssim": 0.9382,
+        "lpips": null
+      },
+      {
+        "epoch": 45,
+        "sl_loss": 0.2385,
+        "test_acc": 0.8435,
+        "co_recon_loss": 0.06196,
+        "psnr": 28.85,
+        "ssim": 0.9558,
+        "lpips": null
+      },
+      {
+        "epoch": 50,
+        "sl_loss": 0.2078,
+        "test_acc": 0.8685,
+        "co_recon_loss": 0.06447,
+        "psnr": 28.41,
+        "ssim": 0.949,
+        "lpips": null
+      },
+      {
+        "epoch": 55,
+        "sl_loss": 0.1785,
+        "test_acc": 0.8925,
+        "co_recon_loss": 0.08529,
+        "psnr": 27.88,
+        "ssim": 0.9436,
+        "lpips": null
+      },
+      {
+        "epoch": 60,
+        "sl_loss": 0.1462,
+        "test_acc": 0.878,
+        "co_recon_loss": 0.05094,
+        "psnr": 29.4,
+        "ssim": 0.9654,
+        "lpips": null
+      },
+      {
+        "epoch": 65,
+        "sl_loss": 0.1371,
+        "test_acc": 0.9095,
+        "co_recon_loss": 0.0386,
+        "psnr": 30.81,
+        "ssim": 0.9662,
+        "lpips": null
+      },
+      {
+        "epoch": 70,
+        "sl_loss": 0.0819,
+        "test_acc": 0.92,
+        "co_recon_loss": 0.04007,
+        "psnr": 30.49,
+        "ssim": 0.9688,
+        "lpips": null
+      },
+      {
+        "epoch": 75,
+        "sl_loss": 0.069,
+        "test_acc": 0.9235,
+        "co_recon_loss": 0.04039,
+        "psnr": 30.74,
+        "ssim": 0.9674,
+        "lpips": null
+      },
+      {
+        "epoch": 80,
+        "sl_loss": 0.0376,
+        "test_acc": 0.937,
+        "co_recon_loss": 0.02447,
+        "psnr": 31.85,
+        "ssim": 0.9734,
+        "lpips": null
+      },
+      {
+        "epoch": 85,
+        "sl_loss": 0.0125,
+        "test_acc": 0.942,
+        "co_recon_loss": 0.01408,
+        "psnr": 33.63,
+        "ssim": 0.9787,
+        "lpips": null
+      },
+      {
+        "epoch": 90,
+        "sl_loss": 0.0062,
+        "test_acc": 0.949,
+        "co_recon_loss": 0.01129,
+        "psnr": 34.36,
+        "ssim": 0.9812,
+        "lpips": null
+      },
+      {
+        "epoch": 95,
+        "sl_loss": 0.0031,
+        "test_acc": 0.9535,
+        "co_recon_loss": 0.01029,
+        "psnr": 34.72,
+        "ssim": 0.9827,
+        "lpips": null
+      },
+      {
+        "epoch": 100,
+        "sl_loss": 0.0029,
+        "test_acc": 0.9495,
+        "co_recon_loss": 0.00912,
+        "psnr": 35.12,
+        "ssim": 0.984,
+        "lpips": 0.0019
+      }
+    ]
+  },
+  {
+    "scenario_id": "b7_seed42",
+    "defense": "B7",
+    "seed": 42,
+    "sl_epochs": 100,
+    "task_test_acc": 91.17,
+    "total_steps": 2000,
+    "coadapt_final_psnr": 15.33,
+    "coadapt_final_ssim": 0.2887,
+    "coadapt_final_lpips": 0.1491,
+    "coadapt_peak_psnr": 15.86,
+    "coadapt_peak_ssim": 0.3641,
+    "coadapt_peak_epoch": 5,
+    "fresh_matched_psnr": 15.03,
+    "fresh_matched_ssim": 0.2716,
+    "fresh_matched_lpips": 0.1618,
+    "fresh_30ep_psnr": 15.08,
+    "fresh_30ep_ssim": 0.2705,
+    "fresh_30ep_lpips": 0.1891,
+    "delta_ssim_vs_matched": 0.0171,
+    "delta_ssim_peak_vs_matched": 0.0922,
+    "delta_psnr_vs_matched": 0.3,
+    "verdict": "B\u1ea5t bi\u1ebfn v\u1edbi Co-adaptation (Ch\u00eanh l\u1ec7ch kh\u00f4ng \u0111\u00e1ng k\u1ec3)",
+    "grid_image": "grid_coadapted_vs_fresh_b7_s42.png",
+    "history_coadapt": [
+      {
+        "epoch": 1,
+        "sl_loss": 2.169,
+        "test_acc": 0.3395,
+        "co_recon_loss": 1.20301,
+        "psnr": 15.0,
+        "ssim": 0.3009,
+        "lpips": null
+      },
+      {
+        "epoch": 5,
+        "sl_loss": 1.1353,
+        "test_acc": 0.626,
+        "co_recon_loss": 0.7421,
+        "psnr": 15.86,
+        "ssim": 0.3641,
+        "lpips": null
+      },
+      {
+        "epoch": 10,
+        "sl_loss": 0.8973,
+        "test_acc": 0.5775,
+        "co_recon_loss": 0.88614,
+        "psnr": 15.27,
+        "ssim": 0.298,
+        "lpips": null
+      },
+      {
+        "epoch": 15,
+        "sl_loss": 0.8105,
+        "test_acc": 0.683,
+        "co_recon_loss": 0.89769,
+        "psnr": 14.9,
+        "ssim": 0.2844,
+        "lpips": null
+      },
+      {
+        "epoch": 20,
+        "sl_loss": 0.7564,
+        "test_acc": 0.6015,
+        "co_recon_loss": 1.04577,
+        "psnr": 14.26,
+        "ssim": 0.2312,
+        "lpips": null
+      },
+      {
+        "epoch": 25,
+        "sl_loss": 0.7224,
+        "test_acc": 0.703,
+        "co_recon_loss": 0.82294,
+        "psnr": 15.18,
+        "ssim": 0.2871,
+        "lpips": null
+      },
+      {
+        "epoch": 30,
+        "sl_loss": 0.6777,
+        "test_acc": 0.754,
+        "co_recon_loss": 0.97183,
+        "psnr": 14.66,
+        "ssim": 0.2484,
+        "lpips": null
+      },
+      {
+        "epoch": 35,
+        "sl_loss": 0.6361,
+        "test_acc": 0.7405,
+        "co_recon_loss": 0.97027,
+        "psnr": 14.43,
+        "ssim": 0.2415,
+        "lpips": null
+      },
+      {
+        "epoch": 40,
+        "sl_loss": 0.6044,
+        "test_acc": 0.726,
+        "co_recon_loss": 0.87765,
+        "psnr": 14.79,
+        "ssim": 0.2727,
+        "lpips": null
+      },
+      {
+        "epoch": 45,
+        "sl_loss": 0.5665,
+        "test_acc": 0.778,
+        "co_recon_loss": 0.81765,
+        "psnr": 15.11,
+        "ssim": 0.2788,
+        "lpips": null
+      },
+      {
+        "epoch": 50,
+        "sl_loss": 0.5445,
+        "test_acc": 0.7925,
+        "co_recon_loss": 0.80749,
+        "psnr": 15.09,
+        "ssim": 0.2721,
+        "lpips": null
+      },
+      {
+        "epoch": 55,
+        "sl_loss": 0.4894,
+        "test_acc": 0.837,
+        "co_recon_loss": 0.74218,
+        "psnr": 15.32,
+        "ssim": 0.3008,
+        "lpips": null
+      },
+      {
+        "epoch": 60,
+        "sl_loss": 0.457,
+        "test_acc": 0.816,
+        "co_recon_loss": 0.72464,
+        "psnr": 15.44,
+        "ssim": 0.3011,
+        "lpips": null
+      },
+      {
+        "epoch": 65,
+        "sl_loss": 0.4051,
+        "test_acc": 0.837,
+        "co_recon_loss": 0.73339,
+        "psnr": 15.24,
+        "ssim": 0.2887,
+        "lpips": null
+      },
+      {
+        "epoch": 70,
+        "sl_loss": 0.364,
+        "test_acc": 0.8545,
+        "co_recon_loss": 0.66948,
+        "psnr": 15.48,
+        "ssim": 0.3075,
+        "lpips": null
+      },
+      {
+        "epoch": 75,
+        "sl_loss": 0.3104,
+        "test_acc": 0.86,
+        "co_recon_loss": 0.64265,
+        "psnr": 15.43,
+        "ssim": 0.3081,
+        "lpips": null
+      },
+      {
+        "epoch": 80,
+        "sl_loss": 0.2584,
+        "test_acc": 0.8875,
+        "co_recon_loss": 0.62455,
+        "psnr": 15.33,
+        "ssim": 0.3003,
+        "lpips": null
+      },
+      {
+        "epoch": 85,
+        "sl_loss": 0.2017,
+        "test_acc": 0.9015,
+        "co_recon_loss": 0.57056,
+        "psnr": 15.6,
+        "ssim": 0.3118,
+        "lpips": null
+      },
+      {
+        "epoch": 90,
+        "sl_loss": 0.1505,
+        "test_acc": 0.913,
+        "co_recon_loss": 0.58126,
+        "psnr": 15.23,
+        "ssim": 0.2814,
+        "lpips": null
+      },
+      {
+        "epoch": 95,
+        "sl_loss": 0.1109,
+        "test_acc": 0.923,
+        "co_recon_loss": 0.53459,
+        "psnr": 15.25,
+        "ssim": 0.2867,
+        "lpips": null
+      },
+      {
+        "epoch": 100,
+        "sl_loss": 0.0945,
+        "test_acc": 0.923,
+        "co_recon_loss": 0.49718,
+        "psnr": 15.32,
+        "ssim": 0.288,
+        "lpips": 0.1501
+      }
+    ]
+  },
+  {
+    "scenario_id": "b1_seed42",
+    "defense": "B1",
+    "seed": 42,
+    "sl_epochs": 100,
+    "task_test_acc": 94.46,
+    "total_steps": 2000,
+    "coadapt_final_psnr": 28.84,
+    "coadapt_final_ssim": 0.9401,
+    "coadapt_final_lpips": 0.0062,
+    "coadapt_peak_psnr": 28.84,
+    "coadapt_peak_ssim": 0.9396,
+    "coadapt_peak_epoch": 100,
+    "fresh_matched_psnr": 28.77,
+    "fresh_matched_ssim": 0.9406,
+    "fresh_matched_lpips": 0.0066,
+    "fresh_30ep_psnr": 26.62,
+    "fresh_30ep_ssim": 0.9184,
+    "fresh_30ep_lpips": 0.0104,
+    "delta_ssim_vs_matched": -0.0006,
+    "delta_ssim_peak_vs_matched": -0.001,
+    "delta_psnr_vs_matched": 0.07,
+    "verdict": "B\u1ea5t bi\u1ebfn v\u1edbi Co-adaptation (Ch\u00eanh l\u1ec7ch kh\u00f4ng \u0111\u00e1ng k\u1ec3)",
+    "grid_image": "grid_coadapted_vs_fresh_b1_s42.png",
+    "history_coadapt": [
+      {
+        "epoch": 1,
+        "sl_loss": 2.0278,
+        "test_acc": 0.4235,
+        "co_recon_loss": 0.64059,
+        "psnr": 19.36,
+        "ssim": 0.7119,
+        "lpips": null
+      },
+      {
+        "epoch": 5,
+        "sl_loss": 0.8186,
+        "test_acc": 0.748,
+        "co_recon_loss": 0.27292,
+        "psnr": 21.99,
+        "ssim": 0.8419,
+        "lpips": null
+      },
+      {
+        "epoch": 10,
+        "sl_loss": 0.5247,
+        "test_acc": 0.783,
+        "co_recon_loss": 0.1352,
+        "psnr": 24.3,
+        "ssim": 0.883,
+        "lpips": null
+      },
+      {
+        "epoch": 15,
+        "sl_loss": 0.4555,
+        "test_acc": 0.784,
+        "co_recon_loss": 0.10558,
+        "psnr": 25.98,
+        "ssim": 0.9111,
+        "lpips": null
+      },
+      {
+        "epoch": 20,
+        "sl_loss": 0.4,
+        "test_acc": 0.808,
+        "co_recon_loss": 0.08062,
+        "psnr": 26.29,
+        "ssim": 0.9135,
+        "lpips": null
+      },
+      {
+        "epoch": 25,
+        "sl_loss": 0.3693,
+        "test_acc": 0.862,
+        "co_recon_loss": 0.13045,
+        "psnr": 25.14,
+        "ssim": 0.9003,
+        "lpips": null
+      },
+      {
+        "epoch": 30,
+        "sl_loss": 0.3291,
+        "test_acc": 0.8495,
+        "co_recon_loss": 0.10285,
+        "psnr": 25.51,
+        "ssim": 0.9012,
+        "lpips": null
+      },
+      {
+        "epoch": 35,
+        "sl_loss": 0.303,
+        "test_acc": 0.854,
+        "co_recon_loss": 0.0857,
+        "psnr": 26.04,
+        "ssim": 0.913,
+        "lpips": null
+      },
+      {
+        "epoch": 40,
+        "sl_loss": 0.285,
+        "test_acc": 0.8345,
+        "co_recon_loss": 0.091,
+        "psnr": 26.64,
+        "ssim": 0.921,
+        "lpips": null
+      },
+      {
+        "epoch": 45,
+        "sl_loss": 0.2542,
+        "test_acc": 0.8575,
+        "co_recon_loss": 0.07081,
+        "psnr": 27.14,
+        "ssim": 0.9257,
+        "lpips": null
+      },
+      {
+        "epoch": 50,
+        "sl_loss": 0.2301,
+        "test_acc": 0.877,
+        "co_recon_loss": 0.06797,
+        "psnr": 27.05,
+        "ssim": 0.9258,
+        "lpips": null
+      },
+      {
+        "epoch": 55,
+        "sl_loss": 0.1927,
+        "test_acc": 0.8675,
+        "co_recon_loss": 0.07452,
+        "psnr": 26.91,
+        "ssim": 0.9197,
+        "lpips": null
+      },
+      {
+        "epoch": 60,
+        "sl_loss": 0.1696,
+        "test_acc": 0.887,
+        "co_recon_loss": 0.06679,
+        "psnr": 26.78,
+        "ssim": 0.924,
+        "lpips": null
+      },
+      {
+        "epoch": 65,
+        "sl_loss": 0.1329,
+        "test_acc": 0.913,
+        "co_recon_loss": 0.06142,
+        "psnr": 27.63,
+        "ssim": 0.9313,
+        "lpips": null
+      },
+      {
+        "epoch": 70,
+        "sl_loss": 0.0898,
+        "test_acc": 0.9005,
+        "co_recon_loss": 0.05992,
+        "psnr": 27.52,
+        "ssim": 0.9266,
+        "lpips": null
+      },
+      {
+        "epoch": 75,
+        "sl_loss": 0.0599,
+        "test_acc": 0.9195,
+        "co_recon_loss": 0.05233,
+        "psnr": 27.62,
+        "ssim": 0.928,
+        "lpips": null
+      },
+      {
+        "epoch": 80,
+        "sl_loss": 0.0284,
+        "test_acc": 0.9365,
+        "co_recon_loss": 0.04966,
+        "psnr": 27.95,
+        "ssim": 0.9295,
+        "lpips": null
+      },
+      {
+        "epoch": 85,
+        "sl_loss": 0.017,
+        "test_acc": 0.9475,
+        "co_recon_loss": 0.03874,
+        "psnr": 28.57,
+        "ssim": 0.9362,
+        "lpips": null
+      },
+      {
+        "epoch": 90,
+        "sl_loss": 0.0056,
+        "test_acc": 0.946,
+        "co_recon_loss": 0.03696,
+        "psnr": 28.54,
+        "ssim": 0.9367,
+        "lpips": null
+      },
+      {
+        "epoch": 95,
+        "sl_loss": 0.004,
+        "test_acc": 0.9505,
+        "co_recon_loss": 0.03613,
+        "psnr": 28.57,
+        "ssim": 0.9366,
+        "lpips": null
+      },
+      {
+        "epoch": 100,
+        "sl_loss": 0.0036,
+        "test_acc": 0.9505,
+        "co_recon_loss": 0.03414,
+        "psnr": 28.84,
+        "ssim": 0.9396,
+        "lpips": 0.0062
+      }
+    ]
   }
 ]
