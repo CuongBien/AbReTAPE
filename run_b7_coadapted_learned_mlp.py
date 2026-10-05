@@ -519,6 +519,7 @@ def run_single_b7_seed(seed, args, device, lpips_fn):
         "scenario_id": scenario_id,
         "seed": seed,
         "k": args.k,
+        "aux_size": args.aux_size,
         "hidden_dim": args.hidden_dim,
         "task_test_acc": round(final_task_acc * 100, 2),
         "total_steps": total_steps_a,
@@ -623,7 +624,7 @@ def main():
         # Cập nhật CSV sau mỗi seed
         with open(csv_path, "w", encoding="utf-8") as f:
             header = [
-                "seed", "task_test_acc", "total_steps",
+                "seed", "aux_size", "task_test_acc", "total_steps",
                 "mean_a_psnr_10", "std_a_psnr_10", "mean_a_ssim_10", "std_a_ssim_10",
                 "mean_b_psnr_10", "std_b_psnr_10", "mean_b_ssim_10", "std_b_ssim_10",
                 "delta_ssim_last10", "delta_psnr_last10",
@@ -636,6 +637,7 @@ def main():
             for r in all_results.values():
                 row = [
                     str(r["seed"]),
+                    str(r.get("aux_size", args.aux_size)),
                     str(r["task_test_acc"]),
                     str(r["total_steps"]),
                     str(r["mean_a_psnr_10"]),
