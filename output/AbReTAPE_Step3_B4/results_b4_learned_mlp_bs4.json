@@ -1,0 +1,17 @@
+{
+  "defense": "B4",
+  "method": "Block Scrambling (Learned Adaptive Attacker)",
+  "block_size": 4,
+  "seed": 42,
+  "attacker": "learned_adaptive_mlp",
+  "test_acc": 0.9261,
+  "mse": 0.0434,
+  "psnr": 28.28,
+  "ssim": 0.9252,
+  "lpips": 0.0135,
+  "dcor": 0.9043,
+  "best_psnr": 28.28,
+  "best_ssim": 0.9252,
+  "best_epoch": 30,
+  "training_time_s": 347.1
+}

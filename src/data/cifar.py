@@ -63,3 +63,52 @@ def get_cifar(dataset="cifar10", data_dir="./data", batch_size=128, num_workers=
         testset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=use_cuda
     )
     return trainloader, testloader
+
+
+def get_cifar10_fsha_splits(data_dir="./data", batch_size=128, num_workers=None, priv_ratio=0.5, seed=42):
+    """
+    Chia tập huấn luyện CIFAR-10 (50,000 mẫu) thành 2 tập con không giao nhau (disjoint):
+    - D_private (Client): priv_ratio * 50,000 mẫu (mặc định 25,000 mẫu)
+    - D_public / Auxiliary (Server): (1 - priv_ratio) * 50,000 mẫu (mặc định 25,000 mẫu)
+    - D_test: 10,000 mẫu dùng đánh giá độc lập Utility và Reconstruction.
+    """
+    if num_workers is None:
+        num_workers = DEFAULT_NUM_WORKERS
+
+    train_tf = T.Compose([
+        T.RandomCrop(32, padding=4),
+        T.RandomHorizontalFlip(),
+        T.ToTensor(),
+        T.Normalize(CIFAR10_MEAN, CIFAR10_STD),
+    ])
+    test_tf = T.Compose([
+        T.ToTensor(),
+        T.Normalize(CIFAR10_MEAN, CIFAR10_STD),
+    ])
+
+    trainset = torchvision.datasets.CIFAR10(root=data_dir, train=True, download=True, transform=train_tf)
+    testset = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=test_tf)
+
+    total_len = len(trainset)
+    priv_len = int(total_len * priv_ratio)
+    g = torch.Generator().manual_seed(seed)
+    indices = torch.randperm(total_len, generator=g).tolist()
+
+    priv_indices = indices[:priv_len]
+    pub_indices = indices[priv_len:]
+
+    priv_set = torch.utils.data.Subset(trainset, priv_indices)
+    pub_set = torch.utils.data.Subset(trainset, pub_indices)
+
+    use_cuda = torch.cuda.is_available()
+    priv_loader = torch.utils.data.DataLoader(
+        priv_set, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=use_cuda, drop_last=True
+    )
+    pub_loader = torch.utils.data.DataLoader(
+        pub_set, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=use_cuda, drop_last=True
+    )
+    test_loader = torch.utils.data.DataLoader(
+        testset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=use_cuda
+    )
+    return priv_loader, pub_loader, test_loader
+

@@ -67,7 +67,8 @@
 5. **B4 (Block Scramble)**: Xáo trộn vị trí khối đặc trưng/pixel tại cut-layer bằng khóa bí mật.
 6. **B5 (Deformable Operators)**: Biến dạng lưới tọa độ không gian phi tuyến ngẫu nhiên (Kiya et al. 2024).
 7. **B6 (ADP-style AE)**: Chèn Autoencoder nút thắt cổ chai kết hợp nhiễu loạn phân phối (arXiv:2502.20629).
-8. **Đề xuất: AR-TAPE**: Chiếu trực giao thu gọn rank $\mathbf{P}_{\text{task}} = \mathbf{V}\mathbf{V}^\top$, triệt tiêu không gian thừa $\mathbf{P}_\perp z$, phá vỡ toàn bộ quan hệ nghịch đảo của $\theta_s$.
+8. **B7 (LightSplit)**: Phép chiếu trực giao ngẫu nhiên cố định $R \in \mathbb{R}^{D \times k}$ ($R^\top R = I_k$, QR từ Gauss) tại cut-layer (arXiv:2605.13265, 05/2026). Baseline non-invertible duy nhất có $k \ll D$, chế độ F (lift không tham số) và L (MLP).
+9. **Đề xuất: AR-TAPE**: Chiếu trực giao thu gọn rank nhận biết tác vụ $\mathbf{P}_{\text{task}} = \mathbf{V}_{\text{task}}\mathbf{V}_{\text{task}}^\top$, triệt tiêu không gian thừa $\mathbf{P}_\perp z$, phá vỡ toàn bộ quan hệ nghịch đảo của $\theta_s$.
 
 ---
 

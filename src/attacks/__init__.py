@@ -12,7 +12,17 @@ from .recover_perm import (
     recover_perm_covariance,
     match_accuracy
 )
-from .fsha import FSHADiscriminator, FSHAPilotAutoEncoder, train_fsha_step
+from .fsha import (
+    FSHADiscriminator,
+    FSHAPilotAutoEncoder,
+    FSHAServerAdapter,
+    compute_gradient_penalty,
+    train_fsha_step,
+    fit_fsha_pilot,
+    warmup_fsha_discriminator,
+    train_fsha_hijack_epoch,
+    evaluate_fsha,
+)
 
 __all__ = [
     "Decoder",
@@ -27,5 +37,24 @@ __all__ = [
     "match_accuracy",
     "FSHADiscriminator",
     "FSHAPilotAutoEncoder",
+    "FSHAServerAdapter",
+    "compute_gradient_penalty",
     "train_fsha_step",
+    "fit_fsha_pilot",
+    "warmup_fsha_discriminator",
+    "train_fsha_hijack_epoch",
+    "evaluate_fsha",
+    "CoAdaptedPassiveAttacker",
+    "get_coadapted_data_splits",
+    "evaluate_coadapted_inversion",
+    "train_fresh_matched_steps",
+    "train_fresh_epochs",
 ]
+
+from .coadapted import (
+    CoAdaptedPassiveAttacker,
+    get_coadapted_data_splits,
+    evaluate_coadapted_inversion,
+    train_fresh_matched_steps,
+    train_fresh_epochs,
+)

@@ -29,7 +29,9 @@ from src.defenses import (
     BlockScrambleDefense,
     DeformableOperatorDefense,
     ADPAutoEncoderDefense,
-    AR_TAPE
+    AR_TAPE,
+    FixedOrthoProjection,
+    SplitProjection
 )
 from src.attacks import (
     Decoder,
@@ -222,6 +224,21 @@ def test_harness_defenses_and_ar_tape(device):
     ortho_loss = tape.get_orthogonality_loss()
     assert ortho_loss >= 0.0, "Orthogonality loss không thể âm!"
     print(f"  -> AR-TAPE (Subspace Projection P_task=V V^T) forward & ortho loss ({ortho_loss.item():.4f}): ĐẠT!")
+
+    # 5. B7: LightSplit (Fixed Orthogonal Projection)
+    proj = FixedOrthoProjection(D=64*32*32, k=1024, seed=42, device=device).to(device)
+    zt = proj(z)
+    assert zt.shape == (2, 1024), f"B7 zt shape sai: {zt.shape}"
+    zh = proj.lift(zt)
+    assert zh.shape == (2, 64*32*32), f"B7 zh shape sai: {zh.shape}"
+    ortho_err = proj.get_orthogonality_error()
+    assert ortho_err < 1e-4, f"B7 orthogonality error quá lớn: {ortho_err}"
+
+    dummy_server = ServerModel().to(device)
+    split_proj_server = SplitProjection(proj, dummy_server, mode="F").to(device)
+    out_f = split_proj_server(zt)
+    assert out_f.shape == (2, 10), f"B7 mode F output shape sai: {out_f.shape}"
+    print(f"  -> B7 (LightSplit Fixed Orthogonal Projection, k=1024, max |R^T R - I|: {ortho_err:.2e}): ĐẠT!")
 
 
 def test_clinical_and_gradcam_metrics(device):

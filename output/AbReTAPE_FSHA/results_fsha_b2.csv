@@ -1,0 +1,4 @@
+scenario_id,defense,method,param_label,sigma_dp,grad_scale,test_acc,delta_acc_vs_b0,mse,psnr,ssim,lpips,dcor_before,dcor_after,psnr_before,collapse_epoch_20db,collapse_epoch_25db,best_epoch,verdict,recon_image,dp_epsilon
+b2_dpsgd_sigma0.5_gs5.0,B2,DP-SGD (Client Optimizer),"sigma_dp=0.5, C=1.0",0.5,5.0,0.9434,-0.0037,0.0434,28.5,0.9683,0.0067,0.732,0.7272,27.77,1,1,1,Sụp đổ trước FSHA (Tái tạo thành công),fsha_recon_b2_dpsgd_sigma0.5_gs5.0.png,17.93
+b2_dpsgd_sigma1.0_gs5.0,B2,DP-SGD (Client Optimizer),"sigma_dp=1.0, C=1.0",1.0,5.0,0.9357,-0.0114,0.07946,25.78,0.9317,0.0152,0.732,0.7144,27.77,1,25,25,Sụp đổ trước FSHA (Tái tạo thành công),fsha_recon_b2_dpsgd_sigma1.0_gs5.0.png,2.6
+b2_dpsgd_sigma2.0_gs5.0,B2,DP-SGD (Client Optimizer),"sigma_dp=2.0, C=1.0",2.0,5.0,0.9438,-0.0033,0.0462,28.68,0.9601,0.008,0.732,0.7219,27.77,1,1,1,Sụp đổ trước FSHA (Tái tạo thành công),fsha_recon_b2_dpsgd_sigma2.0_gs5.0.png,1.03
