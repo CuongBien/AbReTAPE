@@ -55,3 +55,5 @@ scratch/
 # *history.json
 # *.csv
 cifar-10-python.tar.1.gz
+uv.lock
+/output

@@ -1,4 +1,0 @@
-scenario_id,defense,method,param_label,alpha,grad_scale,test_acc,delta_acc_vs_b0,mse,psnr,ssim,lpips,dcor_before,dcor_after,psnr_before,collapse_epoch_20db,collapse_epoch_25db,best_epoch,verdict,recon_image
-b6_adp_ae_alpha0.05_gs5.0,B6,ADP-AE (Plug-in AutoEncoder),"alpha=0.05, grad_scale=5.0",0.05,5.0,0.9356,-0.0115,0.2041,21.94,0.8813,0.045,0.7143,0.7087,28.57,1,,30,Sụp đổ trước FSHA (Tái tạo thành công),fsha_recon_b6_adp_ae_alpha0.05_gs5.0.png
-b6_adp_ae_alpha0.1_gs5.0,B6,ADP-AE (Plug-in AutoEncoder),"alpha=0.1, grad_scale=5.0",0.1,5.0,0.9335,-0.0136,0.24898,21.31,0.8796,0.038,0.7141,0.6964,28.61,20,,30,Sụp đổ trước FSHA (Tái tạo thành công),fsha_recon_b6_adp_ae_alpha0.1_gs5.0.png
-b6_adp_ae_alpha0.2_gs5.0,B6,ADP-AE (Plug-in AutoEncoder),"alpha=0.2, grad_scale=5.0",0.2,5.0,0.9342,-0.0129,0.33785,20.39,0.8672,0.0326,0.7142,0.7054,28.3,20,,30,Sụp đổ trước FSHA (Tái tạo thành công),fsha_recon_b6_adp_ae_alpha0.2_gs5.0.png
