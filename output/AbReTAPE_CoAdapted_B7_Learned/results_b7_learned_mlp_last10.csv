@@ -1,0 +1,4 @@
+seed,task_test_acc,total_steps,mean_a_psnr_10,std_a_psnr_10,mean_a_ssim_10,std_a_ssim_10,mean_b_psnr_10,std_b_psnr_10,mean_b_ssim_10,std_b_ssim_10,delta_ssim_last10,delta_psnr_last10,final_a_psnr,final_a_ssim,final_b_psnr,final_b_ssim,delta_ssim_final,delta_psnr_final,peak_a_psnr,peak_a_ssim,peak_b_psnr,peak_b_ssim,verdict
+42,90.14,2000,16.15,0.05,0.3076,0.0033,16.19,0.02,0.3238,0.0015,-0.0162,-0.03,16.17,0.3099,16.16,0.3257,-0.0158,0.01,17.28,0.4049,16.23,0.3195,"Bất biến với Co-adaptation (Chênh lệch không đáng kể <= 0.05)"
+7,89.02,2000,15.78,0.04,0.2933,0.0019,15.75,0.04,0.3034,0.0017,-0.0101,0.03,15.79,0.2921,15.74,0.3,-0.008,0.05,17.21,0.3951,15.8,0.3042,"Bất biến với Co-adaptation (Chênh lệch không đáng kể <= 0.05)"
+2024,90.82,2000,15.51,0.04,0.2865,0.0032,15.54,0.03,0.3011,0.0022,-0.0146,-0.03,15.58,0.286,15.59,0.2973,-0.0112,-0.01,16.68,0.3654,15.58,0.3006,"Bất biến với Co-adaptation (Chênh lệch không đáng kể <= 0.05)"

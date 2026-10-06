@@ -1,0 +1,1223 @@
+{
+  "b7_learned_mlp_s42": {
+    "scenario_id": "b7_learned_mlp_s42",
+    "seed": 42,
+    "k": 1024,
+    "hidden_dim": 512,
+    "task_test_acc": 90.14,
+    "total_steps": 2000,
+    "mean_a_psnr_10": 16.15,
+    "std_a_psnr_10": 0.05,
+    "mean_a_ssim_10": 0.3076,
+    "std_a_ssim_10": 0.0033,
+    "mean_b_psnr_10": 16.19,
+    "std_b_psnr_10": 0.02,
+    "mean_b_ssim_10": 0.3238,
+    "std_b_ssim_10": 0.0015,
+    "delta_ssim_last10": -0.0162,
+    "delta_psnr_last10": -0.03,
+    "final_a_psnr": 16.17,
+    "final_a_ssim": 0.3099,
+    "final_b_psnr": 16.16,
+    "final_b_ssim": 0.3257,
+    "delta_ssim_final": -0.0158,
+    "delta_psnr_final": 0.01,
+    "peak_a_psnr": 17.28,
+    "peak_a_ssim": 0.4049,
+    "peak_b_psnr": 16.23,
+    "peak_b_ssim": 0.3195,
+    "lpips_a": 0.1028,
+    "lpips_b": 0.0995,
+    "verdict": "Bất biến với Co-adaptation (Chênh lệch không đáng kể <= 0.05)",
+    "history_a": [
+      {
+        "epoch": 1,
+        "task_acc": null,
+        "psnr": 15.76,
+        "ssim": 0.2435
+      },
+      {
+        "epoch": 5,
+        "task_acc": 0.623,
+        "psnr": 16.52,
+        "ssim": 0.3543
+      },
+      {
+        "epoch": 10,
+        "task_acc": 0.584,
+        "psnr": 17.28,
+        "ssim": 0.4049
+      },
+      {
+        "epoch": 15,
+        "task_acc": 0.6315,
+        "psnr": 17.09,
+        "ssim": 0.3752
+      },
+      {
+        "epoch": 20,
+        "task_acc": 0.699,
+        "psnr": 16.6,
+        "ssim": 0.3494
+      },
+      {
+        "epoch": 25,
+        "task_acc": 0.7325,
+        "psnr": 16.61,
+        "ssim": 0.3528
+      },
+      {
+        "epoch": 30,
+        "task_acc": 0.7375,
+        "psnr": 16.2,
+        "ssim": 0.3295
+      },
+      {
+        "epoch": 35,
+        "task_acc": 0.76,
+        "psnr": 15.86,
+        "ssim": 0.3097
+      },
+      {
+        "epoch": 40,
+        "task_acc": 0.74,
+        "psnr": 16.13,
+        "ssim": 0.3207
+      },
+      {
+        "epoch": 45,
+        "task_acc": 0.7665,
+        "psnr": 16.1,
+        "ssim": 0.3214
+      },
+      {
+        "epoch": 50,
+        "task_acc": 0.819,
+        "psnr": 15.79,
+        "ssim": 0.2959
+      },
+      {
+        "epoch": 55,
+        "task_acc": 0.8175,
+        "psnr": 16.06,
+        "ssim": 0.3064
+      },
+      {
+        "epoch": 60,
+        "task_acc": 0.752,
+        "psnr": 15.84,
+        "ssim": 0.2988
+      },
+      {
+        "epoch": 65,
+        "task_acc": 0.8045,
+        "psnr": 16.03,
+        "ssim": 0.3034
+      },
+      {
+        "epoch": 70,
+        "task_acc": 0.858,
+        "psnr": 15.99,
+        "ssim": 0.2965
+      },
+      {
+        "epoch": 75,
+        "task_acc": 0.859,
+        "psnr": 15.82,
+        "ssim": 0.2925
+      },
+      {
+        "epoch": 80,
+        "task_acc": 0.8705,
+        "psnr": 16.11,
+        "ssim": 0.3119
+      },
+      {
+        "epoch": 85,
+        "task_acc": 0.893,
+        "psnr": 16.03,
+        "ssim": 0.3048
+      },
+      {
+        "epoch": 90,
+        "task_acc": 0.906,
+        "psnr": 16.1,
+        "ssim": 0.306
+      },
+      {
+        "epoch": 91,
+        "task_acc": null,
+        "psnr": 16.22,
+        "ssim": 0.3115
+      },
+      {
+        "epoch": 92,
+        "task_acc": null,
+        "psnr": 16.08,
+        "ssim": 0.3002
+      },
+      {
+        "epoch": 93,
+        "task_acc": null,
+        "psnr": 16.14,
+        "ssim": 0.3076
+      },
+      {
+        "epoch": 94,
+        "task_acc": null,
+        "psnr": 16.21,
+        "ssim": 0.3079
+      },
+      {
+        "epoch": 95,
+        "task_acc": 0.906,
+        "psnr": 16.16,
+        "ssim": 0.3075
+      },
+      {
+        "epoch": 96,
+        "task_acc": null,
+        "psnr": 16.08,
+        "ssim": 0.3047
+      },
+      {
+        "epoch": 97,
+        "task_acc": null,
+        "psnr": 16.09,
+        "ssim": 0.3063
+      },
+      {
+        "epoch": 98,
+        "task_acc": null,
+        "psnr": 16.15,
+        "ssim": 0.3085
+      },
+      {
+        "epoch": 99,
+        "task_acc": null,
+        "psnr": 16.21,
+        "ssim": 0.313
+      },
+      {
+        "epoch": 100,
+        "task_acc": 0.9105,
+        "psnr": 16.16,
+        "ssim": 0.3085
+      }
+    ],
+    "history_b": [
+      {
+        "step": 20,
+        "equiv_epoch": 1,
+        "psnr": 13.86,
+        "ssim": 0.1846
+      },
+      {
+        "step": 100,
+        "equiv_epoch": 5,
+        "psnr": 15.98,
+        "ssim": 0.2941
+      },
+      {
+        "step": 200,
+        "equiv_epoch": 10,
+        "psnr": 15.91,
+        "ssim": 0.3068
+      },
+      {
+        "step": 300,
+        "equiv_epoch": 15,
+        "psnr": 15.99,
+        "ssim": 0.3096
+      },
+      {
+        "step": 400,
+        "equiv_epoch": 20,
+        "psnr": 15.77,
+        "ssim": 0.3084
+      },
+      {
+        "step": 500,
+        "equiv_epoch": 25,
+        "psnr": 15.81,
+        "ssim": 0.3144
+      },
+      {
+        "step": 600,
+        "equiv_epoch": 30,
+        "psnr": 16.12,
+        "ssim": 0.311
+      },
+      {
+        "step": 700,
+        "equiv_epoch": 35,
+        "psnr": 16.09,
+        "ssim": 0.3166
+      },
+      {
+        "step": 800,
+        "equiv_epoch": 40,
+        "psnr": 16.04,
+        "ssim": 0.3206
+      },
+      {
+        "step": 900,
+        "equiv_epoch": 45,
+        "psnr": 16.16,
+        "ssim": 0.3193
+      },
+      {
+        "step": 1000,
+        "equiv_epoch": 50,
+        "psnr": 16.19,
+        "ssim": 0.3203
+      },
+      {
+        "step": 1100,
+        "equiv_epoch": 55,
+        "psnr": 16.16,
+        "ssim": 0.3221
+      },
+      {
+        "step": 1200,
+        "equiv_epoch": 60,
+        "psnr": 16.21,
+        "ssim": 0.3224
+      },
+      {
+        "step": 1300,
+        "equiv_epoch": 65,
+        "psnr": 16.19,
+        "ssim": 0.3207
+      },
+      {
+        "step": 1400,
+        "equiv_epoch": 70,
+        "psnr": 16.21,
+        "ssim": 0.3201
+      },
+      {
+        "step": 1500,
+        "equiv_epoch": 75,
+        "psnr": 16.22,
+        "ssim": 0.3238
+      },
+      {
+        "step": 1600,
+        "equiv_epoch": 80,
+        "psnr": 16.23,
+        "ssim": 0.3195
+      },
+      {
+        "step": 1700,
+        "equiv_epoch": 85,
+        "psnr": 16.22,
+        "ssim": 0.3227
+      },
+      {
+        "step": 1800,
+        "equiv_epoch": 90,
+        "psnr": 16.19,
+        "ssim": 0.3234
+      },
+      {
+        "step": 1820,
+        "equiv_epoch": 91,
+        "psnr": 16.21,
+        "ssim": 0.3242
+      },
+      {
+        "step": 1840,
+        "equiv_epoch": 92,
+        "psnr": 16.19,
+        "ssim": 0.3252
+      },
+      {
+        "step": 1860,
+        "equiv_epoch": 93,
+        "psnr": 16.17,
+        "ssim": 0.3249
+      },
+      {
+        "step": 1880,
+        "equiv_epoch": 94,
+        "psnr": 16.17,
+        "ssim": 0.3203
+      },
+      {
+        "step": 1900,
+        "equiv_epoch": 95,
+        "psnr": 16.2,
+        "ssim": 0.323
+      },
+      {
+        "step": 1920,
+        "equiv_epoch": 96,
+        "psnr": 16.21,
+        "ssim": 0.3244
+      },
+      {
+        "step": 1940,
+        "equiv_epoch": 97,
+        "psnr": 16.17,
+        "ssim": 0.3246
+      },
+      {
+        "step": 1960,
+        "equiv_epoch": 98,
+        "psnr": 16.17,
+        "ssim": 0.322
+      },
+      {
+        "step": 1980,
+        "equiv_epoch": 99,
+        "psnr": 16.21,
+        "ssim": 0.325
+      },
+      {
+        "step": 2000,
+        "equiv_epoch": 100,
+        "psnr": 16.16,
+        "ssim": 0.3243
+      }
+    ],
+    "last10_a_ssim": [
+      0.3115,
+      0.3002,
+      0.3076,
+      0.3079,
+      0.3075,
+      0.3047,
+      0.3063,
+      0.3085,
+      0.313,
+      0.3085
+    ],
+    "last10_b_ssim": [
+      0.3242,
+      0.3252,
+      0.3249,
+      0.3203,
+      0.323,
+      0.3244,
+      0.3246,
+      0.322,
+      0.325,
+      0.3243
+    ]
+  },
+  "b7_learned_mlp_s7": {
+    "scenario_id": "b7_learned_mlp_s7",
+    "seed": 7,
+    "k": 1024,
+    "hidden_dim": 512,
+    "task_test_acc": 89.02,
+    "total_steps": 2000,
+    "mean_a_psnr_10": 15.78,
+    "std_a_psnr_10": 0.04,
+    "mean_a_ssim_10": 0.2933,
+    "std_a_ssim_10": 0.0019,
+    "mean_b_psnr_10": 15.75,
+    "std_b_psnr_10": 0.04,
+    "mean_b_ssim_10": 0.3034,
+    "std_b_ssim_10": 0.0017,
+    "delta_ssim_last10": -0.0101,
+    "delta_psnr_last10": 0.03,
+    "final_a_psnr": 15.79,
+    "final_a_ssim": 0.2921,
+    "final_b_psnr": 15.74,
+    "final_b_ssim": 0.3,
+    "delta_ssim_final": -0.008,
+    "delta_psnr_final": 0.05,
+    "peak_a_psnr": 17.21,
+    "peak_a_ssim": 0.3951,
+    "peak_b_psnr": 15.8,
+    "peak_b_ssim": 0.3042,
+    "lpips_a": 0.1036,
+    "lpips_b": 0.1036,
+    "verdict": "Bất biến với Co-adaptation (Chênh lệch không đáng kể <= 0.05)",
+    "history_a": [
+      {
+        "epoch": 1,
+        "task_acc": null,
+        "psnr": 15.74,
+        "ssim": 0.2815
+      },
+      {
+        "epoch": 5,
+        "task_acc": 0.62,
+        "psnr": 17.21,
+        "ssim": 0.3951
+      },
+      {
+        "epoch": 10,
+        "task_acc": 0.5955,
+        "psnr": 16.95,
+        "ssim": 0.375
+      },
+      {
+        "epoch": 15,
+        "task_acc": 0.678,
+        "psnr": 17.0,
+        "ssim": 0.3696
+      },
+      {
+        "epoch": 20,
+        "task_acc": 0.7265,
+        "psnr": 16.33,
+        "ssim": 0.3529
+      },
+      {
+        "epoch": 25,
+        "task_acc": 0.6905,
+        "psnr": 15.95,
+        "ssim": 0.3316
+      },
+      {
+        "epoch": 30,
+        "task_acc": 0.7325,
+        "psnr": 15.76,
+        "ssim": 0.3206
+      },
+      {
+        "epoch": 35,
+        "task_acc": 0.7565,
+        "psnr": 15.73,
+        "ssim": 0.2929
+      },
+      {
+        "epoch": 40,
+        "task_acc": 0.7365,
+        "psnr": 16.14,
+        "ssim": 0.3181
+      },
+      {
+        "epoch": 45,
+        "task_acc": 0.7345,
+        "psnr": 15.87,
+        "ssim": 0.3041
+      },
+      {
+        "epoch": 50,
+        "task_acc": 0.789,
+        "psnr": 15.7,
+        "ssim": 0.2902
+      },
+      {
+        "epoch": 55,
+        "task_acc": 0.803,
+        "psnr": 16.04,
+        "ssim": 0.3089
+      },
+      {
+        "epoch": 60,
+        "task_acc": 0.786,
+        "psnr": 15.36,
+        "ssim": 0.2772
+      },
+      {
+        "epoch": 65,
+        "task_acc": 0.797,
+        "psnr": 15.66,
+        "ssim": 0.2877
+      },
+      {
+        "epoch": 70,
+        "task_acc": 0.8045,
+        "psnr": 15.43,
+        "ssim": 0.2754
+      },
+      {
+        "epoch": 75,
+        "task_acc": 0.865,
+        "psnr": 15.59,
+        "ssim": 0.2811
+      },
+      {
+        "epoch": 80,
+        "task_acc": 0.8725,
+        "psnr": 15.6,
+        "ssim": 0.2841
+      },
+      {
+        "epoch": 85,
+        "task_acc": 0.8755,
+        "psnr": 15.67,
+        "ssim": 0.2872
+      },
+      {
+        "epoch": 90,
+        "task_acc": 0.8885,
+        "psnr": 15.75,
+        "ssim": 0.2922
+      },
+      {
+        "epoch": 91,
+        "task_acc": null,
+        "psnr": 15.84,
+        "ssim": 0.294
+      },
+      {
+        "epoch": 92,
+        "task_acc": null,
+        "psnr": 15.78,
+        "ssim": 0.2936
+      },
+      {
+        "epoch": 93,
+        "task_acc": null,
+        "psnr": 15.77,
+        "ssim": 0.2936
+      },
+      {
+        "epoch": 94,
+        "task_acc": null,
+        "psnr": 15.71,
+        "ssim": 0.2893
+      },
+      {
+        "epoch": 95,
+        "task_acc": 0.8985,
+        "psnr": 15.79,
+        "ssim": 0.2943
+      },
+      {
+        "epoch": 96,
+        "task_acc": null,
+        "psnr": 15.73,
+        "ssim": 0.2908
+      },
+      {
+        "epoch": 97,
+        "task_acc": null,
+        "psnr": 15.8,
+        "ssim": 0.292
+      },
+      {
+        "epoch": 98,
+        "task_acc": null,
+        "psnr": 15.76,
+        "ssim": 0.2944
+      },
+      {
+        "epoch": 99,
+        "task_acc": null,
+        "psnr": 15.82,
+        "ssim": 0.2959
+      },
+      {
+        "epoch": 100,
+        "task_acc": 0.901,
+        "psnr": 15.81,
+        "ssim": 0.2949
+      }
+    ],
+    "history_b": [
+      {
+        "step": 20,
+        "equiv_epoch": 1,
+        "psnr": 13.49,
+        "ssim": 0.1587
+      },
+      {
+        "step": 100,
+        "equiv_epoch": 5,
+        "psnr": 15.66,
+        "ssim": 0.2842
+      },
+      {
+        "step": 200,
+        "equiv_epoch": 10,
+        "psnr": 15.64,
+        "ssim": 0.2931
+      },
+      {
+        "step": 300,
+        "equiv_epoch": 15,
+        "psnr": 15.58,
+        "ssim": 0.2918
+      },
+      {
+        "step": 400,
+        "equiv_epoch": 20,
+        "psnr": 15.37,
+        "ssim": 0.2926
+      },
+      {
+        "step": 500,
+        "equiv_epoch": 25,
+        "psnr": 15.5,
+        "ssim": 0.2907
+      },
+      {
+        "step": 600,
+        "equiv_epoch": 30,
+        "psnr": 15.58,
+        "ssim": 0.2924
+      },
+      {
+        "step": 700,
+        "equiv_epoch": 35,
+        "psnr": 15.62,
+        "ssim": 0.2995
+      },
+      {
+        "step": 800,
+        "equiv_epoch": 40,
+        "psnr": 15.68,
+        "ssim": 0.2983
+      },
+      {
+        "step": 900,
+        "equiv_epoch": 45,
+        "psnr": 15.64,
+        "ssim": 0.2965
+      },
+      {
+        "step": 1000,
+        "equiv_epoch": 50,
+        "psnr": 15.71,
+        "ssim": 0.2973
+      },
+      {
+        "step": 1100,
+        "equiv_epoch": 55,
+        "psnr": 15.65,
+        "ssim": 0.3028
+      },
+      {
+        "step": 1200,
+        "equiv_epoch": 60,
+        "psnr": 15.71,
+        "ssim": 0.3004
+      },
+      {
+        "step": 1300,
+        "equiv_epoch": 65,
+        "psnr": 15.7,
+        "ssim": 0.3033
+      },
+      {
+        "step": 1400,
+        "equiv_epoch": 70,
+        "psnr": 15.74,
+        "ssim": 0.3002
+      },
+      {
+        "step": 1500,
+        "equiv_epoch": 75,
+        "psnr": 15.75,
+        "ssim": 0.3042
+      },
+      {
+        "step": 1600,
+        "equiv_epoch": 80,
+        "psnr": 15.79,
+        "ssim": 0.3069
+      },
+      {
+        "step": 1700,
+        "equiv_epoch": 85,
+        "psnr": 15.74,
+        "ssim": 0.3048
+      },
+      {
+        "step": 1800,
+        "equiv_epoch": 90,
+        "psnr": 15.8,
+        "ssim": 0.3042
+      },
+      {
+        "step": 1820,
+        "equiv_epoch": 91,
+        "psnr": 15.76,
+        "ssim": 0.3054
+      },
+      {
+        "step": 1840,
+        "equiv_epoch": 92,
+        "psnr": 15.78,
+        "ssim": 0.3035
+      },
+      {
+        "step": 1860,
+        "equiv_epoch": 93,
+        "psnr": 15.78,
+        "ssim": 0.3029
+      },
+      {
+        "step": 1880,
+        "equiv_epoch": 94,
+        "psnr": 15.64,
+        "ssim": 0.3054
+      },
+      {
+        "step": 1900,
+        "equiv_epoch": 95,
+        "psnr": 15.73,
+        "ssim": 0.302
+      },
+      {
+        "step": 1920,
+        "equiv_epoch": 96,
+        "psnr": 15.78,
+        "ssim": 0.3041
+      },
+      {
+        "step": 1940,
+        "equiv_epoch": 97,
+        "psnr": 15.78,
+        "ssim": 0.2993
+      },
+      {
+        "step": 1960,
+        "equiv_epoch": 98,
+        "psnr": 15.76,
+        "ssim": 0.3044
+      },
+      {
+        "step": 1980,
+        "equiv_epoch": 99,
+        "psnr": 15.77,
+        "ssim": 0.3037
+      },
+      {
+        "step": 2000,
+        "equiv_epoch": 100,
+        "psnr": 15.76,
+        "ssim": 0.303
+      }
+    ],
+    "last10_a_ssim": [
+      0.294,
+      0.2936,
+      0.2936,
+      0.2893,
+      0.2943,
+      0.2908,
+      0.292,
+      0.2944,
+      0.2959,
+      0.2949
+    ],
+    "last10_b_ssim": [
+      0.3054,
+      0.3035,
+      0.3029,
+      0.3054,
+      0.302,
+      0.3041,
+      0.2993,
+      0.3044,
+      0.3037,
+      0.303
+    ]
+  },
+  "b7_learned_mlp_s2024": {
+    "scenario_id": "b7_learned_mlp_s2024",
+    "seed": 2024,
+    "k": 1024,
+    "hidden_dim": 512,
+    "task_test_acc": 90.82,
+    "total_steps": 2000,
+    "mean_a_psnr_10": 15.51,
+    "std_a_psnr_10": 0.04,
+    "mean_a_ssim_10": 0.2865,
+    "std_a_ssim_10": 0.0032,
+    "mean_b_psnr_10": 15.54,
+    "std_b_psnr_10": 0.03,
+    "mean_b_ssim_10": 0.3011,
+    "std_b_ssim_10": 0.0022,
+    "delta_ssim_last10": -0.0146,
+    "delta_psnr_last10": -0.03,
+    "final_a_psnr": 15.58,
+    "final_a_ssim": 0.286,
+    "final_b_psnr": 15.59,
+    "final_b_ssim": 0.2973,
+    "delta_ssim_final": -0.0112,
+    "delta_psnr_final": -0.01,
+    "peak_a_psnr": 16.68,
+    "peak_a_ssim": 0.3654,
+    "peak_b_psnr": 15.58,
+    "peak_b_ssim": 0.3006,
+    "lpips_a": 0.1063,
+    "lpips_b": 0.1016,
+    "verdict": "Bất biến với Co-adaptation (Chênh lệch không đáng kể <= 0.05)",
+    "history_a": [
+      {
+        "epoch": 1,
+        "task_acc": null,
+        "psnr": 15.3,
+        "ssim": 0.2597
+      },
+      {
+        "epoch": 5,
+        "task_acc": 0.5395,
+        "psnr": 16.68,
+        "ssim": 0.3654
+      },
+      {
+        "epoch": 10,
+        "task_acc": 0.687,
+        "psnr": 16.66,
+        "ssim": 0.3619
+      },
+      {
+        "epoch": 15,
+        "task_acc": 0.4785,
+        "psnr": 16.65,
+        "ssim": 0.3666
+      },
+      {
+        "epoch": 20,
+        "task_acc": 0.7035,
+        "psnr": 16.31,
+        "ssim": 0.3419
+      },
+      {
+        "epoch": 25,
+        "task_acc": 0.6705,
+        "psnr": 16.26,
+        "ssim": 0.3362
+      },
+      {
+        "epoch": 30,
+        "task_acc": 0.721,
+        "psnr": 16.04,
+        "ssim": 0.3216
+      },
+      {
+        "epoch": 35,
+        "task_acc": 0.71,
+        "psnr": 15.78,
+        "ssim": 0.3088
+      },
+      {
+        "epoch": 40,
+        "task_acc": 0.7115,
+        "psnr": 16.12,
+        "ssim": 0.3307
+      },
+      {
+        "epoch": 45,
+        "task_acc": 0.707,
+        "psnr": 15.59,
+        "ssim": 0.2995
+      },
+      {
+        "epoch": 50,
+        "task_acc": 0.798,
+        "psnr": 15.68,
+        "ssim": 0.2977
+      },
+      {
+        "epoch": 55,
+        "task_acc": 0.7965,
+        "psnr": 15.65,
+        "ssim": 0.293
+      },
+      {
+        "epoch": 60,
+        "task_acc": 0.822,
+        "psnr": 15.33,
+        "ssim": 0.2778
+      },
+      {
+        "epoch": 65,
+        "task_acc": 0.8095,
+        "psnr": 15.35,
+        "ssim": 0.2807
+      },
+      {
+        "epoch": 70,
+        "task_acc": 0.8515,
+        "psnr": 15.42,
+        "ssim": 0.2787
+      },
+      {
+        "epoch": 75,
+        "task_acc": 0.866,
+        "psnr": 15.34,
+        "ssim": 0.2742
+      },
+      {
+        "epoch": 80,
+        "task_acc": 0.888,
+        "psnr": 15.56,
+        "ssim": 0.2876
+      },
+      {
+        "epoch": 85,
+        "task_acc": 0.8875,
+        "psnr": 15.41,
+        "ssim": 0.2781
+      },
+      {
+        "epoch": 90,
+        "task_acc": 0.91,
+        "psnr": 15.52,
+        "ssim": 0.2839
+      },
+      {
+        "epoch": 91,
+        "task_acc": null,
+        "psnr": 15.44,
+        "ssim": 0.2797
+      },
+      {
+        "epoch": 92,
+        "task_acc": null,
+        "psnr": 15.57,
+        "ssim": 0.2889
+      },
+      {
+        "epoch": 93,
+        "task_acc": null,
+        "psnr": 15.53,
+        "ssim": 0.2884
+      },
+      {
+        "epoch": 94,
+        "task_acc": null,
+        "psnr": 15.45,
+        "ssim": 0.2823
+      },
+      {
+        "epoch": 95,
+        "task_acc": 0.9135,
+        "psnr": 15.5,
+        "ssim": 0.2841
+      },
+      {
+        "epoch": 96,
+        "task_acc": null,
+        "psnr": 15.54,
+        "ssim": 0.2873
+      },
+      {
+        "epoch": 97,
+        "task_acc": null,
+        "psnr": 15.54,
+        "ssim": 0.2874
+      },
+      {
+        "epoch": 98,
+        "task_acc": null,
+        "psnr": 15.53,
+        "ssim": 0.2902
+      },
+      {
+        "epoch": 99,
+        "task_acc": null,
+        "psnr": 15.5,
+        "ssim": 0.2876
+      },
+      {
+        "epoch": 100,
+        "task_acc": 0.9165,
+        "psnr": 15.54,
+        "ssim": 0.2891
+      }
+    ],
+    "history_b": [
+      {
+        "step": 20,
+        "equiv_epoch": 1,
+        "psnr": 13.44,
+        "ssim": 0.1607
+      },
+      {
+        "step": 100,
+        "equiv_epoch": 5,
+        "psnr": 15.27,
+        "ssim": 0.2763
+      },
+      {
+        "step": 200,
+        "equiv_epoch": 10,
+        "psnr": 15.35,
+        "ssim": 0.2889
+      },
+      {
+        "step": 300,
+        "equiv_epoch": 15,
+        "psnr": 15.4,
+        "ssim": 0.2912
+      },
+      {
+        "step": 400,
+        "equiv_epoch": 20,
+        "psnr": 15.25,
+        "ssim": 0.2875
+      },
+      {
+        "step": 500,
+        "equiv_epoch": 25,
+        "psnr": 15.28,
+        "ssim": 0.2893
+      },
+      {
+        "step": 600,
+        "equiv_epoch": 30,
+        "psnr": 15.4,
+        "ssim": 0.2906
+      },
+      {
+        "step": 700,
+        "equiv_epoch": 35,
+        "psnr": 15.34,
+        "ssim": 0.2904
+      },
+      {
+        "step": 800,
+        "equiv_epoch": 40,
+        "psnr": 15.38,
+        "ssim": 0.2958
+      },
+      {
+        "step": 900,
+        "equiv_epoch": 45,
+        "psnr": 15.51,
+        "ssim": 0.2929
+      },
+      {
+        "step": 1000,
+        "equiv_epoch": 50,
+        "psnr": 15.45,
+        "ssim": 0.297
+      },
+      {
+        "step": 1100,
+        "equiv_epoch": 55,
+        "psnr": 15.43,
+        "ssim": 0.2949
+      },
+      {
+        "step": 1200,
+        "equiv_epoch": 60,
+        "psnr": 15.4,
+        "ssim": 0.2953
+      },
+      {
+        "step": 1300,
+        "equiv_epoch": 65,
+        "psnr": 15.56,
+        "ssim": 0.3007
+      },
+      {
+        "step": 1400,
+        "equiv_epoch": 70,
+        "psnr": 15.49,
+        "ssim": 0.3003
+      },
+      {
+        "step": 1500,
+        "equiv_epoch": 75,
+        "psnr": 15.5,
+        "ssim": 0.2985
+      },
+      {
+        "step": 1600,
+        "equiv_epoch": 80,
+        "psnr": 15.58,
+        "ssim": 0.2993
+      },
+      {
+        "step": 1700,
+        "equiv_epoch": 85,
+        "psnr": 15.56,
+        "ssim": 0.2959
+      },
+      {
+        "step": 1800,
+        "equiv_epoch": 90,
+        "psnr": 15.51,
+        "ssim": 0.3001
+      },
+      {
+        "step": 1820,
+        "equiv_epoch": 91,
+        "psnr": 15.55,
+        "ssim": 0.3009
+      },
+      {
+        "step": 1840,
+        "equiv_epoch": 92,
+        "psnr": 15.47,
+        "ssim": 0.2975
+      },
+      {
+        "step": 1860,
+        "equiv_epoch": 93,
+        "psnr": 15.54,
+        "ssim": 0.3053
+      },
+      {
+        "step": 1880,
+        "equiv_epoch": 94,
+        "psnr": 15.56,
+        "ssim": 0.2998
+      },
+      {
+        "step": 1900,
+        "equiv_epoch": 95,
+        "psnr": 15.58,
+        "ssim": 0.3006
+      },
+      {
+        "step": 1920,
+        "equiv_epoch": 96,
+        "psnr": 15.55,
+        "ssim": 0.302
+      },
+      {
+        "step": 1940,
+        "equiv_epoch": 97,
+        "psnr": 15.51,
+        "ssim": 0.3039
+      },
+      {
+        "step": 1960,
+        "equiv_epoch": 98,
+        "psnr": 15.57,
+        "ssim": 0.3017
+      },
+      {
+        "step": 1980,
+        "equiv_epoch": 99,
+        "psnr": 15.52,
+        "ssim": 0.2985
+      },
+      {
+        "step": 2000,
+        "equiv_epoch": 100,
+        "psnr": 15.55,
+        "ssim": 0.3007
+      }
+    ],
+    "last10_a_ssim": [
+      0.2797,
+      0.2889,
+      0.2884,
+      0.2823,
+      0.2841,
+      0.2873,
+      0.2874,
+      0.2902,
+      0.2876,
+      0.2891
+    ],
+    "last10_b_ssim": [
+      0.3009,
+      0.2975,
+      0.3053,
+      0.2998,
+      0.3006,
+      0.302,
+      0.3039,
+      0.3017,
+      0.2985,
+      0.3007
+    ]
+  }
+}
