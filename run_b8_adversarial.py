@@ -41,9 +41,9 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from src.models import ClientModel, ServerModel
-from src.data.cifar import CIFAR10_MEAN, CIFAR10_STD, denormalize
+from src.data.cifar import CIFAR10_MEAN, CIFAR10_STD
 from src.attacks import Decoder
-from src.metrics.reconstruction import psnr_ssim, distance_correlation
+from src.metrics.reconstruction import psnr_ssim, distance_correlation, denormalize
 
 
 class LearnedAdaptiveDecoderB8(nn.Module):
