@@ -1,4 +1,7 @@
 [core]
-    remote = origin
+    remote = dagshub_http
 ['remote "origin"']
+    url = s3://dvc
+    endpointurl = https://dagshub.com/meowmeow01aa/AbReTAPE.s3
+['remote "dagshub_http"']
     url = https://dagshub.com/meowmeow01aa/AbReTAPE.dvc
