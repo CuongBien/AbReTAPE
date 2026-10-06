@@ -1,0 +1,8 @@
+scenario_id,defense,seed,task_test_acc,total_steps,coadapt_final_psnr,coadapt_final_ssim,coadapt_peak_psnr,coadapt_peak_ssim,fresh_matched_psnr,fresh_matched_ssim,fresh_30ep_psnr,fresh_30ep_ssim,delta_ssim_vs_matched,delta_psnr_vs_matched,verdict
+b0_seed42,B0,42,94.8,2000,36.34,0.9877,36.39,0.9879,37.16,0.9903,32.97,0.9806,-0.0026,-0.82,Bất biến với Co-adaptation (Chênh lệch không đáng kể)
+b0_seed7,B0,7,94.77,2000,36.72,0.9885,36.82,0.9888,34.17,0.9897,34.39,0.9831,-0.0012,2.55,Bất biến với Co-adaptation (Chênh lệch không đáng kể)
+b4_seed42,B4,42,92.42,2000,15.24,0.1937,15.29,0.1877,14.61,0.1582,14.68,0.1452,0.0355,0.63,Bất biến với Co-adaptation (Chênh lệch không đáng kể)
+b4_seed7,B4,7,92.19,2000,14.76,0.1632,14.79,0.1591,14.2,0.1363,14.44,0.1221,0.0269,0.56,Bất biến với Co-adaptation (Chênh lệch không đáng kể)
+b6_seed42,B6,42,94.86,2000,35.06,0.9837,35.12,0.984,35.91,0.988,33.97,0.9829,-0.0043,-0.85,Bất biến với Co-adaptation (Chênh lệch không đáng kể)
+b7_seed42,B7,42,91.17,2000,15.33,0.2887,15.86,0.3641,15.03,0.2716,15.08,0.2705,0.0171,0.3,Bất biến với Co-adaptation (Chênh lệch không đáng kể)
+b1_seed42,B1,42,94.46,2000,28.84,0.9401,28.84,0.9396,28.77,0.9406,26.62,0.9184,-0.0006,0.07,Bất biến với Co-adaptation (Chênh lệch không đáng kể)

@@ -1,0 +1,4 @@
+scenario_id,defense,method,param_label,block_size,grad_scale,test_acc,delta_acc_vs_b0,mse,psnr,ssim,lpips,dcor_before,dcor_after,psnr_before,collapse_epoch_20db,collapse_epoch_25db,best_epoch,verdict,recon_image
+b4_scramble_bs2_gs5.0,B4,Block Scrambling,"block_size=2, grad_scale=5.0",2,5.0,0.9405,-0.0066,0.06591,26.61,0.9492,0.0235,0.7199,0.7101,13.28,1,1,1,Sụp đổ trước FSHA (Tái tạo thành công),fsha_recon_b4_scramble_bs2_gs5.0.png
+b4_scramble_bs4_gs5.0,B4,Block Scrambling,"block_size=4, grad_scale=5.0",4,5.0,0.934,-0.0131,0.33641,20.66,0.8919,0.0334,0.7199,0.699,12.67,25,,30,Sụp đổ trước FSHA (Tái tạo thành công),fsha_recon_b4_scramble_bs4_gs5.0.png
+b4_scramble_bs8_gs5.0,B4,Block Scrambling,"block_size=8, grad_scale=5.0",8,5.0,0.9359,-0.0112,0.16704,22.55,0.8961,0.0321,0.7199,0.7106,12.84,5,,30,Sụp đổ trước FSHA (Tái tạo thành công),fsha_recon_b4_scramble_bs8_gs5.0.png

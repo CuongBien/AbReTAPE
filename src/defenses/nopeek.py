@@ -27,5 +27,9 @@ class NoPeekDefense(nn.Module):
         dcor = distance_correlation(x, z)
         return self.alpha * dcor
 
+    def compute_penalty(self, x, z):
+        """Alias tương thích ngược cho các unit tests."""
+        return self.compute_loss(x, z)
+
     def extra_repr(self):
         return f"alpha={self.alpha}"
