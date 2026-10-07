@@ -280,6 +280,7 @@ def main():
     parser.add_argument("--eval-freq", type=int, default=5, help="Tần suất đánh giá mỗi N epochs (mặc định: 5)")
     parser.add_argument("--num-workers", type=int, default=0 if sys.platform == "win32" else 2)
     parser.add_argument("--data-dir", type=str, default=os.path.join(PROJECT_ROOT, "data"))
+    parser.add_argument("--output-dir", type=str, default=os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step3_B8"))
     parser.add_argument("--dry-run", action="store_true", help="Chạy thử 1 epoch rút gọn để kiểm tra lỗi cú pháp/logic")
     args = parser.parse_args()
 
