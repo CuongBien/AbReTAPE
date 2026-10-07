@@ -125,6 +125,8 @@ def evaluate_adversary(client, adv, loader, device, client_mode="eval"):
     total_samples = 0
     psnr_sum = 0.0
     ssim_sum = 0.0
+    mse_sum = 0.0
+    criterion = nn.MSELoss()
 
     for x, _ in loader:
         x = x.to(device, non_blocking=True)
@@ -132,12 +134,15 @@ def evaluate_adversary(client, adv, loader, device, client_mode="eval"):
         z = client(x)
         x_rec = adv(z)
 
+        mse_val = criterion(x_rec, x).item()
         p, s = psnr_ssim(x, x_rec, CIFAR10_MEAN, CIFAR10_STD)
+        mse_sum += mse_val * b
         psnr_sum += p * b
         ssim_sum += s * b
         total_samples += b
 
-    return psnr_sum / max(total_samples, 1), ssim_sum / max(total_samples, 1)
+    n = max(total_samples, 1)
+    return psnr_sum / n, ssim_sum / n, mse_sum / n
 
 
 @torch.no_grad()
@@ -238,18 +243,16 @@ def train_single_b8(lam, args, device):
         seed=args.seed,
     )
 
-    # 2. Kiểm chứng E[x^2] trên dữ liệu huấn luyện
-    x_sq_sum = 0.0
-    n_sq_batches = 0
+    # 2. Kiểm chứng E[x^2] trên dữ liệu sạch (không augmentation) để tính R^2 chuẩn xác
+    clean_sq_sum = 0.0
+    n_clean = 0
     with torch.no_grad():
-        for x_b, _ in train_loader:
-            x_b = x_b.to(device)
-            x_sq_sum += (x_b ** 2).mean().item()
-            n_sq_batches += 1
-            if n_sq_batches >= 20:
-                break
-    avg_x_sq = x_sq_sum / max(n_sq_batches, 1)
-    print(f"[KIỂM CHỨNG CAP] E[x^2] (pixel sau chuẩn hóa): {avg_x_sq:.4f} | Cap đang áp dụng: {args.cap:.4f}")
+        for x_t, _ in test_eval_loader:
+            x_t = x_t.to(device)
+            clean_sq_sum += (x_t ** 2).sum().item()
+            n_clean += x_t.numel()
+    clean_e_x2 = clean_sq_sum / max(n_clean, 1)  # Thực nghiệm: ~1.5550 (khớp lý thuyết ~1.5586)
+    print(f"[KIỂM CHỨNG] E[x^2] trên ảnh sạch (chuẩn hóa): {clean_e_x2:.4f} | Cap áp dụng: {args.cap:.4f}")
 
     # 3. Khởi tạo Client, Server, và Adversary
     client = ClientModel().to(device)
@@ -359,12 +362,17 @@ def train_single_b8(lam, args, device):
             test_acc = evaluate_task_acc(client, server, test_eval_loader, device)
 
             # 2. Adversary Reconstruction: Đo trên cả z_eval và z_train
-            psnr_eval, ssim_eval = evaluate_adversary(client, adv, test_eval_loader, device, client_mode="eval")
-            psnr_train, ssim_train = evaluate_adversary(client, adv, test_eval_loader, device, client_mode="train")
+            psnr_eval, ssim_eval, mse_eval = evaluate_adversary(client, adv, test_eval_loader, device, client_mode="eval")
+            psnr_train, ssim_train, mse_train = evaluate_adversary(client, adv, test_eval_loader, device, client_mode="train")
 
             # Lấy giá trị cao hơn thận trọng
             max_ssim = max(ssim_eval, ssim_train)
             max_psnr = max(psnr_eval, psnr_train)
+
+            # R^2 của adversary trên test: R^2 = 1 - MSE / E[x^2]
+            r2_eval = 1.0 - (mse_eval / clean_e_x2)
+            r2_train = 1.0 - (mse_train / clean_e_x2)
+            max_r2 = max(r2_eval, r2_train)
 
             # 3. Tính dCor định kỳ (mỗi 10 epochs hoặc epoch cuối)
             dcor_val = None
@@ -391,10 +399,15 @@ def train_single_b8(lam, args, device):
                 "clamp_ratio": round(clamp_ratio, 4),
                 "adv_psnr_eval": round(psnr_eval, 2),
                 "adv_ssim_eval": round(ssim_eval, 4),
+                "adv_mse_eval": round(mse_eval, 4),
+                "adv_r2_eval": round(r2_eval, 4),
                 "adv_psnr_train": round(psnr_train, 2),
                 "adv_ssim_train": round(ssim_train, 4),
+                "adv_mse_train": round(mse_train, 4),
+                "adv_r2_train": round(r2_train, 4),
                 "adv_ssim_max": round(max_ssim, 4),
                 "adv_psnr_max": round(max_psnr, 2),
+                "adv_r2_max": round(max_r2, 4),
                 "dcor": dcor_val,
             }
             history.append(record)
@@ -403,7 +416,7 @@ def train_single_b8(lam, args, device):
             print(
                 f"  [Ep {ep:3d}/{args.epochs}] Task Acc: {test_acc*100:.2f}% | "
                 f"Raw Rec: {avg_raw_rec:.4f} (Clamp: {clamp_ratio*100:.1f}%) | "
-                f"Adv Eval: {psnr_eval:.2f}dB / {ssim_eval:.4f} | "
+                f"Adv Eval: {psnr_eval:.2f}dB / {ssim_eval:.4f} (R²: {r2_eval:+.4f}) | "
                 f"Adv Train: {psnr_train:.2f}dB / {ssim_train:.4f} (Max SSIM: {max_ssim:.4f}){dcor_str}",
                 flush=True
             )
@@ -413,10 +426,13 @@ def train_single_b8(lam, args, device):
 
     # Đánh giá cuối cùng trên Full Test Set (10.000 ảnh)
     final_test_acc = evaluate_task_acc(client, server, test_full_loader, device)
-    final_psnr_eval, final_ssim_eval = evaluate_adversary(client, adv, test_full_loader, device, client_mode="eval")
-    final_psnr_train, final_ssim_train = evaluate_adversary(client, adv, test_full_loader, device, client_mode="train")
+    final_psnr_eval, final_ssim_eval, final_mse_eval = evaluate_adversary(client, adv, test_full_loader, device, client_mode="eval")
+    final_psnr_train, final_ssim_train, final_mse_train = evaluate_adversary(client, adv, test_full_loader, device, client_mode="train")
     final_max_ssim = max(final_ssim_eval, final_ssim_train)
     final_max_psnr = max(final_psnr_eval, final_psnr_train)
+    final_r2_eval = 1.0 - (final_mse_eval / clean_e_x2)
+    final_r2_train = 1.0 - (final_mse_train / clean_e_x2)
+    final_max_r2 = max(final_r2_eval, final_r2_train)
 
     # Lưu checkpoint
     ckpt_dir = os.path.join(args.output_dir, "checkpoints")
@@ -429,11 +445,15 @@ def train_single_b8(lam, args, device):
     curve_path = os.path.join(args.output_dir, f"curve_{scenario_id}.png")
     plot_b8_curves(history, curve_path, lam, args.adversary)
 
-    # Tính trung bình 10 epoch cuối của adversary
+    # Tính trung bình 10 epoch cuối (91-100) của Task Acc, Adversary SSIM, PSNR, R^2
+    last10_acc = [h["test_acc"] for h in history[-10:]]
     last10_ssim_max = [h["adv_ssim_max"] for h in history[-10:]]
     last10_psnr_max = [h["adv_psnr_max"] for h in history[-10:]]
+    last10_r2_max = [h["adv_r2_max"] for h in history[-10:]]
+    mean_task_acc_10 = float(np.mean(last10_acc))
     mean_adv_ssim_10 = float(np.mean(last10_ssim_max))
     mean_adv_psnr_10 = float(np.mean(last10_psnr_max))
+    mean_adv_r2_10 = float(np.mean(last10_r2_max))
 
     res = {
         "scenario_id": scenario_id,
@@ -442,14 +462,17 @@ def train_single_b8(lam, args, device):
         "cap": args.cap,
         "seed": args.seed,
         "task_test_acc": round(final_test_acc * 100, 2),
+        "mean_task_acc_last10": round(mean_task_acc_10, 2),
         "mean_adv_ssim_last10": round(mean_adv_ssim_10, 4),
         "mean_adv_psnr_last10": round(mean_adv_psnr_10, 2),
+        "mean_adv_r2_last10": round(mean_adv_r2_10, 4),
         "final_adv_ssim_eval": round(final_ssim_eval, 4),
         "final_adv_ssim_train": round(final_ssim_train, 4),
         "final_adv_ssim_max": round(final_max_ssim, 4),
         "final_adv_psnr_max": round(final_max_psnr, 2),
+        "final_adv_r2_max": round(final_max_r2, 4),
         "training_time_s": round(t_total, 1),
-        "meets_utility_criterion": bool((final_test_acc * 100) >= 92.7),
+        "meets_utility_criterion": bool(mean_task_acc_10 >= 92.7),
         "history": history,
     }
 
@@ -460,10 +483,10 @@ def main():
     parser = argparse.ArgumentParser(description="Baseline B8: Adversarial Training (Min-Max Privacy Defense)")
     parser.add_argument("--adversary", type=str, default="conv", choices=["conv", "mlp"],
                         help="Kiến trúc adversary trong lúc train: 'conv' (ConvDecoder) hoặc 'mlp' (LearnedAdaptiveDecoderB8)")
-    parser.add_argument("--lambdas", type=str, default="0.1,0.5,1.0,5.0",
-                        help="Danh sách hệ số phạt đối kháng lambda cần quét (mặc định: '0.1,0.5,1.0,5.0')")
-    parser.add_argument("--cap", type=float, default=1.0,
-                        help="Cận trên chặn MSE reconstruction loss (mặc định: 1.0, tương ứng E[x^2])")
+    parser.add_argument("--lambdas", type=str, default="0.1,0.5,1.0",
+                        help="Danh sách hệ số phạt đối kháng lambda cần quét (mặc định: '0.1,0.5,1.0')")
+    parser.add_argument("--cap", type=float, default=1.5586,
+                        help="Cận trên chặn MSE reconstruction loss (mặc định: 1.5586, tương ứng E[x^2] thực nghiệm)")
     parser.add_argument("--seed", type=int, default=42, help="Random seed (mặc định: 42)")
     parser.add_argument("--epochs", type=int, default=100, help="Số epochs huấn luyện Split Learning (mặc định: 100)")
     parser.add_argument("--batch-size", type=int, default=128, help="Batch size (mặc định: 128)")
@@ -483,6 +506,7 @@ def main():
         args.epochs = 2
         args.eval_freq = 1
         args.lambdas = "0.1"
+        args.output_dir = os.path.join(args.output_dir, "dry_run")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     os.makedirs(args.output_dir, exist_ok=True)
@@ -529,9 +553,9 @@ def main():
         with open(csv_path, "w", encoding="utf-8") as f:
             header = [
                 "scenario_id", "adversary", "lambda", "cap", "seed",
-                "task_test_acc", "mean_adv_ssim_last10", "mean_adv_psnr_last10",
+                "task_test_acc", "mean_task_acc_last10", "mean_adv_ssim_last10", "mean_adv_psnr_last10", "mean_adv_r2_last10",
                 "final_adv_ssim_eval", "final_adv_ssim_train", "final_adv_ssim_max",
-                "final_adv_psnr_max", "training_time_s", "meets_utility_criterion"
+                "final_adv_psnr_max", "final_adv_r2_max", "training_time_s", "meets_utility_criterion"
             ]
             f.write(",".join(header) + "\n")
             for r in all_results.values():
@@ -542,12 +566,15 @@ def main():
                     str(r["cap"]),
                     str(r["seed"]),
                     str(r["task_test_acc"]),
+                    str(r.get("mean_task_acc_last10", r["task_test_acc"])),
                     str(r["mean_adv_ssim_last10"]),
                     str(r["mean_adv_psnr_last10"]),
+                    str(r.get("mean_adv_r2_last10", 0.0)),
                     str(r["final_adv_ssim_eval"]),
                     str(r["final_adv_ssim_train"]),
                     str(r["final_adv_ssim_max"]),
                     str(r["final_adv_psnr_max"]),
+                    str(r.get("final_adv_r2_max", 0.0)),
                     str(r["training_time_s"]),
                     str(r["meets_utility_criterion"])
                 ]
