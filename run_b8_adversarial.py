@@ -146,12 +146,18 @@ def evaluate_adversary(client, adv, loader, device, client_mode="eval"):
 
 
 @torch.no_grad()
-def evaluate_task_acc(client, server, loader, device):
+def evaluate_task_acc(client, server, loader, device, mode="eval"):
     """
-    Đánh giá độ chính xác phân loại của Split Learning (Client + Server).
+    Đánh giá độ chính xác phân loại của Split Learning (Client + Server):
+    mode = 'eval': chạy ở chế độ eval() (chuẩn tất định)
+    mode = 'train': chạy ở chế độ train() (kiểm tra độ lệch BatchNorm)
     """
-    client.eval()
-    server.eval()
+    if mode == "eval":
+        client.eval()
+        server.eval()
+    else:
+        client.train()
+        server.train()
     correct, total = 0, 0
     for x, y in loader:
         x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
@@ -291,6 +297,9 @@ def train_single_b8(lam, args, device):
         total_batches = 0
         train_correct = 0
         train_samples = 0
+        total_norm_priv = 0.0
+        total_norm_task = 0.0
+        total_norm_total = 0.0
 
         for x, y in train_loader:
             x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
@@ -313,9 +322,7 @@ def train_single_b8(lam, args, device):
             # -------------------------------------------------------------
             # BƯỚC 2: MIN (Client và Server tối ưu đối kháng)
             # -------------------------------------------------------------
-            # [QUAN TRỌNG] Tạm thời tắt requires_grad của adv để:
-            # (1) Chống rò rỉ gradient vào adv
-            # (2) Tăng tốc tính toán backward (không tính gradient tham số adv)
+            # Tạm thời tắt requires_grad của adv
             for p in adv.parameters():
                 p.requires_grad = False
 
@@ -336,14 +343,40 @@ def train_single_b8(lam, args, device):
             else:
                 cur_lam = lam
 
-            loss_total = loss_task - cur_lam * torch.clamp(rec_mse, max=args.cap)
-
+            # 1. Lan truyền ngược tác vụ phân loại (Task Loss) cho cả Client và Server
             opt_cs.zero_grad()
-            loss_total.backward()
+            loss_task.backward(retain_graph=True)
 
-            # Gradient clipping cho Client và Server nếu được cấu hình
+            client_params = [p for p in client.parameters() if p.requires_grad]
+            norm_task = torch.sqrt(sum((p.grad.norm(2) ** 2) for p in client_params if p.grad is not None)).item()
+
+            # 2. Tính riêng gradient đối kháng/tái tạo (Privacy Loss) trên Client
+            loss_priv = - cur_lam * torch.clamp(rec_mse, max=args.cap)
+            grads_priv = torch.autograd.grad(loss_priv, client_params, retain_graph=False)
+
+            # Ghi nhận norm gradient rec TRƯỚC KHI CLIP
+            norm_priv = torch.sqrt(sum((g.norm(2) ** 2) for g in grads_priv if g is not None)).item()
+
+            # 3. Clip riêng phần gradient của rec nếu có cấu hình clip_rec_grad (tránh làm chậm việc học tác vụ)
+            if hasattr(args, "clip_rec_grad") and args.clip_rec_grad is not None and args.clip_rec_grad > 0:
+                clip_coef = min(1.0, args.clip_rec_grad / (norm_priv + 1e-6))
+            else:
+                clip_coef = 1.0
+
+            # Cộng gradient đối kháng (đã clip) vào client parameters
+            for p, g in zip(client_params, grads_priv):
+                if p.grad is not None:
+                    p.grad.add_(g, alpha=clip_coef)
+                else:
+                    p.grad = g * clip_coef
+
+            # 4. Đo norm gradient tổng trên cả client và server trước khi step
+            all_params = list(client.parameters()) + list(server.parameters())
+            norm_total = torch.sqrt(sum((p.grad.norm(2) ** 2) for p in all_params if p.grad is not None)).item()
+
+            # Clip tổng gradient nếu cấu hình clip_grad
             if hasattr(args, "clip_grad") and args.clip_grad is not None and args.clip_grad > 0:
-                torch.nn.utils.clip_grad_norm_(list(client.parameters()) + list(server.parameters()), max_norm=args.clip_grad)
+                torch.nn.utils.clip_grad_norm_(all_params, max_norm=args.clip_grad)
 
             opt_cs.step()
 
@@ -356,6 +389,9 @@ def train_single_b8(lam, args, device):
             total_batches += 1
             train_correct += (logits.argmax(1) == y).sum().item()
             train_samples += b
+            total_norm_priv += norm_priv
+            total_norm_task += norm_task
+            total_norm_total += norm_total
 
         sched_cs.step()
 
@@ -363,14 +399,19 @@ def train_single_b8(lam, args, device):
         train_acc = train_correct / train_samples
         avg_raw_rec = total_raw_rec / total_batches
         clamp_ratio = n_clamped_batches / total_batches
+        avg_norm_priv = total_norm_priv / max(total_batches, 1)
+        avg_norm_task = total_norm_task / max(total_batches, 1)
+        avg_norm_total = total_norm_total / max(total_batches, 1)
 
         # -------------------------------------------------------------
         # ĐÁNH GIÁ ĐỊNH KỲ MỖI EPOCH (TRÊN 2.000 ẢNH TEST CỐ ĐỊNH)
         # -------------------------------------------------------------
         should_eval = (ep == 1 or ep % args.eval_freq == 0 or ep == args.epochs)
         if should_eval:
-            # 1. Task Test Accuracy
-            test_acc = evaluate_task_acc(client, server, test_eval_loader, device)
+            # 1. Task Test Accuracy ở cả 2 chế độ: eval (chuẩn) và train (đo lệch BN)
+            test_acc_eval = evaluate_task_acc(client, server, test_eval_loader, device, mode="eval")
+            test_acc_train = evaluate_task_acc(client, server, test_eval_loader, device, mode="train")
+            test_acc = test_acc_eval
 
             # 2. Adversary Reconstruction: Đo trên cả z_eval và z_train
             psnr_eval, ssim_eval, mse_eval = evaluate_adversary(client, adv, test_eval_loader, device, client_mode="eval")
@@ -405,7 +446,12 @@ def train_single_b8(lam, args, device):
                 "epoch": ep,
                 "train_task_loss": round(avg_task_loss, 4),
                 "train_acc": round(train_acc * 100, 2),
-                "test_acc": round(test_acc * 100, 2),
+                "test_acc_eval": round(test_acc_eval * 100, 2),
+                "test_acc_train": round(test_acc_train * 100, 2),
+                "test_acc": round(test_acc_eval * 100, 2),
+                "norm_task": round(avg_norm_task, 4),
+                "norm_priv_raw": round(avg_norm_priv, 4),
+                "norm_total": round(avg_norm_total, 4),
                 "raw_rec_mse": round(avg_raw_rec, 4),
                 "clamp_ratio": round(clamp_ratio, 4),
                 "adv_psnr_eval": round(psnr_eval, 2),
@@ -425,10 +471,10 @@ def train_single_b8(lam, args, device):
 
             dcor_str = f" | dCor: {dcor_val}" if dcor_val is not None else ""
             print(
-                f"  [Ep {ep:3d}/{args.epochs}] Task Acc: {test_acc*100:.2f}% | "
-                f"Raw Rec: {avg_raw_rec:.4f} (Clamp: {clamp_ratio*100:.1f}%) | "
+                f"  [Ep {ep:3d}/{args.epochs}] Acc (Eval/Train): {test_acc_eval*100:.2f}% / {test_acc_train*100:.2f}% (TrainSet: {train_acc*100:.2f}%) | "
+                f"Norm (Task/Rec): {avg_norm_task:.3f} / {avg_norm_priv:.3f} | "
                 f"Adv Eval: {psnr_eval:.2f}dB / {ssim_eval:.4f} (R²: {r2_eval:+.4f}) | "
-                f"Adv Train: {psnr_train:.2f}dB / {ssim_train:.4f} (Max SSIM: {max_ssim:.4f}){dcor_str}",
+                f"Adv Train: {psnr_train:.2f}dB / {ssim_train:.4f} (Max: {max_ssim:.4f}){dcor_str}",
                 flush=True
             )
 
@@ -436,7 +482,8 @@ def train_single_b8(lam, args, device):
     print(f"\n[HOÀN TẤT HUẤN LUYỆN] Xong sau {t_total:.1f}s!", flush=True)
 
     # Đánh giá cuối cùng trên Full Test Set (10.000 ảnh)
-    final_test_acc = evaluate_task_acc(client, server, test_full_loader, device)
+    final_test_acc_eval = evaluate_task_acc(client, server, test_full_loader, device, mode="eval")
+    final_test_acc_train = evaluate_task_acc(client, server, test_full_loader, device, mode="train")
     final_psnr_eval, final_ssim_eval, final_mse_eval = evaluate_adversary(client, adv, test_full_loader, device, client_mode="eval")
     final_psnr_train, final_ssim_train, final_mse_train = evaluate_adversary(client, adv, test_full_loader, device, client_mode="train")
     final_max_ssim = max(final_ssim_eval, final_ssim_train)
@@ -456,15 +503,19 @@ def train_single_b8(lam, args, device):
     curve_path = os.path.join(args.output_dir, f"curve_{scenario_id}.png")
     plot_b8_curves(history, curve_path, lam, args.adversary)
 
-    # Tính trung bình 10 epoch cuối (91-100) của Task Acc, Adversary SSIM, PSNR, R^2
-    last10_acc = [h["test_acc"] for h in history[-10:]]
+    # Tính trung bình 10 epoch cuối (91-100) của Task Acc (eval/train), Adversary SSIM, PSNR, R^2, Grad Norms
+    last10_acc_eval = [h["test_acc_eval"] for h in history[-10:]]
+    last10_acc_train = [h["test_acc_train"] for h in history[-10:]]
     last10_ssim_max = [h["adv_ssim_max"] for h in history[-10:]]
     last10_psnr_max = [h["adv_psnr_max"] for h in history[-10:]]
     last10_r2_max = [h["adv_r2_max"] for h in history[-10:]]
-    mean_task_acc_10 = float(np.mean(last10_acc))
+    mean_task_acc_eval_10 = float(np.mean(last10_acc_eval))
+    mean_task_acc_train_10 = float(np.mean(last10_acc_train))
     mean_adv_ssim_10 = float(np.mean(last10_ssim_max))
     mean_adv_psnr_10 = float(np.mean(last10_psnr_max))
     mean_adv_r2_10 = float(np.mean(last10_r2_max))
+    mean_norm_task_10 = float(np.mean([h["norm_task"] for h in history[-10:]]))
+    mean_norm_priv_10 = float(np.mean([h["norm_priv_raw"] for h in history[-10:]]))
 
     res = {
         "scenario_id": scenario_id,
@@ -472,8 +523,14 @@ def train_single_b8(lam, args, device):
         "lambda": lam,
         "cap": args.cap,
         "seed": args.seed,
-        "task_test_acc": round(final_test_acc * 100, 2),
-        "mean_task_acc_last10": round(mean_task_acc_10, 2),
+        "warmup_epochs": getattr(args, "warmup_epochs", 0),
+        "clip_rec_grad": getattr(args, "clip_rec_grad", None),
+        "task_test_acc": round(final_test_acc_eval * 100, 2),
+        "task_test_acc_train": round(final_test_acc_train * 100, 2),
+        "mean_task_acc_last10": round(mean_task_acc_eval_10, 2),
+        "mean_task_acc_train_last10": round(mean_task_acc_train_10, 2),
+        "mean_norm_task_last10": round(mean_norm_task_10, 4),
+        "mean_norm_priv_raw_last10": round(mean_norm_priv_10, 4),
         "mean_adv_ssim_last10": round(mean_adv_ssim_10, 4),
         "mean_adv_psnr_last10": round(mean_adv_psnr_10, 2),
         "mean_adv_r2_last10": round(mean_adv_r2_10, 4),
@@ -483,7 +540,7 @@ def train_single_b8(lam, args, device):
         "final_adv_psnr_max": round(final_max_psnr, 2),
         "final_adv_r2_max": round(final_max_r2, 4),
         "training_time_s": round(t_total, 1),
-        "meets_utility_criterion": bool(mean_task_acc_10 >= 92.7),
+        "meets_utility_criterion": bool(mean_task_acc_eval_10 >= 92.7),
         "history": history,
     }
 
@@ -511,6 +568,8 @@ def main():
     parser.add_argument("--backup-dir", type=str, default=None, help="Thư mục sao lưu Google Drive nếu chạy Colab")
     parser.add_argument("--clip-grad", type=float, default=None,
                         help="Cắt chuẩn gradient (clip_grad_norm) cho Client và Server (mặc định: None)")
+    parser.add_argument("--clip-rec-grad", type=float, default=None,
+                        help="Cắt chuẩn riêng cho gradient đối kháng (privacy rec) trên Client (mặc định: None)")
     parser.add_argument("--warmup-epochs", type=int, default=0,
                         help="Số epochs tăng dần lambda từ 0 đến lam để ổn định min-max (mặc định: 0)")
     parser.add_argument("--resume", action="store_true", default=False, help="Bỏ qua các lambda đã hoàn thành")
@@ -568,7 +627,10 @@ def main():
         with open(csv_path, "w", encoding="utf-8") as f:
             header = [
                 "scenario_id", "adversary", "lambda", "cap", "seed",
-                "task_test_acc", "mean_task_acc_last10", "mean_adv_ssim_last10", "mean_adv_psnr_last10", "mean_adv_r2_last10",
+                "task_test_acc", "task_test_acc_train",
+                "mean_task_acc_last10", "mean_task_acc_train_last10",
+                "mean_norm_task_last10", "mean_norm_priv_raw_last10",
+                "mean_adv_ssim_last10", "mean_adv_psnr_last10", "mean_adv_r2_last10",
                 "final_adv_ssim_eval", "final_adv_ssim_train", "final_adv_ssim_max",
                 "final_adv_psnr_max", "final_adv_r2_max", "training_time_s", "meets_utility_criterion"
             ]
@@ -581,7 +643,11 @@ def main():
                     str(r["cap"]),
                     str(r["seed"]),
                     str(r["task_test_acc"]),
+                    str(r.get("task_test_acc_train", "N/A")),
                     str(r.get("mean_task_acc_last10", r["task_test_acc"])),
+                    str(r.get("mean_task_acc_train_last10", "N/A")),
+                    str(r.get("mean_norm_task_last10", "N/A")),
+                    str(r.get("mean_norm_priv_raw_last10", "N/A")),
                     str(r["mean_adv_ssim_last10"]),
                     str(r["mean_adv_psnr_last10"]),
                     str(r.get("mean_adv_r2_last10", 0.0)),
