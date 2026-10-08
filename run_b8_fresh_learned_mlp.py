@@ -232,13 +232,22 @@ def train_fresh_mlp_for_lambda(lam, client_path, args, train_loader, test_eval_l
     # Đánh giá trên 10.000 test đầy đủ
     res_10k = evaluate_fresh_attacker(client, attacker, test_full_loader, device, lpips_fn=None)
 
-    # In-training adversary baseline SSIM từ kết quả trước
-    in_train_ssim_map = {
-        0.1: 0.3938,
-        0.5: 0.2979,
-        1.0: 0.2776
-    }
-    in_train_ssim = in_train_ssim_map.get(lam, None)
+    # Tự động nạp in-training adversary baseline SSIM từ results_b8_conv_sweep.json nếu có
+    in_train_ssim = None
+    sweep_json = os.path.join(args.output_dir, "results_b8_conv_sweep.json")
+    if os.path.isfile(sweep_json):
+        try:
+            with open(sweep_json, "r", encoding="utf-8") as f:
+                sw_data = json.load(f)
+            sc_key = f"b8_conv_lam{lam}_s{args.seed}"
+            if sc_key in sw_data:
+                in_train_ssim = sw_data[sc_key].get("final_adv_ssim_max", None)
+        except Exception:
+            pass
+    if in_train_ssim is None:
+        in_train_ssim_map = {0.1: 0.4262, 0.5: 0.1531, 1.0: 0.1947}
+        in_train_ssim = in_train_ssim_map.get(lam, None)
+
     gap_g = (res_2k["ssim"] - in_train_ssim) if in_train_ssim is not None else None
 
     print(f"\n[KẾT QUẢ λ={lam}]")
@@ -281,6 +290,7 @@ def main():
     parser.add_argument("--num-workers", type=int, default=0 if sys.platform == "win32" else 2)
     parser.add_argument("--data-dir", type=str, default=os.path.join(PROJECT_ROOT, "data"))
     parser.add_argument("--output-dir", type=str, default=os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step3_B8"))
+    parser.add_argument("--suffix", type=str, default="", help="Hậu tố tên file kết quả (ví dụ: '_cap1.5586')")
     parser.add_argument("--dry-run", action="store_true", help="Chạy thử 1 epoch rút gọn để kiểm tra lỗi cú pháp/logic")
     args = parser.parse_args()
 
@@ -333,11 +343,11 @@ def main():
         all_results.append(res)
 
     # Lưu kết quả tổng hợp
-    json_path = os.path.join(args.output_dir, "results_b8_fresh_learned_mlp.json")
+    json_path = os.path.join(args.output_dir, f"results_b8_fresh_learned_mlp{args.suffix}.json")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(all_results, f, indent=2, ensure_ascii=False)
 
-    csv_path = os.path.join(args.output_dir, "results_b8_fresh_learned_mlp.csv")
+    csv_path = os.path.join(args.output_dir, f"results_b8_fresh_learned_mlp{args.suffix}.csv")
     if all_results:
         import csv
         keys = list(all_results[0].keys())

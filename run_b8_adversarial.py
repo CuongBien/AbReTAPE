@@ -330,10 +330,21 @@ def train_single_b8(lam, args, device):
             if rec_mse.item() >= args.cap:
                 n_clamped_batches += 1
 
-            loss_total = loss_task - lam * torch.clamp(rec_mse, max=args.cap)
+            # Áp dụng warmup cho lambda nếu cấu hình
+            if hasattr(args, "warmup_epochs") and args.warmup_epochs > 0:
+                cur_lam = lam * min(1.0, ep / max(args.warmup_epochs, 1))
+            else:
+                cur_lam = lam
+
+            loss_total = loss_task - cur_lam * torch.clamp(rec_mse, max=args.cap)
 
             opt_cs.zero_grad()
             loss_total.backward()
+
+            # Gradient clipping cho Client và Server nếu được cấu hình
+            if hasattr(args, "clip_grad") and args.clip_grad is not None and args.clip_grad > 0:
+                torch.nn.utils.clip_grad_norm_(list(client.parameters()) + list(server.parameters()), max_norm=args.clip_grad)
+
             opt_cs.step()
 
             # Bật lại requires_grad cho adv cho batch kế tiếp
@@ -498,6 +509,10 @@ def main():
     parser.add_argument("--data-dir", type=str, default=os.path.join(PROJECT_ROOT, "data"))
     parser.add_argument("--output-dir", type=str, default=os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step3_B8"))
     parser.add_argument("--backup-dir", type=str, default=None, help="Thư mục sao lưu Google Drive nếu chạy Colab")
+    parser.add_argument("--clip-grad", type=float, default=None,
+                        help="Cắt chuẩn gradient (clip_grad_norm) cho Client và Server (mặc định: None)")
+    parser.add_argument("--warmup-epochs", type=int, default=0,
+                        help="Số epochs tăng dần lambda từ 0 đến lam để ổn định min-max (mặc định: 0)")
     parser.add_argument("--resume", action="store_true", default=False, help="Bỏ qua các lambda đã hoàn thành")
     parser.add_argument("--dry-run", action="store_true", default=False, help="Chạy thử 2 epochs để kiểm thử mã")
     args = parser.parse_args()
