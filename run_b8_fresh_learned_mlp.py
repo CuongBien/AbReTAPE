@@ -206,7 +206,7 @@ def train_fresh_mlp_for_lambda(lam, client_path, args, train_loader, test_eval_l
                 best_psnr = cur_psnr
                 best_ep = ep
                 # Lưu checkpoint tốt nhất
-                save_path = os.path.join(args.output_dir, "checkpoints", f"b8_fresh_mlp_lam{lam}_s{args.seed}_best.pt")
+                save_path = os.path.join(args.output_dir, "checkpoints", f"b8_fresh_mlp_lam{lam}_s{args.seed}{args.suffix}_best.pt")
                 os.makedirs(os.path.dirname(save_path), exist_ok=True)
                 torch.save({
                     "attacker": attacker.state_dict(),
@@ -222,7 +222,7 @@ def train_fresh_mlp_for_lambda(lam, client_path, args, train_loader, test_eval_l
     print(f"[HOÀN TẤT] Huấn luyện λ={lam} xong trong {train_time:.1f}s. Đang nạp model tốt nhất để đánh giá toàn diện...")
 
     # Nạp best checkpoint để đánh giá toàn diện
-    best_ckpt_path = os.path.join(args.output_dir, "checkpoints", f"b8_fresh_mlp_lam{lam}_s{args.seed}_best.pt")
+    best_ckpt_path = os.path.join(args.output_dir, "checkpoints", f"b8_fresh_mlp_lam{lam}_s{args.seed}{args.suffix}_best.pt")
     if os.path.isfile(best_ckpt_path):
         b_ckpt = torch.load(best_ckpt_path, map_location=device)
         attacker.load_state_dict(b_ckpt["attacker"])
@@ -259,7 +259,7 @@ def train_fresh_mlp_for_lambda(lam, client_path, args, train_loader, test_eval_l
     print("-" * 80, flush=True)
 
     # Lưu ảnh trực quan hóa
-    grid_path = os.path.join(args.output_dir, f"rec_fresh_mlp_lam{lam}_s{args.seed}.png")
+    grid_path = os.path.join(args.output_dir, f"rec_fresh_mlp_lam{lam}_s{args.seed}{args.suffix}.png")
     save_reconstruction_grid(client, attacker, test_eval_loader, device, CIFAR10_MEAN, CIFAR10_STD, save_path=grid_path, num_images=8)
 
     return {
