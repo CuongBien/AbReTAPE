@@ -40,7 +40,7 @@ _legacy_steps/
 output/**/*.pt
 !output/AbReTAPE_Step0/b0_vanilla.pt
 !output/AbReTAPE_Step1/best_b1_decoder.pt
-!output/**/checkpoints/*_client.pt
+!output/**/checkpoints/b8_*_client.pt
 /checkpoints/
 
 # Logs & scratch

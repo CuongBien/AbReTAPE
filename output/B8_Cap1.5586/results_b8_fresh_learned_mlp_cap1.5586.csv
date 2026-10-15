@@ -1,0 +1,4 @@
+lambda,seed,in_train_adv_ssim,fresh_mlp_ssim_2k,fresh_mlp_psnr_2k,fresh_mlp_lpips_2k,fresh_mlp_mse_norm_2k,fresh_mlp_ssim_10k,fresh_mlp_psnr_10k,discrepancy_G,best_epoch,training_time_s
+0.1,42,0.4262,0.4532,17.92,0.1415,0.4764,0.458,17.92,0.027,30,293.0
+0.5,42,0.1531,0.5947,19.42,0.1111,0.3284,0.5989,19.42,0.4416,30,293.2
+1.0,42,0.1947,0.4876,18.48,0.1505,0.4115,0.4908,18.47,0.2929,30,296.5

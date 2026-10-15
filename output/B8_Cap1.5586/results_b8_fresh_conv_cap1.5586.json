@@ -1,0 +1,44 @@
+[
+  {
+    "lambda": 0.1,
+    "seed": 42,
+    "in_train_adv_ssim": 0.4262,
+    "fresh_conv_ssim_2k": 0.7641,
+    "fresh_conv_psnr_2k": 20.67,
+    "fresh_conv_lpips_2k": 0.0237,
+    "fresh_conv_mse_norm_2k": 0.2391,
+    "fresh_conv_ssim_10k": 0.7652,
+    "fresh_conv_psnr_10k": 20.63,
+    "discrepancy_G": 0.3379,
+    "best_epoch": 30,
+    "training_time_s": 287.4
+  },
+  {
+    "lambda": 0.5,
+    "seed": 42,
+    "in_train_adv_ssim": 0.1531,
+    "fresh_conv_ssim_2k": 0.1841,
+    "fresh_conv_psnr_2k": 13.08,
+    "fresh_conv_lpips_2k": 0.1791,
+    "fresh_conv_mse_norm_2k": 1.3467,
+    "fresh_conv_ssim_10k": 0.1843,
+    "fresh_conv_psnr_10k": 13.06,
+    "discrepancy_G": 0.031,
+    "best_epoch": 30,
+    "training_time_s": 290.1
+  },
+  {
+    "lambda": 1.0,
+    "seed": 42,
+    "in_train_adv_ssim": 0.1947,
+    "fresh_conv_ssim_2k": 0.6552,
+    "fresh_conv_psnr_2k": 18.03,
+    "fresh_conv_lpips_2k": 0.0465,
+    "fresh_conv_mse_norm_2k": 0.426,
+    "fresh_conv_ssim_10k": 0.6551,
+    "fresh_conv_psnr_10k": 18.0,
+    "discrepancy_G": 0.4605,
+    "best_epoch": 30,
+    "training_time_s": 289.4
+  }
+]

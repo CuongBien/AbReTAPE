@@ -356,74 +356,92 @@ def train_single_artape_v0(lam, args, device):
             zt = client(x)
 
             # -------------------------------------------------------------
-            # BƯỚC 1: MAX (Adversary học giải mã zt hiện tại)
+            # HUẤN LUYỆN SPLIT LEARNING
             # -------------------------------------------------------------
-            zt_det = zt.detach()
-            x_rec_adv = adv(zt_det)
-            loss_adv = criterion_mse(x_rec_adv, x)
+            if lam > 0.0:
+                # BƯỚC 1: MAX (Adversary học giải mã zt hiện tại)
+                zt_det = zt.detach()
+                x_rec_adv = adv(zt_det)
+                loss_adv = criterion_mse(x_rec_adv, x)
 
-            opt_adv.zero_grad()
-            loss_adv.backward()
-            opt_adv.step()
+                opt_adv.zero_grad()
+                loss_adv.backward()
+                opt_adv.step()
 
-            # -------------------------------------------------------------
-            # BƯỚC 2: MIN (Client và Server tối ưu đối kháng)
-            # -------------------------------------------------------------
-            # Tạm thời tắt requires_grad của adv để chống rò rỉ gradient rác
-            for p in adv.parameters():
-                p.requires_grad = False
+                # BƯỚC 2: MIN (Client và Server tối ưu đối kháng)
+                for p in adv.parameters():
+                    p.requires_grad = False
 
-            logits = server(zt)
-            loss_task = criterion_task(logits, y)
+                logits = server(zt)
+                loss_task = criterion_task(logits, y)
 
-            # Tái tạo qua adv (đồ thị đạo hàm chảy ngược từ adv về zt và client)
-            x_rec_client = adv(zt)
-            rec_mse = criterion_mse(x_rec_client, x)
+                # Tái tạo qua adv (đồ thị đạo hàm chảy ngược từ adv về zt và client)
+                x_rec_client = adv(zt)
+                rec_mse = criterion_mse(x_rec_client, x)
 
-            if rec_mse.item() >= args.cap:
-                n_clamped_batches += 1
+                if rec_mse.item() >= args.cap:
+                    n_clamped_batches += 1
 
-            if hasattr(args, "warmup_epochs") and args.warmup_epochs > 0:
-                cur_lam = lam * min(1.0, ep / max(args.warmup_epochs, 1))
-            else:
-                cur_lam = lam
-
-            # Lan truyền ngược Task Loss
-            opt_cs.zero_grad()
-            loss_task.backward(retain_graph=True)
-
-            client_params = [p for p in client.parameters() if p.requires_grad]
-            norm_task = torch.sqrt(sum((p.grad.norm(2) ** 2) for p in client_params if p.grad is not None)).item()
-
-            # Tính riêng gradient đối kháng trên Client
-            loss_priv = - cur_lam * torch.clamp(rec_mse, max=args.cap)
-            grads_priv = torch.autograd.grad(loss_priv, client_params, retain_graph=False)
-
-            norm_priv = torch.sqrt(sum((g.norm(2) ** 2) for g in grads_priv if g is not None)).item()
-
-            # Cắt chuẩn gradient đối kháng nếu có cấu hình
-            if hasattr(args, "clip_rec_grad") and args.clip_rec_grad is not None and args.clip_rec_grad > 0:
-                clip_coef = min(1.0, args.clip_rec_grad / (norm_priv + 1e-6))
-            else:
-                clip_coef = 1.0
-
-            for p, g in zip(client_params, grads_priv):
-                if p.grad is not None:
-                    p.grad.add_(g, alpha=clip_coef)
+                if hasattr(args, "warmup_epochs") and args.warmup_epochs > 0:
+                    cur_lam = lam * min(1.0, ep / max(args.warmup_epochs, 1))
                 else:
-                    p.grad = g * clip_coef
+                    cur_lam = lam
 
-            all_params = list(client.parameters()) + list(server.parameters())
-            if hasattr(args, "clip_grad") and args.clip_grad is not None and args.clip_grad > 0:
-                torch.nn.utils.clip_grad_norm_(all_params, max_norm=args.clip_grad)
+                # Lan truyền ngược Task Loss
+                opt_cs.zero_grad()
+                loss_task.backward(retain_graph=True)
 
-            opt_cs.step()
+                client_params = [p for p in client.parameters() if p.requires_grad]
+                norm_task = torch.sqrt(sum((p.grad.norm(2) ** 2) for p in client_params if p.grad is not None)).item()
 
-            for p in adv.parameters():
-                p.requires_grad = True
+                # Tính riêng gradient đối kháng trên Client
+                loss_priv = - cur_lam * torch.clamp(rec_mse, max=args.cap)
+                grads_priv = torch.autograd.grad(loss_priv, client_params, retain_graph=False)
+
+                norm_priv = torch.sqrt(sum((g.norm(2) ** 2) for g in grads_priv if g is not None)).item()
+
+                # Cắt chuẩn gradient đối kháng nếu có cấu hình
+                if hasattr(args, "clip_rec_grad") and args.clip_rec_grad is not None and args.clip_rec_grad > 0:
+                    clip_coef = min(1.0, args.clip_rec_grad / (norm_priv + 1e-6))
+                else:
+                    clip_coef = 1.0
+
+                for p, g in zip(client_params, grads_priv):
+                    if p.grad is not None:
+                        p.grad.add_(g, alpha=clip_coef)
+                    else:
+                        p.grad = g * clip_coef
+
+                all_params = list(client.parameters()) + list(server.parameters())
+                if hasattr(args, "clip_grad") and args.clip_grad is not None and args.clip_grad > 0:
+                    torch.nn.utils.clip_grad_norm_(all_params, max_norm=args.clip_grad)
+
+                opt_cs.step()
+
+                for p in adv.parameters():
+                    p.requires_grad = True
+
+                raw_rec_val = rec_mse.item()
+            else:
+                # lam == 0: Huấn luyện thuần Split Learning qua bottleneck, không adversary
+                logits = server(zt)
+                loss_task = criterion_task(logits, y)
+
+                opt_cs.zero_grad()
+                loss_task.backward()
+
+                all_params = list(client.parameters()) + list(server.parameters())
+                if hasattr(args, "clip_grad") and args.clip_grad is not None and args.clip_grad > 0:
+                    torch.nn.utils.clip_grad_norm_(all_params, max_norm=args.clip_grad)
+
+                opt_cs.step()
+
+                norm_task = 0.0
+                norm_priv = 0.0
+                raw_rec_val = 0.0
 
             total_task_loss += loss_task.item() * b
-            total_raw_rec += rec_mse.item()
+            total_raw_rec += raw_rec_val
             total_batches += 1
             train_correct += (logits.argmax(1) == y).sum().item()
             train_samples += b
@@ -523,6 +541,8 @@ def train_single_artape_v0(lam, args, device):
 
     last10 = history[-10:] if len(history) >= 10 else history
     mean_task_acc_last10 = np.mean([h["test_acc_eval"] for h in last10])
+    full_accs = [h["test_acc_full"] for h in last10 if h.get("test_acc_full") is not None]
+    mean_full_acc_last10 = np.mean(full_accs) if full_accs else final_full_acc * 100
     mean_adv_ssim_last10 = np.mean([h["adv_ssim_max"] for h in last10])
     mean_adv_psnr_last10 = np.mean([h["adv_psnr_max"] for h in last10])
 
@@ -550,7 +570,8 @@ def train_single_artape_v0(lam, args, device):
         "seed": args.seed,
         "final_full_test_acc": round(final_full_acc * 100, 2),
         "final_full_test_acc_train_mode": round(final_full_acc_train * 100, 2),
-        "mean_task_acc_last10": round(float(mean_task_acc_last10), 2),
+        "mean_full_test_acc_last10": round(float(mean_full_acc_last10), 2),
+        "mean_task_acc_last10_2k": round(float(mean_task_acc_last10), 2),
         "mean_adv_ssim_last10": round(float(mean_adv_ssim_last10), 4),
         "mean_adv_psnr_last10": round(float(mean_adv_psnr_last10), 2),
         "final_adv_ssim_eval": history[-1]["adv_ssim_eval"],
@@ -566,7 +587,8 @@ def train_single_artape_v0(lam, args, device):
     print("\n" + "=" * 90)
     print(f"KẾT QUẢ AR-TAPE v0 ({scenario_id.upper()}):")
     print(f"  - Full Test Acc (eval mode): {final_full_acc*100:.2f}% (Ngưỡng >= 92.7%: {'ĐẠT' if meets_utility else 'KHÔNG ĐẠT'})")
-    print(f"  - Mean Last 10 Acc: {mean_task_acc_last10:.2f}%")
+    print(f"  - Mean Last 10 Full Test Acc (10k): {mean_full_acc_last10:.2f}%")
+    print(f"  - Mean Last 10 Fast Eval Acc (2k): {mean_task_acc_last10:.2f}%")
     print(f"  - In-train Adversary SSIM (eval/train): {history[-1]['adv_ssim_eval']:.4f} / {history[-1]['adv_ssim_train']:.4f} (Max: {history[-1]['adv_ssim_max']:.4f})")
     print(f"  - In-train Adversary PSNR: {history[-1]['adv_psnr_max']:.2f} dB")
     print(f"  - Final dCor: {history[-1]['dcor']}")
@@ -634,7 +656,8 @@ def main():
             header = [
                 "scenario_id", "k", "m", "lambda", "cap", "seed",
                 "final_full_test_acc", "final_full_test_acc_train_mode",
-                "mean_task_acc_last10", "mean_adv_ssim_last10", "mean_adv_psnr_last10",
+                "mean_full_test_acc_last10", "mean_task_acc_last10_2k",
+                "mean_adv_ssim_last10", "mean_adv_psnr_last10",
                 "final_adv_ssim_eval", "final_adv_ssim_train", "final_adv_ssim_max",
                 "final_adv_psnr_max", "final_dcor", "training_time_s", "meets_utility_criterion"
             ]
@@ -643,7 +666,9 @@ def main():
                 row = [
                     r["scenario_id"], str(r["k"]), str(r["m"]), str(r["lambda"]), str(r["cap"]), str(r["seed"]),
                     str(r["final_full_test_acc"]), str(r["final_full_test_acc_train_mode"]),
-                    str(r["mean_task_acc_last10"]), str(r["mean_adv_ssim_last10"]), str(r["mean_adv_psnr_last10"]),
+                    str(r.get("mean_full_test_acc_last10", r.get("final_full_test_acc"))),
+                    str(r.get("mean_task_acc_last10_2k", r.get("mean_task_acc_last10"))),
+                    str(r["mean_adv_ssim_last10"]), str(r["mean_adv_psnr_last10"]),
                     str(r["final_adv_ssim_eval"]), str(r["final_adv_ssim_train"]), str(r["final_adv_ssim_max"]),
                     str(r["final_adv_psnr_max"]), str(r.get("final_dcor", "N/A")), str(r["training_time_s"]),
                     str(r["meets_utility_criterion"])
