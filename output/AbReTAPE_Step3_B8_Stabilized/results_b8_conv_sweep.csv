@@ -1,0 +1,5 @@
+scenario_id,adversary,lambda,cap,seed,task_test_acc,task_test_acc_train,mean_task_acc_last10,mean_task_acc_train_last10,mean_norm_task_last10,mean_norm_priv_raw_last10,mean_adv_ssim_last10,mean_adv_psnr_last10,mean_adv_r2_last10,final_adv_ssim_eval,final_adv_ssim_train,final_adv_ssim_max,final_adv_psnr_max,final_adv_r2_max,training_time_s,meets_utility_criterion
+b8_conv_lam0.1_s42,conv,0.1,1.5586,42,88.98,88.29,93.53,88.12,0.8097,0.4315,0.3888,13.17,0.0806,0.3483,0.3437,0.3483,12.97,0.053,1698.5,True
+b8_conv_lam0.2_s42,conv,0.2,1.5586,42,89.24,88.49,92.66,88.65,1.1445,0.6191,0.2411,12.52,-0.05,0.2271,0.2235,0.2271,12.37,-0.0889,1710.4,False
+b8_conv_lam0.3_s42,conv,0.3,1.5586,42,90.31,89.68,92.59,89.38,1.0002,0.6006,0.1978,12.3,-0.1116,0.1897,0.1863,0.1897,12.13,-0.1482,1719.5,False
+b8_conv_lam0.5_s42,conv,0.5,1.5586,42,89.34,88.69,92.49,88.63,1.1717,0.7525,0.2029,12.34,-0.082,0.1942,0.1907,0.1942,12.23,-0.1237,1712.0,False

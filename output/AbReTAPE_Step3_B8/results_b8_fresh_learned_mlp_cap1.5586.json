@@ -1,0 +1,44 @@
+[
+  {
+    "lambda": 0.1,
+    "seed": 42,
+    "in_train_adv_ssim": 0.4262,
+    "fresh_mlp_ssim_2k": 0.4516,
+    "fresh_mlp_psnr_2k": 17.91,
+    "fresh_mlp_lpips_2k": 0.1425,
+    "fresh_mlp_mse_norm_2k": 0.4775,
+    "fresh_mlp_ssim_10k": 0.4563,
+    "fresh_mlp_psnr_10k": 17.91,
+    "discrepancy_G": 0.0254,
+    "best_epoch": 30,
+    "training_time_s": 293.8
+  },
+  {
+    "lambda": 0.5,
+    "seed": 42,
+    "in_train_adv_ssim": 0.1531,
+    "fresh_mlp_ssim_2k": 0.5963,
+    "fresh_mlp_psnr_2k": 19.43,
+    "fresh_mlp_lpips_2k": 0.1108,
+    "fresh_mlp_mse_norm_2k": 0.3276,
+    "fresh_mlp_ssim_10k": 0.6005,
+    "fresh_mlp_psnr_10k": 19.43,
+    "discrepancy_G": 0.4432,
+    "best_epoch": 30,
+    "training_time_s": 293.3
+  },
+  {
+    "lambda": 1.0,
+    "seed": 42,
+    "in_train_adv_ssim": 0.1947,
+    "fresh_mlp_ssim_2k": 0.4855,
+    "fresh_mlp_psnr_2k": 18.47,
+    "fresh_mlp_lpips_2k": 0.1518,
+    "fresh_mlp_mse_norm_2k": 0.4118,
+    "fresh_mlp_ssim_10k": 0.4889,
+    "fresh_mlp_psnr_10k": 18.45,
+    "discrepancy_G": 0.2908,
+    "best_epoch": 30,
+    "training_time_s": 298.9
+  }
+]
