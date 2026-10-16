@@ -174,7 +174,12 @@ def run_artape_fsha_single(
     opt_d = torch.optim.Adam(discriminator.parameters(), lr=args.disc_lr, betas=(0.5, 0.999))
     opt_c = torch.optim.SGD(client.parameters(), lr=args.client_lr, momentum=0.9, weight_decay=1e-4)
     sched_c = CosineAnnealingLR(opt_c, T_max=args.epochs)
-    opt_task_s = torch.optim.SGD(task_server.parameters(), lr=0.005, momentum=0.9, weight_decay=1e-4)
+    opt_task_s = torch.optim.SGD(
+        list(task_server.parameters()) + list(defense_mod.unprojector.parameters()),
+        lr=0.005,
+        momentum=0.9,
+        weight_decay=1e-4
+    )
 
     print("[FSHA] Bắt đầu khởi động Discriminator (warmup)...", flush=True)
     warmup_fsha_discriminator(
@@ -386,6 +391,7 @@ def main():
     parser.add_argument("--server-ckpt", type=str, default=None, help="Đường dẫn checkpoint server AR-TAPE v0")
     parser.add_argument("--k", type=int, default=1024, help="Số chiều bottleneck k (mặc định: 1024)")
     parser.add_argument("--m", type=int, default=512, help="Số chiều ẩn MLP unprojector (mặc định: 512)")
+    parser.add_argument("--target-dim", type=int, default=32, help="Chiều không gian mục tiêu d_target của Pilot AE (mặc định: 32)")
     parser.add_argument("--lambda-val", type=float, default=0.1, help="Giá trị lambda của checkpoint (mặc định: 0.1)")
     parser.add_argument("--grad-scales", nargs="+", type=float, default=[5.0, 1.0], help="Danh sách grad scale (mặc định: 5.0 1.0)")
     parser.add_argument("--epochs", type=int, default=30, help="Số epochs tấn công FSHA (mặc định: 30)")
@@ -458,7 +464,8 @@ def main():
 
     # 2. Chuẩn bị Pilot AutoEncoder (f_tilde, f_tilde^-1)
     pilot_ae_path = os.path.join(args.output_dir, f"pilot_ae_cifar10_s{args.seed}.pt")
-    pilot_ae = FSHAPilotAutoEncoder(in_channels=64, target_dim=None).to(device)
+    target_dim = args.target_dim if args.target_dim > 0 else None
+    pilot_ae = FSHAPilotAutoEncoder(in_channels=3, latent_channels=64, target_dim=target_dim).to(device)
 
     # Tái sử dụng pilot fitted nếu đã có
     existing_pilots = [
@@ -473,16 +480,20 @@ def main():
             try:
                 ckpt = torch.load(p_cand, map_location=device)
                 if isinstance(ckpt, dict) and "pilot_ae" in ckpt:
-                    pilot_ae.load_state_dict(ckpt["pilot_ae"])
+                    pilot_ae.load_state_dict(ckpt["pilot_ae"], strict=False)
                 else:
-                    pilot_ae.load_state_dict(ckpt)
+                    pilot_ae.load_state_dict(ckpt, strict=False)
                 print(f"[PILOT] Đã nạp Pilot AutoEncoder có sẵn từ: {p_cand}")
                 pilot_loaded = True
                 break
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[PILOT] Bỏ qua {p_cand}: {e}")
 
-    if not pilot_loaded:
+    if pilot_loaded:
+        pilot_ae.eval()
+        for p in pilot_ae.parameters():
+            p.requires_grad = False
+    else:
         print(f"[PILOT] Đang huấn luyện Pilot AutoEncoder trên tập công khai ({args.pilot_epochs} epochs)...", flush=True)
         fit_pilot_server = ServerModel().to(device)
         fit_fsha_pilot(
