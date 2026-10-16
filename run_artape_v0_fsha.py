@@ -403,18 +403,33 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
     # Tìm kiếm checkpoint client mặc định
-    if args.client_ckpt is None:
+    if args.client_ckpt is None or not os.path.isfile(args.client_ckpt):
         candidates = [
             os.path.join(PROJECT_ROOT, "output", "AR_TAPE_v0", "checkpoints", f"artape_v0_k{args.k}_lam{args.lambda_val}_s{args.seed}_client.pt"),
             os.path.join(PROJECT_ROOT, "output", "AbReTAPE_v0", "checkpoints", f"artape_v0_k{args.k}_lam{args.lambda_val}_s{args.seed}_client.pt"),
+            f"/content/drive/MyDrive/AbReTAPE_Results/AbReTAPE_v0/checkpoints/artape_v0_k{args.k}_lam{args.lambda_val}_s{args.seed}_client.pt",
+            f"/content/drive/MyDrive/AbReTAPE_Results/AR_TAPE_v0/checkpoints/artape_v0_k{args.k}_lam{args.lambda_val}_s{args.seed}_client.pt",
         ]
         for c in candidates:
             if os.path.isfile(c):
                 args.client_ckpt = c
                 break
 
+    if args.server_ckpt is None or not os.path.isfile(args.server_ckpt):
+        s_candidates = [
+            os.path.join(PROJECT_ROOT, "output", "AR_TAPE_v0", "checkpoints", f"artape_v0_k{args.k}_lam{args.lambda_val}_s{args.seed}_server.pt"),
+            os.path.join(PROJECT_ROOT, "output", "AbReTAPE_v0", "checkpoints", f"artape_v0_k{args.k}_lam{args.lambda_val}_s{args.seed}_server.pt"),
+            f"/content/drive/MyDrive/AbReTAPE_Results/AbReTAPE_v0/checkpoints/artape_v0_k{args.k}_lam{args.lambda_val}_s{args.seed}_server.pt",
+            f"/content/drive/MyDrive/AbReTAPE_Results/AR_TAPE_v0/checkpoints/artape_v0_k{args.k}_lam{args.lambda_val}_s{args.seed}_server.pt",
+        ]
+        for sc in s_candidates:
+            if os.path.isfile(sc):
+                args.server_ckpt = sc
+                break
+
     if args.client_ckpt is None or not os.path.isfile(args.client_ckpt):
         print(f"[LỖI] Không tìm thấy Client Checkpoint AR-TAPE v0 tại: {args.client_ckpt}")
+        print("Vui lòng chỉ định rõ qua cờ --client-ckpt hoặc đồng bộ từ Google Drive.")
         sys.exit(1)
 
     print("=" * 90)
@@ -426,11 +441,19 @@ def main():
     print("=" * 90, flush=True)
 
     # 1. Nạp dữ liệu FSHA splits
-    priv_loader, pub_loader, test_eval_loader, test_full_loader = get_cifar10_fsha_splits(
+    priv_loader, pub_loader, test_full_loader = get_cifar10_fsha_splits(
         data_dir=args.data_dir,
         batch_size=args.batch_size,
         num_workers=0 if sys.platform == "win32" else 2,
         seed=args.seed
+    )
+
+    # Tạo tập đánh giá nhanh test_eval_loader (2000 ảnh) từ test set
+    g_eval = torch.Generator().manual_seed(args.seed)
+    eval_indices = torch.randperm(len(test_full_loader.dataset), generator=g_eval)[:2000].tolist()
+    test_eval_set = torch.utils.data.Subset(test_full_loader.dataset, eval_indices)
+    test_eval_loader = torch.utils.data.DataLoader(
+        test_eval_set, batch_size=args.batch_size, shuffle=False, num_workers=0 if sys.platform == "win32" else 2
     )
 
     # 2. Chuẩn bị Pilot AutoEncoder (f_tilde, f_tilde^-1)
