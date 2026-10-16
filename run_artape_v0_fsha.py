@@ -179,14 +179,14 @@ def run_artape_fsha_single(
     print("[FSHA] Bắt đầu khởi động Discriminator (warmup)...", flush=True)
     warmup_fsha_discriminator(
         client=client.base_client,
-        pilot_ae=pilot_ae,
         discriminator=discriminator,
-        opt_d=opt_d,
+        pilot_ae=pilot_ae,
         priv_loader=priv_loader,
         pub_loader=pub_loader,
+        opt_d=opt_d,
         defense=defense_mod,
         device=device,
-        epochs=args.warmup_d_epochs
+        num_batches=20
     )
 
     # 2. Đo đạc trước khi bị Hijack (Epoch 0)
@@ -463,7 +463,9 @@ def main():
     # Tái sử dụng pilot fitted nếu đã có
     existing_pilots = [
         pilot_ae_path,
-        os.path.join(PROJECT_ROOT, "output", "AbReTAPE_FSHA", "pilot_ae_fitted_d32.pt")
+        os.path.join(PROJECT_ROOT, "output", "AbReTAPE_FSHA", "pilot_ae_fitted_d32.pt"),
+        "/content/drive/MyDrive/AbReTAPE_Results/AbReTAPE_FSHA/pilot_ae_fitted_d32.pt",
+        "/content/drive/MyDrive/AbReTAPE_Results/AbReTAPE_FSHA/pilot_ae_cifar10_s42.pt",
     ]
     pilot_loaded = False
     for p_cand in existing_pilots:
@@ -482,8 +484,17 @@ def main():
 
     if not pilot_loaded:
         print(f"[PILOT] Đang huấn luyện Pilot AutoEncoder trên tập công khai ({args.pilot_epochs} epochs)...", flush=True)
-        fit_fsha_pilot(pilot_ae, pub_loader, test_eval_loader, device=device, epochs=args.pilot_epochs, lr=1e-3)
-        torch.save(pilot_ae.state_dict(), pilot_ae_path)
+        fit_pilot_server = ServerModel().to(device)
+        fit_fsha_pilot(
+            pilot_ae=pilot_ae,
+            pilot_server=fit_pilot_server,
+            pub_loader=pub_loader,
+            test_loader=test_eval_loader,
+            epochs=args.pilot_epochs,
+            lr=1e-3,
+            device=device,
+            save_path=pilot_ae_path
+        )
         print(f"[PILOT] Đã lưu Pilot AutoEncoder tại: {pilot_ae_path}")
 
     lpips_fn = get_lpips_fn(device=device)
