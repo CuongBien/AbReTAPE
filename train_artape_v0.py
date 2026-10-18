@@ -55,66 +55,147 @@ from src.utils.visualize import save_reconstruction_grid
 
 class ClientWithBottleneck(nn.Module):
     """
-    Client AR-TAPE v0:
+    Client AR-TAPE v0 / v1:
     - Base: stem (Conv3->64, BN, ReLU) + layer1 (2 BasicBlocks, 64 channels) -> shape (B, 64, 32, 32)
     - Flatten: (B, 65536)
-    - Bottleneck học được: Linear(65536, k, bias=False) với k=1024
-      (Khởi tạo trực giao bằng QR mỏng giống B7 để đảm bảo tính ổn định và tính liên tục toán học)
+    - Bottleneck:
+        * fixed_bottleneck=True: Phép chiếu trực giao cố định R in R^{D x k} (B7 mode F style, QR orthonormal)
+        * fixed_bottleneck=False: Linear(D, k, bias=False) học được, khởi tạo trực chuẩn bằng QR.
     """
-    def __init__(self, k=1024, D=65536, init_ortho=True, seed=42):
+    def __init__(self, k=1024, D=65536, init_ortho=True, seed=42, fixed_bottleneck=False):
         super().__init__()
         self.base_client = ClientModel()
         self.k = k
         self.D = D
-        self.bottleneck = nn.Linear(D, k, bias=False)
+        self.fixed_bottleneck = fixed_bottleneck
 
-        if init_ortho:
-            g = torch.Generator().manual_seed(seed)
-            A = torch.randn(D, k, generator=g)
-            Q, _ = torch.linalg.qr(A, mode="reduced")
-            with torch.no_grad():
-                self.bottleneck.weight.copy_(Q.t())  # weight shape: [k, D]
+        g = torch.Generator().manual_seed(seed)
+        A = torch.randn(D, k, generator=g)
+        Q, _ = torch.linalg.qr(A, mode="reduced")  # Q in R^{D x k}
+
+        if fixed_bottleneck:
+            self.register_buffer("R", Q)
+            self.bottleneck = None
+        else:
+            self.R = None
+            self.bottleneck = nn.Linear(D, k, bias=False)
+            if init_ortho:
+                with torch.no_grad():
+                    self.bottleneck.weight.copy_(Q.t())  # weight shape: [k, D]
+
+    def get_bottleneck_weight(self):
+        """Trả về ma trận trọng số chiếu dạng [k, D] để dùng cho Conv lift attacker."""
+        if self.fixed_bottleneck:
+            return self.R.t()
+        return self.bottleneck.weight
 
     def forward(self, x):
         h = self.base_client(x)
         h_flat = h.view(h.size(0), -1)
-        zt = self.bottleneck(h_flat)
+        if self.fixed_bottleneck:
+            zt = torch.matmul(h_flat, self.R)
+        else:
+            zt = self.bottleneck(h_flat)
         return zt
 
     def forward_features(self, x):
         h = self.base_client(x)
         h_flat = h.view(h.size(0), -1)
-        zt = self.bottleneck(h_flat)
+        if self.fixed_bottleneck:
+            zt = torch.matmul(h_flat, self.R)
+        else:
+            zt = self.bottleneck(h_flat)
         return zt, h
+
+    def load_state_dict(self, state_dict, strict=True):
+        clean_sd = {}
+        for k, v in state_dict.items():
+            clean_sd[k] = v
+        # Tương thích chéo: nếu state_dict có 'R' nhưng model dùng 'bottleneck.weight'
+        if "R" in clean_sd and hasattr(self, "bottleneck") and self.bottleneck is not None:
+            self.bottleneck.weight.data.copy_(clean_sd["R"].t())
+            clean_sd.pop("R", None)
+        # Hoặc nếu state_dict có 'bottleneck.weight' nhưng model dùng 'R'
+        elif "bottleneck.weight" in clean_sd and hasattr(self, "R") and self.R is not None:
+            self.R.data.copy_(clean_sd["bottleneck.weight"].t())
+            clean_sd.pop("bottleneck.weight", None)
+        return super().load_state_dict(clean_sd, strict=False)
 
 
 class ServerWithBottleneck(nn.Module):
     """
-    Server AR-TAPE v0:
-    - ProjectionMLP: Linear(k, m) -> BatchNorm1d(m) -> ReLU -> Linear(m, D)
-      (k=1024, m=512, D=65536) tương thích hoàn toàn với B7 mode L
+    Server AR-TAPE v0 / v1:
+    - unprojector_mode:
+        * 'linear_fixed': Toán tử nâng chiều trực giao R^T (0 tham số thừa, B7 mode F style).
+                          z_hat = z_t @ R^T in R^{B x D} -> không làm hẹp rank, không trôi BatchNorm.
+        * 'linear_learned': Tầng Linear(k, D, bias=False) học được, khởi tạo trực giao từ R^T.
+        * 'mlp': Mạng MLP phi tuyến Linear(k, m) -> BN -> ReLU -> Linear(m, D) (B7 mode L style).
     - Reshape: (B, 64, 32, 32)
     - Base Server: ResNet-18 layer2..4 + AvgPool + FC (10 classes)
     """
-    def __init__(self, k=1024, m=512, D=65536):
+    def __init__(self, k=1024, m=512, D=65536, unprojector_mode="linear_fixed", ortho_matrix=None, seed=42):
         super().__init__()
         self.k = k
         self.m = m
         self.D = D
-        self.unprojector = nn.Sequential(
-            nn.Linear(k, m),
-            nn.BatchNorm1d(m),
-            nn.ReLU(inplace=True),
-            nn.Linear(m, D)
-        )
+        self.unprojector_mode = unprojector_mode
+
+        if unprojector_mode == "linear_fixed":
+            if ortho_matrix is not None:
+                self.register_buffer("R", ortho_matrix.clone())
+            else:
+                g = torch.Generator().manual_seed(seed)
+                A = torch.randn(D, k, generator=g)
+                Q, _ = torch.linalg.qr(A, mode="reduced")
+                self.register_buffer("R", Q)
+            self.unprojector = None
+        elif unprojector_mode == "linear_learned":
+            self.unprojector = nn.Linear(k, D, bias=False)
+            if ortho_matrix is not None:
+                Q = ortho_matrix
+            else:
+                g = torch.Generator().manual_seed(seed)
+                A = torch.randn(D, k, generator=g)
+                Q, _ = torch.linalg.qr(A, mode="reduced")
+            with torch.no_grad():
+                self.unprojector.weight.copy_(Q)  # [D, k] in PyTorch Linear(k, D)
+        elif unprojector_mode == "mlp":
+            self.unprojector = nn.Sequential(
+                nn.Linear(k, m),
+                nn.BatchNorm1d(m),
+                nn.ReLU(inplace=True),
+                nn.Linear(m, D)
+            )
+        else:
+            raise ValueError(f"Không hỗ trợ unprojector_mode='{unprojector_mode}'. Chọn 'linear_fixed', 'linear_learned', hoặc 'mlp'.")
+
         self.base_server = ServerModel()
 
-    def forward(self, zt):
+    def lift(self, zt):
         if zt.dim() > 2:
             zt = zt.view(zt.size(0), -1)
-        zh = self.unprojector(zt)
+        if self.unprojector_mode == "linear_fixed":
+            zh = torch.matmul(zt, self.R.t())
+        else:
+            zh = self.unprojector(zt)
+        return zh
+
+    def forward(self, zt):
+        zh = self.lift(zt)
         zh_tensor = zh.view(zt.size(0), 64, 32, 32)
         return self.base_server(zh_tensor)
+
+    def load_state_dict(self, state_dict, strict=True):
+        clean_sd = {}
+        for k, v in state_dict.items():
+            clean_sd[k] = v
+        if "R" in clean_sd and hasattr(self, "unprojector") and self.unprojector is not None and isinstance(self.unprojector, nn.Linear):
+            self.unprojector.weight.data.copy_(clean_sd["R"])
+            clean_sd.pop("R", None)
+        elif "unprojector.weight" in clean_sd and hasattr(self, "R") and self.R is not None:
+            self.R.data.copy_(clean_sd["unprojector.weight"])
+            clean_sd.pop("unprojector.weight", None)
+        return super().load_state_dict(clean_sd, strict=False)
 
 
 class LearnedAdaptiveDecoder(nn.Module):
@@ -289,11 +370,14 @@ def plot_artape_v0_curves(history, save_path, lam):
 # ==============================================================================
 
 def train_single_artape_v0(lam, args, device):
-    scenario_id = f"artape_v0_k{args.k}_lam{lam}_s{args.seed}"
+    mode_str = f"_{args.unprojector_mode}" if args.unprojector_mode != "mlp" else ""
+    fix_str = "_fixR" if getattr(args, "fixed_bottleneck", False) else ""
+    scenario_id = f"artape_v0_k{args.k}{mode_str}{fix_str}_lam{lam}_s{args.seed}"
     print("\n" + "=" * 90)
-    print(f"BẮT ĐẦU HUẤN LUYỆN AR-TAPE v0: {scenario_id.upper()}")
-    print(f"Cấu hình: k={args.k} | m={args.m} | Lambda={lam} | Cap={args.cap} | Seed={args.seed}")
-    print(f"Client: Stem+Layer1 + Linear({args.D}->{args.k}) | Server: MLP({args.k}->{args.m}->{args.D}) + ServerModel")
+    print(f"BẮT ĐẦU HUẤN LUYỆN AR-TAPE: {scenario_id.upper()}")
+    print(f"Cấu hình: k={args.k} | Unprojector Mode={args.unprojector_mode} | Fixed Bottleneck={getattr(args, 'fixed_bottleneck', False)}")
+    print(f"Lambda={lam} (Warmup={getattr(args, 'warmup_epochs', 0)}) | Cap={args.cap} | Seed={args.seed}")
+    print(f"Client: Stem+Layer1 + Bottleneck({args.D}->{args.k}) | Server: Mode {args.unprojector_mode} + ServerModel")
     print(f"Adversary: LearnedAdaptiveDecoder ({args.k}->{args.m}->{args.D} + ConvDecoder, ~34M params)")
     print(f"Huấn luyện Split Learning 100 Epochs (MultiStepLR [50, 75]) | Single Forward Pass")
     print("=" * 90, flush=True)
@@ -312,13 +396,19 @@ def train_single_artape_v0(lam, args, device):
     )
 
     # 1. Khởi tạo Client, Server, Adversary
-    client = ClientWithBottleneck(k=args.k, D=args.D, init_ortho=True, seed=args.seed).to(device)
-    server = ServerWithBottleneck(k=args.k, m=args.m, D=args.D).to(device)
+    client = ClientWithBottleneck(
+        k=args.k, D=args.D, init_ortho=True, seed=args.seed, fixed_bottleneck=getattr(args, "fixed_bottleneck", False)
+    ).to(device)
+    ortho_q = client.R if client.fixed_bottleneck else client.bottleneck.weight.t().detach()
+    server = ServerWithBottleneck(
+        k=args.k, m=args.m, D=args.D, unprojector_mode=args.unprojector_mode, ortho_matrix=ortho_q, seed=args.seed
+    ).to(device)
     adv = LearnedAdaptiveDecoder(k=args.k, D=args.D, hidden_dim=args.m).to(device)
 
     # 2. Optimizers & Schedulers
+    trainable_cs = [p for p in client.parameters() if p.requires_grad] + [p for p in server.parameters() if p.requires_grad]
     opt_cs = torch.optim.SGD(
-        list(client.parameters()) + list(server.parameters()),
+        trainable_cs,
         lr=args.lr, momentum=0.9, weight_decay=5e-4
     )
     sched_cs = MultiStepLR(opt_cs, milestones=[50, 75], gamma=0.1)
@@ -579,13 +669,15 @@ def train_single_artape_v0(lam, args, device):
         "final_adv_ssim_max": history[-1]["adv_ssim_max"],
         "final_adv_psnr_max": history[-1]["adv_psnr_max"],
         "final_dcor": history[-1]["dcor"],
+        "unprojector_mode": args.unprojector_mode,
+        "fixed_bottleneck": getattr(args, "fixed_bottleneck", False),
         "training_time_s": round(train_time, 1),
         "meets_utility_criterion": meets_utility,
         "history": history
     }
 
     print("\n" + "=" * 90)
-    print(f"KẾT QUẢ AR-TAPE v0 ({scenario_id.upper()}):")
+    print(f"KẾT QUẢ AR-TAPE ({scenario_id.upper()}):")
     print(f"  - Full Test Acc (eval mode): {final_full_acc*100:.2f}% (Ngưỡng >= 92.7%: {'ĐẠT' if meets_utility else 'KHÔNG ĐẠT'})")
     print(f"  - Mean Last 10 Full Test Acc (10k): {mean_full_acc_last10:.2f}%")
     print(f"  - Mean Last 10 Fast Eval Acc (2k): {mean_task_acc_last10:.2f}%")
@@ -599,10 +691,12 @@ def train_single_artape_v0(lam, args, device):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="AR-TAPE v0: ResSFL-lite (Learned Bottleneck + Min-Max Strong Adversary)")
+    parser = argparse.ArgumentParser(description="AR-TAPE v0 / v1: ResSFL-lite (Learned/Ortho Bottleneck + Min-Max Strong Adversary)")
     parser.add_argument("--k", type=int, default=1024, help="Chiều không gian con bottleneck k (mặc định: 1024)")
     parser.add_argument("--m", type=int, default=512, help="Chiều ẩn MLP unprojector (mặc định: 512)")
     parser.add_argument("--D", type=int, default=65536, help="Số chiều phẳng smashed data (mặc định: 65536)")
+    parser.add_argument("--unprojector-mode", type=str, default="linear_fixed", choices=["linear_fixed", "linear_learned", "mlp"], help="Chế độ unprojector tại server: linear_fixed (Mode F), linear_learned, hoặc mlp (Mode L)")
+    parser.add_argument("--fixed-bottleneck", action="store_true", help="Cố định ma trận chiếu trực giao R tại client (không cập nhật gradient trên R, tương thích B7 Mode F)")
     parser.add_argument("--lambdas", type=str, default="0.1", help="Danh sách lambda phân tách bởi dấu phẩy (mặc định: '0.1')")
     parser.add_argument("--cap", type=float, default=1.5586, help="Cận trên chặn MSE loss (mặc định: 1.5586)")
     parser.add_argument("--seed", type=int, default=42, help="Random seed (mặc định: 42)")
@@ -633,10 +727,10 @@ def main():
     lambda_list = [float(l.strip()) for l in args.lambdas.split(",") if l.strip()]
 
     print("=" * 90)
-    print("KHỞI CHẠY THỰC NGHIỆM AR-TAPE v0 (RES-SFL-LITE)")
+    print("KHỞI CHẠY THỰC NGHIỆM AR-TAPE (RES-SFL-LITE)")
     print(f"Thiết bị: {device} ({torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'})")
-    print(f"Bottleneck: {args.D} -> k={args.k} | Unprojector: k={args.k} -> m={args.m} -> {args.D}")
-    print(f"Danh sách Lambda: {lambda_list} | Seed: {args.seed} | Cap: {args.cap}")
+    print(f"Bottleneck: {args.D} -> k={args.k} (Fixed={args.fixed_bottleneck}) | Server Unprojector: Mode {args.unprojector_mode}")
+    print(f"Danh sách Lambda: {lambda_list} (Warmup={args.warmup_epochs}) | Seed: {args.seed} | Cap: {args.cap}")
     print(f"Thư mục lưu kết quả: {args.output_dir}")
     print("=" * 90, flush=True)
 
@@ -645,9 +739,8 @@ def main():
 
     all_results = {}
     for lam in lambda_list:
-        scenario_id = f"artape_v0_k{args.k}_lam{lam}_s{args.seed}"
         res = train_single_artape_v0(lam, args, device)
-        all_results[scenario_id] = res
+        all_results[res["scenario_id"]] = res
 
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(all_results, f, indent=2, ensure_ascii=False)

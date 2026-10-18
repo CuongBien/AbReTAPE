@@ -157,7 +157,8 @@ def train_fresh_attacker(attacker_type, client_ckpt_path, lam, args, train_loade
     if attacker_type == "mlp":
         attacker = LearnedAdaptiveDecoder(k=args.k, D=args.D, hidden_dim=args.hidden_dim).to(device)
     elif attacker_type == "conv":
-        attacker = TransposeLiftConvDecoder(client.bottleneck.weight.data).to(device)
+        bw = client.get_bottleneck_weight().data if hasattr(client, "get_bottleneck_weight") else client.bottleneck.weight.data
+        attacker = TransposeLiftConvDecoder(bw).to(device)
     else:
         raise ValueError(f"Không hỗ trợ attacker_type: {attacker_type}")
 
@@ -278,6 +279,7 @@ def main():
     parser.add_argument("--k", type=int, default=1024, help="Chiều không gian con bottleneck k")
     parser.add_argument("--D", type=int, default=65536, help="Chiều phẳng smashed data")
     parser.add_argument("--hidden-dim", type=int, default=512, help="Chiều ẩn MLP unprojector")
+    parser.add_argument("--client-ckpt", type=str, default=None, help="Đường dẫn trực tiếp tới checkpoint client (nếu có)")
     parser.add_argument("--lambdas", nargs="+", type=float, default=[0.1], help="Danh sách lambda")
     parser.add_argument("--seed", type=int, default=42, help="Seed của checkpoint và data split")
     parser.add_argument("--epochs", type=int, default=30, help="Số epochs huấn luyện attacker (mặc định: 30)")
@@ -311,11 +313,24 @@ def main():
 
     all_results = []
     for lam in args.lambdas:
-        client_ckpt_name = f"artape_v0_k{args.k}_lam{lam}_s{args.seed}_client.pt"
-        client_ckpt_path = os.path.join(args.output_dir, "checkpoints", client_ckpt_name)
+        client_ckpt_path = None
+        if args.client_ckpt and os.path.isfile(args.client_ckpt):
+            client_ckpt_path = args.client_ckpt
+        else:
+            candidates = [
+                os.path.join(args.output_dir, "checkpoints", f"artape_v0_k{args.k}_linear_fixed_lam{lam}_s{args.seed}_client.pt"),
+                os.path.join(args.output_dir, "checkpoints", f"artape_v0_k{args.k}_linear_fixed_fixR_lam{lam}_s{args.seed}_client.pt"),
+                os.path.join(args.output_dir, "checkpoints", f"artape_v0_k{args.k}_linear_learned_lam{lam}_s{args.seed}_client.pt"),
+                os.path.join(args.output_dir, "checkpoints", f"artape_v0_k{args.k}_lam{lam}_s{args.seed}_client.pt"),
+                os.path.join(args.output_dir, f"artape_v0_k{args.k}_lam{lam}_s{args.seed}_client.pt"),
+            ]
+            for c in candidates:
+                if os.path.isfile(c):
+                    client_ckpt_path = c
+                    break
 
-        if not os.path.isfile(client_ckpt_path):
-            print(f"[WARN] Bỏ qua λ={lam}: Không tìm thấy {client_ckpt_path}")
+        if not client_ckpt_path or not os.path.isfile(client_ckpt_path):
+            print(f"[WARN] Bỏ qua λ={lam}: Không tìm thấy checkpoint client phù hợp tại {args.output_dir}")
             continue
 
         for atk in args.attackers:

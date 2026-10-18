@@ -56,18 +56,29 @@ class ARTAPEv0FSHADefense(nn.Module):
     Toán tử phòng thủ AR-TAPE v0 tại cut layer:
     - Client bottleneck: Chiếu z in R^{B x 65536} -> z_t in R^{B x k} (k=1024)
     - Server unprojector: Nâng z_t in R^{B x k} -> z_hat in R^{B x 65536} -> (B, 64, 32, 32)
-    Gradient đối kháng từ Discriminator truyền qua unprojector và bottleneck về Client.
+    Tương thích cả fixed buffer R (Mode F) và learned unprojector.
     """
-    def __init__(self, bottleneck_layer, unprojector_layer):
+    def __init__(self, client_module, server_module):
         super().__init__()
-        self.bottleneck = bottleneck_layer
-        self.unprojector = unprojector_layer
+        self.client_module = client_module
+        self.server_module = server_module
 
     def forward(self, z):
         b = z.size(0)
         z_flat = z.view(b, -1)
-        zt = self.bottleneck(z_flat)
-        zh = self.unprojector(zt)
+        if hasattr(self.client_module, "fixed_bottleneck") and self.client_module.fixed_bottleneck:
+            zt = torch.matmul(z_flat, self.client_module.R)
+        elif hasattr(self.client_module, "bottleneck") and self.client_module.bottleneck is not None:
+            zt = self.client_module.bottleneck(z_flat)
+        else:
+            zt = z_flat
+
+        if hasattr(self.server_module, "lift"):
+            zh = self.server_module.lift(zt)
+        elif hasattr(self.server_module, "unprojector") and self.server_module.unprojector is not None:
+            zh = self.server_module.unprojector(zt)
+        else:
+            zh = zt
         return zh.view(b, 64, 32, 32)
 
 
@@ -174,8 +185,11 @@ def run_artape_fsha_single(
     opt_d = torch.optim.Adam(discriminator.parameters(), lr=args.disc_lr, betas=(0.5, 0.999))
     opt_c = torch.optim.SGD(client.parameters(), lr=args.client_lr, momentum=0.9, weight_decay=1e-4)
     sched_c = CosineAnnealingLR(opt_c, T_max=args.epochs)
+    s_params = [p for p in task_server.parameters() if p.requires_grad]
+    if hasattr(defense_mod, "server_module") and hasattr(defense_mod.server_module, "unprojector") and defense_mod.server_module.unprojector is not None:
+        s_params += [p for p in defense_mod.server_module.unprojector.parameters() if p.requires_grad]
     opt_task_s = torch.optim.SGD(
-        list(task_server.parameters()) + list(defense_mod.unprojector.parameters()),
+        s_params,
         lr=0.005,
         momentum=0.9,
         weight_decay=1e-4
@@ -401,6 +415,8 @@ def main():
     parser.add_argument("--disc-lr", type=float, default=2e-4, help="Learning rate Discriminator (mặc định: 2e-4)")
     parser.add_argument("--warmup-d-epochs", type=int, default=3, help="Số epoch warmup discriminator (mặc định: 3)")
     parser.add_argument("--pilot-epochs", type=int, default=25, help="Số epoch fit pilot autoencoder nếu chưa có (mặc định: 25)")
+    parser.add_argument("--unprojector-mode", type=str, default="linear_fixed", choices=["linear_fixed", "linear_learned", "mlp"], help="Chế độ unprojector tại server")
+    parser.add_argument("--fixed-bottleneck", action="store_true", help="Cố định ma trận chiếu trực giao R tại client")
     parser.add_argument("--data-dir", type=str, default=os.path.join(PROJECT_ROOT, "data"))
     parser.add_argument("--output-dir", type=str, default=os.path.join(PROJECT_ROOT, "output", "AbReTAPE_v0_FSHA"))
     args = parser.parse_args()
@@ -513,20 +529,31 @@ def main():
     all_records = []
     for gs in args.grad_scales:
         # Nạp Client mới từ checkpoint cho mỗi kịch bản grad_scale
-        client = ClientWithBottleneck(k=args.k, D=65536, init_ortho=False).to(device)
-        client.load_state_dict(torch.load(args.client_ckpt, map_location=device))
+        client_sd = torch.load(args.client_ckpt, map_location=device)
+        is_fixed_client = ("R" in client_sd) or getattr(args, "fixed_bottleneck", False)
+        client = ClientWithBottleneck(k=args.k, D=65536, init_ortho=False, fixed_bottleneck=is_fixed_client).to(device)
+        client.load_state_dict(client_sd)
 
         # Khởi tạo Server tương ứng
-        server = ServerWithBottleneck(k=args.k, m=args.m, D=65536).to(device)
+        ortho_q = client.R if is_fixed_client else (client.bottleneck.weight.t().detach() if client.bottleneck is not None else None)
+        server_sd = None
         if args.server_ckpt and os.path.isfile(args.server_ckpt):
             try:
-                server.load_state_dict(torch.load(args.server_ckpt, map_location=device))
-                print(f"[SERVER] Đã nạp Server Checkpoint từ {args.server_ckpt}")
+                server_sd = torch.load(args.server_ckpt, map_location=device)
             except Exception:
-                pass
+                server_sd = None
+
+        mode = "linear_fixed" if (server_sd and "R" in server_sd) else args.unprojector_mode
+        server = ServerWithBottleneck(k=args.k, m=args.m, D=65536, unprojector_mode=mode, ortho_matrix=ortho_q).to(device)
+        if server_sd is not None:
+            try:
+                server.load_state_dict(server_sd)
+                print(f"[SERVER] Đã nạp Server Checkpoint từ {args.server_ckpt}")
+            except Exception as e:
+                print(f"[SERVER] Cảnh báo nạp checkpoint: {e}")
 
         # Tạo module phòng thủ AR-TAPE v0
-        defense_mod = ARTAPEv0FSHADefense(client.bottleneck, server.unprojector).to(device)
+        defense_mod = ARTAPEv0FSHADefense(client, server).to(device)
         task_server = server.base_server
 
         rec = run_artape_fsha_single(

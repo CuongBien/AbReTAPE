@@ -15,6 +15,7 @@ import sys
 import time
 import json
 import csv
+import copy
 import argparse
 import numpy as np
 import torch
@@ -125,11 +126,14 @@ def save_comparison_grid(client, dec_a, dec_b, loader, device, save_path, num_im
 
 
 def run_coadapted_single(args, device):
-    scenario_id = f"artape_v0_coadapted_k{args.k}_lam{args.lambda_val}_naux{args.aux_size}_s{args.seed}"
+    mode_str = f"_{args.unprojector_mode}" if args.unprojector_mode != "mlp" else ""
+    fix_str = "_fixR" if getattr(args, "fixed_bottleneck", False) else ""
+    scenario_id = f"artape_v0_coadapted_k{args.k}{mode_str}{fix_str}_lam{args.lambda_val}_naux{args.aux_size}_s{args.seed}"
     print("=" * 90)
     print(f"KHỞI CHẠY THỰC NGHIỆM CO-ADAPTED TRÊN AR-TAPE v0 (N_aux = {args.aux_size})")
     print(f"Kịch bản: {scenario_id} | Seed: {args.seed} | Bottleneck k={args.k}")
-    print(f"Epochs: {args.epochs} | Batch size: {args.batch_size} | Lambda: {args.lambda_val}")
+    print(f"Unprojector Mode: {args.unprojector_mode} | Fixed Bottleneck: {getattr(args, 'fixed_bottleneck', False)}")
+    print(f"Epochs: {args.epochs} | Batch size: {args.batch_size} | Lambda: {args.lambda_val} (Warmup={getattr(args, 'warmup_epochs', 0)})")
     print("=" * 90, flush=True)
 
     # 1. Nạp dữ liệu splits Co-adapted: D_sl (40k), D_aux (10k), D_test_eval (2k), D_test_full (10k)
@@ -143,8 +147,13 @@ def run_coadapted_single(args, device):
     )
 
     # 2. Khởi tạo Client và Server AR-TAPE v0
-    client = ClientWithBottleneck(k=args.k, D=65536, init_ortho=True, seed=args.seed).to(device)
-    server = ServerWithBottleneck(k=args.k, m=args.m, D=65536).to(device)
+    client = ClientWithBottleneck(
+        k=args.k, D=65536, init_ortho=True, seed=args.seed, fixed_bottleneck=getattr(args, "fixed_bottleneck", False)
+    ).to(device)
+    ortho_q = client.R if client.fixed_bottleneck else client.bottleneck.weight.t().detach()
+    server = ServerWithBottleneck(
+        k=args.k, m=args.m, D=65536, unprojector_mode=args.unprojector_mode, ortho_matrix=ortho_q, seed=args.seed
+    ).to(device)
 
     # Khởi tạo In-training Adversary cho Split Learning (min-max nội bộ)
     adv_sl = LearnedAdaptiveDecoder(k=args.k, D=65536, hidden_dim=args.m).to(device)
@@ -166,6 +175,7 @@ def run_coadapted_single(args, device):
     last10_a_psnr = []
     last10_a_ssim = []
     best_a_psnr, best_a_ssim, best_a_ep = 0.0, 0.0, 0
+    best_a_state = copy.deepcopy(dec_a.state_dict())
 
     steps_per_epoch_aux = len(aux_loader)
     t_start = time.time()
@@ -173,6 +183,8 @@ def run_coadapted_single(args, device):
     print("\n[BƯỚC 1/2] Huấn luyện Split Learning đồng bộ Nhánh A (Co-adapted Online)...", flush=True)
 
     for ep in range(1, args.epochs + 1):
+        cur_lam = args.lambda_val * min(1.0, ep / max(1, args.warmup_epochs)) if getattr(args, "warmup_epochs", 0) > 0 else args.lambda_val
+
         # 1.1 Huấn luyện 1 epoch Split Learning trên D_sl (40k ảnh)
         client.train()
         server.train()
@@ -182,7 +194,7 @@ def run_coadapted_single(args, device):
             x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
             zt = client(x)
 
-            if args.lambda_val > 0:
+            if cur_lam > 0:
                 # Max step cho adversary nội bộ
                 zt_det = zt.detach()
                 x_rec_adv = adv_sl(zt_det)
@@ -204,7 +216,7 @@ def run_coadapted_single(args, device):
                 loss_task.backward(retain_graph=True)
 
                 client_params = [p for p in client.parameters() if p.requires_grad]
-                loss_priv = - args.lambda_val * torch.clamp(rec_mse, max=args.cap)
+                loss_priv = - cur_lam * torch.clamp(rec_mse, max=args.cap)
                 grads_priv = torch.autograd.grad(loss_priv, client_params, retain_graph=False)
 
                 for p, g in zip(client_params, grads_priv):
@@ -245,10 +257,11 @@ def run_coadapted_single(args, device):
 
         if should_eval:
             psnr_val, ssim_val, _ = evaluate_inversion(dec_a, client, test_eval_loader, device)
-            if psnr_val > best_a_psnr:
-                best_a_psnr = psnr_val
+            if ssim_val > best_a_ssim:
                 best_a_ssim = ssim_val
+                best_a_psnr = psnr_val
                 best_a_ep = ep
+                best_a_state = copy.deepcopy(dec_a.state_dict())
 
             record = {
                 "epoch": ep,
@@ -262,7 +275,7 @@ def run_coadapted_single(args, device):
                 last10_a_ssim.append(ssim_val)
 
             tag_last10 = " [LAST 10]" if is_last10 else ""
-            print(f"  [Ep {ep:3d}/{args.epochs}] Nhánh A PSNR: {psnr_val:.2f} dB | SSIM: {ssim_val:.4f}{tag_last10} (Peak: {best_a_psnr:.2f}dB Ep {best_a_ep})", flush=True)
+            print(f"  [Ep {ep:3d}/{args.epochs}] Nhánh A PSNR: {psnr_val:.2f} dB | SSIM: {ssim_val:.4f}{tag_last10} (Peak: SSIM {best_a_ssim:.4f} / {best_a_psnr:.2f}dB Ep {best_a_ep})", flush=True)
 
     t_a = time.time() - t_start
     total_steps_a = args.epochs * steps_per_epoch_aux
@@ -284,6 +297,7 @@ def run_coadapted_single(args, device):
     last10_b_psnr = []
     last10_b_ssim = []
     best_b_psnr, best_b_ssim, best_b_step = 0.0, 0.0, 0
+    best_b_state = copy.deepcopy(dec_b.state_dict())
 
     t_start_b = time.time()
     step_count = 0
@@ -315,10 +329,11 @@ def run_coadapted_single(args, device):
 
                 if should_eval_b:
                     psnr_b, ssim_b, _ = evaluate_inversion(dec_b, client, test_eval_loader, device)
-                    if psnr_b > best_b_psnr:
-                        best_b_psnr = psnr_b
+                    if ssim_b > best_b_ssim:
                         best_b_ssim = ssim_b
+                        best_b_psnr = psnr_b
                         best_b_step = step_count
+                        best_b_state = copy.deepcopy(dec_b.state_dict())
 
                     record_b = {
                         "epoch_equiv": cur_epoch_b,
@@ -333,11 +348,37 @@ def run_coadapted_single(args, device):
                         last10_b_ssim.append(ssim_b)
 
                     tag_last10_b = " [LAST 10]" if is_last10_b else ""
-                    print(f"  [Step {step_count:4d}/{total_steps_a} ~ Ep {cur_epoch_b:3d}] Nhánh B PSNR: {psnr_b:.2f} dB | SSIM: {ssim_b:.4f}{tag_last10_b} (Peak: {best_b_psnr:.2f}dB)", flush=True)
+                    print(f"  [Step {step_count:4d}/{total_steps_a} ~ Ep {cur_epoch_b:3d}] Nhánh B PSNR: {psnr_b:.2f} dB | SSIM: {ssim_b:.4f}{tag_last10_b} (Peak: SSIM {best_b_ssim:.4f} / {best_b_psnr:.2f}dB)", flush=True)
 
     t_b = time.time() - t_start_b
 
-    # 3. Tính toán độ chênh lệch cốt lõi Δ
+    # 3. Lưu checkpoints cuối và tốt nhất
+    checkpoint_dir = os.path.join(args.output_dir, "checkpoints")
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    torch.save(client.state_dict(), os.path.join(checkpoint_dir, f"{scenario_id}_client.pt"))
+    torch.save(server.state_dict(), os.path.join(checkpoint_dir, f"{scenario_id}_server.pt"))
+    torch.save(best_a_state, os.path.join(checkpoint_dir, f"{scenario_id}_dec_a_best.pt"))
+    torch.save(best_b_state, os.path.join(checkpoint_dir, f"{scenario_id}_dec_b_best.pt"))
+    torch.save(dec_a.state_dict(), os.path.join(checkpoint_dir, f"{scenario_id}_dec_a_final.pt"))
+    torch.save(dec_b.state_dict(), os.path.join(checkpoint_dir, f"{scenario_id}_dec_b_final.pt"))
+
+    # 4. Đánh giá chuyên sâu trên các checkpoint TỐT NHẤT (Peak validation SSIM)
+    print("\n[ĐÁNH GIÁ CHUYÊN SÂU] Nạp checkpoints tốt nhất (Peak SSIM) để đánh giá không thiên vị...", flush=True)
+    dec_a_best = LearnedAdaptiveDecoder(k=args.k, D=65536, hidden_dim=args.m).to(device)
+    dec_a_best.load_state_dict(best_a_state)
+    dec_b_best = LearnedAdaptiveDecoder(k=args.k, D=65536, hidden_dim=args.m).to(device)
+    dec_b_best.load_state_dict(best_b_state)
+
+    best_psnr_a_2k, best_ssim_a_2k, _ = evaluate_inversion(dec_a_best, client, test_eval_loader, device)
+    best_psnr_b_2k, best_ssim_b_2k, _ = evaluate_inversion(dec_b_best, client, test_eval_loader, device)
+    delta_ssim_best_2k = best_ssim_a_2k - best_ssim_b_2k
+    delta_psnr_best_2k = best_psnr_a_2k - best_psnr_b_2k
+
+    full_psnr_a_best, full_ssim_a_best, _ = evaluate_inversion(dec_a_best, client, test_full_loader, device)
+    full_psnr_b_best, full_ssim_b_best, _ = evaluate_inversion(dec_b_best, client, test_full_loader, device)
+    delta_ssim_full_best = full_ssim_a_best - full_ssim_b_best
+
+    # 5. Tính toán độ chênh lệch theo mốc 10 Epochs cuối (Last 10)
     mean_a_ssim_10 = float(np.mean(last10_a_ssim)) if last10_a_ssim else best_a_ssim
     mean_b_ssim_10 = float(np.mean(last10_b_ssim)) if last10_b_ssim else best_b_ssim
     delta_ssim_last10 = mean_a_ssim_10 - mean_b_ssim_10
@@ -347,20 +388,24 @@ def run_coadapted_single(args, device):
     delta_psnr_last10 = mean_a_psnr_10 - mean_b_psnr_10
 
     lpips_fn = get_lpips_fn(device=device)
-    _, _, lpips_a = evaluate_inversion(dec_a, client, test_eval_loader, device, lpips_fn)
-    _, _, lpips_b = evaluate_inversion(dec_b, client, test_eval_loader, device, lpips_fn)
+    _, _, lpips_a_best = evaluate_inversion(dec_a_best, client, test_eval_loader, device, lpips_fn)
+    _, _, lpips_b_best = evaluate_inversion(dec_b_best, client, test_eval_loader, device, lpips_fn)
 
-    # Đánh giá nhận định
-    if abs(delta_ssim_last10) <= 0.05:
-        verdict = "Bất biến với Co-adaptation (Chênh lệch không đáng kể <= 0.05)"
-    elif delta_ssim_last10 > 0.05:
-        verdict = f"Nhạy cảm với Co-adaptation (Co-adaptation tăng SSIM +{delta_ssim_last10:.4f})"
+    # Đánh giá nhận định dựa trên cả mốc Last10 và mốc Best
+    primary_delta = delta_ssim_best_2k if abs(delta_ssim_best_2k) > abs(delta_ssim_last10) else delta_ssim_last10
+    if abs(primary_delta) <= 0.05:
+        verdict = f"Bất biến với Co-adaptation (Chênh lệch không đáng kể <= 0.05, Δ_best={delta_ssim_best_2k:+.4f}, Δ_last10={delta_ssim_last10:+.4f})"
+    elif primary_delta > 0.05:
+        verdict = f"Nhạy cảm với Co-adaptation (Co-adaptation tăng SSIM +{primary_delta:.4f})"
     else:
-        verdict = f"Kháng Co-adaptation vượt trội (Co-adaptation thấp hơn Fresh {delta_ssim_last10:.4f})"
+        verdict = f"Kháng Co-adaptation vượt trội (Co-adaptation thấp hơn Fresh {primary_delta:.4f})"
 
-    # Lưu hình ảnh và biểu đồ
-    grid_path = os.path.join(args.output_dir, f"grid_coadapted_{scenario_id}.png")
-    save_comparison_grid(client, dec_a, dec_b, test_eval_loader, device, grid_path, num_images=8)
+    # Lưu hình ảnh so sánh cả Best và Final
+    grid_best_path = os.path.join(args.output_dir, f"grid_coadapted_{scenario_id}_best.png")
+    save_comparison_grid(client, dec_a_best, dec_b_best, test_eval_loader, device, grid_best_path, num_images=8)
+
+    grid_final_path = os.path.join(args.output_dir, f"grid_coadapted_{scenario_id}_final.png")
+    save_comparison_grid(client, dec_a, dec_b, test_eval_loader, device, grid_final_path, num_images=8)
 
     # Vẽ biểu đồ
     plot_path = os.path.join(args.output_dir, f"curve_coadapted_{scenario_id}.png")
@@ -384,21 +429,28 @@ def run_coadapted_single(args, device):
     result = {
         "scenario_id": scenario_id,
         "k": args.k,
+        "unprojector_mode": args.unprojector_mode,
+        "fixed_bottleneck": getattr(args, "fixed_bottleneck", False),
         "lambda": args.lambda_val,
         "aux_size": args.aux_size,
         "seed": args.seed,
+        "best_a_ssim_2k": round(best_ssim_a_2k, 4),
+        "best_b_ssim_2k": round(best_ssim_b_2k, 4),
+        "delta_ssim_best_2k": round(delta_ssim_best_2k, 4),
+        "full_a_ssim_best": round(full_ssim_a_best, 4),
+        "full_b_ssim_best": round(full_ssim_b_best, 4),
+        "delta_ssim_full_best": round(delta_ssim_full_best, 4),
         "mean_a_ssim_10": round(mean_a_ssim_10, 4),
         "mean_b_ssim_10": round(mean_b_ssim_10, 4),
         "delta_ssim_last10": round(delta_ssim_last10, 4),
+        "best_a_psnr_2k": round(best_psnr_a_2k, 2),
+        "best_b_psnr_2k": round(best_psnr_b_2k, 2),
+        "delta_psnr_best_2k": round(delta_psnr_best_2k, 2),
         "mean_a_psnr_10": round(mean_a_psnr_10, 2),
         "mean_b_psnr_10": round(mean_b_psnr_10, 2),
         "delta_psnr_last10": round(delta_psnr_last10, 2),
-        "peak_a_ssim": round(best_a_ssim, 4),
-        "peak_b_ssim": round(best_b_ssim, 4),
-        "peak_a_psnr": round(best_a_psnr, 2),
-        "peak_b_psnr": round(best_b_psnr, 2),
-        "lpips_a": round(lpips_a, 4) if lpips_a else None,
-        "lpips_b": round(lpips_b, 4) if lpips_b else None,
+        "lpips_a_best": round(lpips_a_best, 4) if lpips_a_best else None,
+        "lpips_b_best": round(lpips_b_best, 4) if lpips_b_best else None,
         "total_steps": total_steps_a,
         "verdict": verdict,
         "history_a": history_a,
@@ -407,10 +459,14 @@ def run_coadapted_single(args, device):
 
     print("\n" + "=" * 90)
     print(f"KẾT QUẢ ĐỐI CHUẨN CO-ADAPTED TRÊN AR-TAPE v0 ({scenario_id.upper()}):")
-    print(f"  - Nhánh A (Co-adapted) TB 10 Epoch cuối: SSIM = {mean_a_ssim_10:.4f} | PSNR = {mean_a_psnr_10:.2f} dB")
-    print(f"  - Nhánh B (Fresh Matched) TB 10 Epoch cuối: SSIM = {mean_b_ssim_10:.4f} | PSNR = {mean_b_psnr_10:.2f} dB")
-    print(f"  -> Độ chênh lệch ΔSSIM (A - B) = {delta_ssim_last10:+.4f}")
-    print(f"  -> Độ chênh lệch ΔPSNR (A - B) = {delta_psnr_last10:+.2f} dB")
+    print(f"  [CHECKPOINT TỐT NHẤT - PEAK SSIM]:")
+    print(f"    - Nhánh A Best SSIM (2k / full 10k): {best_ssim_a_2k:.4f} / {full_ssim_a_best:.4f} (PSNR: {best_psnr_a_2k:.2f} dB, Ep {best_a_ep})")
+    print(f"    - Nhánh B Best SSIM (2k / full 10k): {best_ssim_b_2k:.4f} / {full_ssim_b_best:.4f} (PSNR: {best_psnr_b_2k:.2f} dB)")
+    print(f"    -> ΔSSIM Best (A - B) = {delta_ssim_best_2k:+.4f} (Full 10k: {delta_ssim_full_best:+.4f})")
+    print(f"  [10 EPOCHS CUỐI - LAST 10 MEAN]:")
+    print(f"    - Nhánh A Last10 SSIM: {mean_a_ssim_10:.4f} | PSNR: {mean_a_psnr_10:.2f} dB")
+    print(f"    - Nhánh B Last10 SSIM: {mean_b_ssim_10:.4f} | PSNR: {mean_b_psnr_10:.2f} dB")
+    print(f"    -> ΔSSIM Last10 (A - B) = {delta_ssim_last10:+.4f}")
     print(f"  - Nhận định: {verdict}")
     print("=" * 90 + "\n", flush=True)
 
@@ -421,6 +477,9 @@ def main():
     parser = argparse.ArgumentParser(description="Co-adapted Attacker Evaluation trên AR-TAPE v0")
     parser.add_argument("--k", type=int, default=1024, help="Số chiều bottleneck k (mặc định: 1024)")
     parser.add_argument("--m", type=int, default=512, help="Số chiều ẩn MLP unprojector (mặc định: 512)")
+    parser.add_argument("--unprojector-mode", type=str, default="linear_fixed", choices=["linear_fixed", "linear_learned", "mlp"], help="Chế độ unprojector tại server (mặc định: linear_fixed)")
+    parser.add_argument("--fixed-bottleneck", action="store_true", help="Cố định ma trận chiếu trực giao R tại client (Mode F style)")
+    parser.add_argument("--warmup-epochs", type=int, default=0, help="Số epoch warmup lambda từ 0 (mặc định: 0)")
     parser.add_argument("--lambda-val", type=float, default=0.1, help="Giá trị lambda (mặc định: 0.1)")
     parser.add_argument("--cap", type=float, default=1.5586, help="Cận trên chặn MSE loss (mặc định: 1.5586)")
     parser.add_argument("--aux-size", type=int, default=10000, help="Kích thước tập ảnh phụ D_aux (mặc định: 10000)")
