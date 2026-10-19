@@ -143,12 +143,14 @@ def train_fresh_attacker(attacker_type, client_ckpt_path, lam, args, train_loade
     print("=" * 85, flush=True)
 
     # 1. Nạp Client AR-TAPE v0 và đóng băng
-    client = ClientWithBottleneck(k=args.k, D=args.D, init_ortho=False, seed=args.seed).to(device)
     ckpt = torch.load(client_ckpt_path, map_location=device)
     if isinstance(ckpt, dict) and "client" in ckpt:
-        client.load_state_dict(ckpt["client"])
+        sd = ckpt["client"]
     else:
-        client.load_state_dict(ckpt)
+        sd = ckpt
+    is_fixed = ("R" in sd) or getattr(args, "fixed_bottleneck", False)
+    client = ClientWithBottleneck(k=args.k, D=args.D, init_ortho=False, seed=args.seed, fixed_bottleneck=is_fixed).to(device)
+    client.load_state_dict(sd)
     client.eval()
     for p in client.parameters():
         p.requires_grad = False
@@ -280,7 +282,9 @@ def main():
     parser.add_argument("--D", type=int, default=65536, help="Chiều phẳng smashed data")
     parser.add_argument("--hidden-dim", type=int, default=512, help="Chiều ẩn MLP unprojector")
     parser.add_argument("--client-ckpt", type=str, default=None, help="Đường dẫn trực tiếp tới checkpoint client (nếu có)")
-    parser.add_argument("--lambdas", nargs="+", type=float, default=[0.1], help="Danh sách lambda")
+    parser.add_argument("--lambdas", nargs="+", type=float, default=None, help="Danh sách lambda")
+    parser.add_argument("--lambda-val", type=float, default=None, help="Giá trị lambda đơn lẻ (alias tương thích)")
+    parser.add_argument("--fixed-bottleneck", action="store_true", help="Cố định ma trận chiếu trực giao R tại client (Mode F)")
     parser.add_argument("--seed", type=int, default=42, help="Seed của checkpoint và data split")
     parser.add_argument("--epochs", type=int, default=30, help="Số epochs huấn luyện attacker (mặc định: 30)")
     parser.add_argument("--batch-size", type=int, default=128, help="Batch size (mặc định: 128)")
@@ -291,6 +295,14 @@ def main():
     parser.add_argument("--output-dir", type=str, default=os.path.join(PROJECT_ROOT, "output", "AbReTAPE_v0"))
     parser.add_argument("--dry-run", action="store_true", help="Chạy thử 1 epoch rút gọn")
     args = parser.parse_args()
+
+    if args.lambda_val is not None:
+        if args.lambdas is None:
+            args.lambdas = [args.lambda_val]
+        else:
+            args.lambdas.append(args.lambda_val)
+    elif args.lambdas is None:
+        args.lambdas = [0.1]
 
     if args.dry_run:
         args.epochs = 1
