@@ -480,7 +480,7 @@ def main():
     parser.add_argument("--unprojector-mode", type=str, default="linear_fixed", choices=["linear_fixed", "linear_learned", "mlp"], help="Chế độ unprojector tại server (mặc định: linear_fixed)")
     parser.add_argument("--fixed-bottleneck", action="store_true", help="Cố định ma trận chiếu trực giao R tại client (Mode F style)")
     parser.add_argument("--warmup-epochs", type=int, default=0, help="Số epoch warmup lambda từ 0 (mặc định: 0)")
-    parser.add_argument("--lambda-val", type=float, default=0.1, help="Giá trị lambda (mặc định: 0.1)")
+    parser.add_argument("--lambda-val", "--lambda", type=float, default=0.1, dest="lambda_val", help="Giá trị lambda (mặc định: 0.1)")
     parser.add_argument("--cap", type=float, default=1.5586, help="Cận trên chặn MSE loss (mặc định: 1.5586)")
     parser.add_argument("--aux-size", type=int, default=10000, help="Kích thước tập ảnh phụ D_aux (mặc định: 10000)")
     parser.add_argument("--test-eval-size", type=int, default=2000, help="Kích thước tập test nhanh (mặc định: 2000)")
