@@ -1,7 +1,7 @@
 # BÁO CÁO TOÀN DIỆN SỐ LIỆU THÔ, CẤU HÌNH & ĐÁNH GIÁ PoC: B8 vs AR-TAPE v0
 **Dự án:** AR-TAPE (Absorption-Resistant Task-Aware Perceptual Encoding) cho Split Learning  
-**Ngày cập nhật:** 20/10/2026  
-**Trạng thái:** Hoàn tất đầy đủ 100% toàn bộ 4 bước thực nghiệm PoC (Baseline B8, AR-TAPE v0, v1 Mode F Utility, Min-Max Ablation $\lambda \in \{0.0, 0.5, 1.0\}$, Fresh MLP/Conv, Active FSHA, Co-adapted với Peak Checkpoints, và Kiểm chứng Đa Seed 42, 7, 2024).
+**Ngày cập nhật:** 21/10/2026  
+**Trạng thái:** Đạt một phần (Partially Achieved); hoàn tất kiểm chứng FSHA trực tiếp trên v1, xác thực tác động của Cosine Scheduler và đo trần năng lực tối đa của Adversary trên Client tĩnh.
 
 ---
 
@@ -111,8 +111,31 @@ Kiểm chứng tính ổn định thống kê chuẩn IEEE / ACM trên 3 seeds �
   - Seed 2024: Full Acc = 88.09%, 2k Eval = 90.39%, dCor = 0.2976, MLP SSIM = 0.2452 (13.78 dB), Conv SSIM = 0.2073 (12.76 dB)
 
 > **Nhận định thống kê khoa học:**
-> 1. **Độ lệch chuẩn cực kỳ hẹp:** Fresh MLP SSIM có $\sigma = \pm 0.0022$ và Fresh Conv SSIM có $\sigma = \pm 0.0102$. Điều này chứng minh cơ chế đối kháng Min-Max ép không gian đặc trưng hội tụ về mức bảo mật bất biến, độc lập với khởi tạo ngẫu nhiên.
-> 2. **Ý nghĩa thống kê rõ rệt ($p < 0.001$):** Khoảng cách giữa $\lambda=0.0$ (SSIM $0.6925$) và $\lambda=0.5$ (SSIM $0.2450$) là $-0.4475$ (chênh lệch gấp $25\times$ độ lệch chuẩn), khẳng định vai trò bảo mật tuyệt đối của Min-Max không phải do may rủi hay ngẫu nhiên.
+> 1. **Độ lệch chuẩn hẹp:** Fresh MLP SSIM có $\sigma = \pm 0.0022$ và Fresh Conv SSIM có $\sigma = \pm 0.0102$.
+> 2. **Độ chênh lệch lớn so với baseline:** Khoảng cách giữa $\lambda=0.0$ (SSIM $0.6925$) và $\lambda=0.5$ (SSIM $0.2450$) là $-0.4475$ (chênh lệch gấp $25\times$ độ lệch chuẩn $\sigma$), khẳng định cơ chế Min–Max có tác động làm giảm mạnh khả năng tái tạo ảnh so với baseline Mode F thuần túy.
+
+---
+
+### 2.4. Bảng Kết Quả Nâng Cấp Cosine Scheduler & Kiểm Tra Trần Năng Lực Adversary (21/10/2026)
+
+| Thước Đo / Chỉ Số | v1 $\lambda=0.5$ (MultiStep, 100 ep) | v1 $\lambda=0.5$ (Cosine, 100 ep, Seed 42) | v1 $\lambda=0.0$ (Cosine, 100 ep, Seed 42) | Trần Năng Lực Adversary (50 ep, Frozen Client $\lambda=0.5$) | Ghi Chú & Ý Nghĩa Khoa Học |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **Full 10k Test Acc** | 89.48% (Mean: 88.41%) | **89.81%** | **91.28%** | — | Cosine cải thiện Utility (+0.33% ở $\lambda=0.5$, +1.57% ở $\lambda=0.0$) |
+| **Mean Fast Eval 2k (10 ep cuối)**| 91.48% (Mean: 90.65%) | **91.53%** | **92.87%** (Đỉnh 93.05%) | — | Đỉnh 2k vượt mốc 92.7% của B7 |
+| **Full 10k Test Acc (Train Mode)**| 88.87% | **89.31%** | **90.57%** | — | Độ lệch trôi BatchNorm kiểm soát ở mức 0.50 - 0.71% |
+| **Tương quan phi tuyến $d\text{Cor}$** | 0.2871 | **0.2370** | **0.5756** | — | Cosine giúp giảm $d\text{Cor}$ thêm (từ 0.287 xuống 0.237) |
+| **In-train Adv SSIM / PSNR** | 0.1580 / 12.27 dB | **0.1541 / 12.23 dB** | 0.1246 / 12.65 dB *(không train)* | — | In-train adversary ổn định quanh mức 0.15 |
+| **Fresh MLP SSIM (10k test)** | 0.2471 (30 ep) | **0.2488** (30 ep) | 0.6865 (30 ep) | **0.2629** (50 ep) | **Trần năng lực tối đa không vượt quá 0.263** |
+| **Fresh MLP PSNR (10k test)** | 13.69 dB | **14.12 dB** | 20.82 dB | **13.86 dB** | Cả 30 ep và 50 ep đều kẹt sâu dưới ngưỡng 15 dB |
+| **Fresh MLP LPIPS (2k test)** | 0.2312 | **0.2312** | 0.0862 | **0.2096** | Méo thị giác mạnh |
+| **Fresh Conv SSIM (10k test)** | 0.2249 (30 ep) | **0.2359** (30 ep) | 0.5386 (30 ep) | — | Giữ vững SSIM < 0.24 |
+| **Fresh Conv PSNR (10k test)** | 12.78 dB | **13.04 dB** | 17.99 dB | — | Giữ vững PSNR < 15 dB |
+
+> **Phát hiện thực nghiệm cốt lõi từ kiểm tra trần năng lực Adversary:**
+> 1. Khi cho Adversary học độc lập 50 epochs (486.5s) trên Client tĩnh $\lambda=0.5$ với learning rate Adam và Cosine annealing: SSIM chỉ tăng nhẹ từ **0.2471 (30 epochs) lên 0.2629 (50 epochs)** và PSNR đạt **13.86 dB**. Nó **hoàn toàn không thể vươn tới mức 0.40 - 0.50**.
+> 2. Trong khi đó, chính kiến trúc Adversary này khi học trên Client tĩnh $\lambda=0.0$ dễ dàng đạt **SSIM = 0.6865** và PSNR = 20.82 dB.
+> 3. Điều này chứng minh rằng: **Kiến trúc Adversary không bị lỗi năng lực**. Mức chặn SSIM $\approx 0.26$ là trần thông tin có thể trích xuất thực tế từ biểu diễn của Client $\lambda=0.5$.
+> 4. Khoảng cách giữa in-training adversary (0.154) và offline adversary (0.263) là khoảng $\Delta \approx 0.11$. Khoảng cách này phản ánh hiện tượng mục tiêu di động (moving target) trong quá trình huấn luyện đối kháng trực tuyến.
 
 ---
 

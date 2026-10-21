@@ -674,6 +674,7 @@ def train_single_artape_v0(lam, args, device):
         "final_dcor": history[-1]["dcor"],
         "unprojector_mode": args.unprojector_mode,
         "fixed_bottleneck": getattr(args, "fixed_bottleneck", False),
+        "scheduler": getattr(args, "scheduler", "multistep"),
         "training_time_s": round(train_time, 1),
         "meets_utility_criterion": meets_utility,
         "history": history

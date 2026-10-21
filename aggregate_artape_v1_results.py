@@ -27,8 +27,8 @@ def load_json_file(path):
         return None
 
 def find_all_results(search_dirs):
-    sl_results = {}     # key: (lambda, seed) -> dict
-    fresh_results = {}  # key: (lambda, seed, attacker) -> dict
+    sl_results = {}     # key: (scheduler, lambda, seed) -> dict
+    fresh_results = {}  # key: (scheduler, lambda, seed, attacker) -> dict
 
     for d in search_dirs:
         if not os.path.isdir(d):
@@ -47,7 +47,8 @@ def find_all_results(search_dirs):
                 k = item.get("k", 2048)
                 unproj = item.get("unprojector_mode", "")
                 if lam is not None and seed is not None and k == 2048 and unproj == "linear_fixed":
-                    sl_results[(round(float(lam), 2), int(seed))] = item
+                    sched = item.get("scheduler") or ("cosine" if "cosine" in f.lower() else "multistep")
+                    sl_results[(sched, round(float(lam), 2), int(seed))] = item
 
         # 2. Tìm results Fresh
         for f in glob.glob(os.path.join(d, "**", "results_artape_v0_fresh_attackers.json"), recursive=True):
@@ -61,7 +62,8 @@ def find_all_results(search_dirs):
                 lam = item.get("lambda")
                 seed = item.get("seed")
                 if atk and lam is not None and seed is not None:
-                    fresh_results[(round(float(lam), 2), int(seed), atk)] = item
+                    sched = "cosine" if "cosine" in f.lower() else "multistep"
+                    fresh_results[(sched, round(float(lam), 2), int(seed), atk)] = item
 
     return sl_results, fresh_results
 
@@ -79,67 +81,75 @@ def fmt_stat(arr, decimals=2, is_pct=False):
     return f"{mean:.{decimals}f} ± {std:.{decimals}f}"
 
 def generate_report(sl_results, fresh_results, target_lambdas=[0.0, 0.5]):
-    seeds = sorted(list(set([k[1] for k in sl_results.keys()])))
-    print("=" * 95)
-    print(f"BÁO CÁO TỔNG HỢP ĐA SEED AR-TAPE v1 (Mode F: linear_fixed, k=2048)")
-    print(f"Các Seed tìm thấy: {seeds} (Số lượng: {len(seeds)})")
-    print("=" * 95)
+    schedulers = sorted(list(set([k[0] for k in sl_results.keys()])))
+    if not schedulers:
+        schedulers = ["multistep"]
 
-    headers = [
-        "Cấu hình", "Seeds", "Full Test Acc (10k)", "Fast Eval Acc (2k)",
-        "dCor(X, Z)", "Fresh MLP SSIM", "Fresh MLP PSNR", "Fresh Conv SSIM", "Fresh Conv PSNR"
-    ]
+    for sched in schedulers:
+        seeds = sorted(list(set([k[2] for k in sl_results.keys() if k[0] == sched])))
+        print("=" * 95)
+        print(f"BÁO CÁO TỔNG HỢP ĐA SEED AR-TAPE v1 (Scheduler: {sched.upper()}, Mode F, k=2048)")
+        print(f"Các Seed tìm thấy: {seeds} (Số lượng: {len(seeds)})")
+        print("=" * 95)
 
-    rows = []
-    for lam in target_lambdas:
-        row_seeds = []
-        full_accs, eval_accs, dcors = [], [], []
-        mlp_ssims, mlp_psnrs = [], []
-        conv_ssims, conv_psnrs = [], []
+        headers = [
+            "Cấu hình", "Seeds", "Full Test Acc (10k)", "Fast Eval Acc (2k)",
+            "dCor(X, Z)", "Fresh MLP SSIM", "Fresh MLP PSNR", "Fresh Conv SSIM", "Fresh Conv PSNR"
+        ]
 
-        for s in [42, 7, 2024]:
-            sl = sl_results.get((lam, s))
-            if sl:
-                row_seeds.append(str(s))
-                full_accs.append(sl["final_full_test_acc"])
-                eval_accs.append(sl["mean_task_acc_last10_2k"])
-                if sl.get("final_dcor") is not None:
-                    dcors.append(sl["final_dcor"])
+        rows = []
+        for lam in target_lambdas:
+            row_seeds = []
+            full_accs, eval_accs, dcors = [], [], []
+            mlp_ssims, mlp_psnrs = [], []
+            conv_ssims, conv_psnrs = [], []
 
-            f_mlp = fresh_results.get((lam, s, "mlp"))
-            if f_mlp:
-                mlp_ssims.append(f_mlp["fresh_ssim_10k"])
-                mlp_psnrs.append(f_mlp["fresh_psnr_10k"])
+            for s in [42, 7, 2024]:
+                sl = sl_results.get((sched, lam, s))
+                if sl:
+                    row_seeds.append(str(s))
+                    full_accs.append(sl["final_full_test_acc"])
+                    eval_accs.append(sl["mean_task_acc_last10_2k"])
+                    if sl.get("final_dcor") is not None:
+                        dcors.append(sl["final_dcor"])
 
-            f_conv = fresh_results.get((lam, s, "conv"))
-            if f_conv:
-                conv_ssims.append(f_conv["fresh_ssim_10k"])
-                conv_psnrs.append(f_conv["fresh_psnr_10k"])
+                f_mlp = fresh_results.get((sched, lam, s, "mlp"))
+                if f_mlp:
+                    mlp_ssims.append(f_mlp["fresh_ssim_10k"])
+                    mlp_psnrs.append(f_mlp["fresh_psnr_10k"])
 
-        label = f"λ = {lam}" + (" (Baseline Không ĐK)" if lam == 0.0 else " (Operating Point)")
-        rows.append({
-            "config": label,
-            "seeds": ",".join(row_seeds) if row_seeds else "Chưa có",
-            "full_acc": fmt_stat(full_accs, 2, is_pct=True),
-            "eval_acc": fmt_stat(eval_accs, 2, is_pct=True),
-            "dcor": fmt_stat(dcors, 4),
-            "mlp_ssim": fmt_stat(mlp_ssims, 4),
-            "mlp_psnr": fmt_stat(mlp_psnrs, 2) + (" dB" if mlp_psnrs else ""),
-            "conv_ssim": fmt_stat(conv_ssims, 4),
-            "conv_psnr": fmt_stat(conv_psnrs, 2) + (" dB" if conv_psnrs else "")
-        })
+                f_conv = fresh_results.get((sched, lam, s, "conv"))
+                if f_conv:
+                    conv_ssims.append(f_conv["fresh_ssim_10k"])
+                    conv_psnrs.append(f_conv["fresh_psnr_10k"])
 
-    # Render Markdown Table
-    md_lines = [
-        "| Cấu Hình | Seeds Đã Đo | Full Test Acc (10k) | Fast Eval (2k) | $d\\text{Cor}(X, Z)$ | Fresh MLP SSIM | Fresh MLP PSNR | Fresh Conv SSIM | Fresh Conv PSNR |",
-        "| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |"
-    ]
-    for r in rows:
-        md_lines.append(f"| **{r['config']}** | {r['seeds']} | **{r['full_acc']}** | {r['eval_acc']} | {r['dcor']} | **{r['mlp_ssim']}** | {r['mlp_psnr']} | **{r['conv_ssim']}** | {r['conv_psnr']} |")
+            if not row_seeds:
+                continue
 
-    table_md = "\n".join(md_lines)
-    print("\n" + table_md + "\n")
-    return table_md, rows
+            label = f"λ = {lam} ({sched.capitalize()})" + (" [Baseline]" if lam == 0.0 else " [Operating Point]")
+            rows.append({
+                "config": label,
+                "seeds": ",".join(row_seeds) if row_seeds else "Chưa có",
+                "full_acc": fmt_stat(full_accs, 2, is_pct=True),
+                "eval_acc": fmt_stat(eval_accs, 2, is_pct=True),
+                "dcor": fmt_stat(dcors, 4),
+                "mlp_ssim": fmt_stat(mlp_ssims, 4),
+                "mlp_psnr": fmt_stat(mlp_psnrs, 2) + (" dB" if mlp_psnrs else ""),
+                "conv_ssim": fmt_stat(conv_ssims, 4),
+                "conv_psnr": fmt_stat(conv_psnrs, 2) + (" dB" if conv_psnrs else "")
+            })
+
+        # Render Markdown Table
+        md_lines = [
+            f"### Bảng Tổng Hợp Đa Seed với Scheduler: {sched.capitalize()}",
+            "| Cấu Hình | Seeds Đã Đo | Full Test Acc (10k) | Fast Eval (2k) | $d\\text{Cor}(X, Z)$ | Fresh MLP SSIM | Fresh MLP PSNR | Fresh Conv SSIM | Fresh Conv PSNR |",
+            "| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |"
+        ]
+        for r in rows:
+            md_lines.append(f"| **{r['config']}** | {r['seeds']} | **{r['full_acc']}** | {r['eval_acc']} | {r['dcor']} | **{r['mlp_ssim']}** | {r['mlp_psnr']} | **{r['conv_ssim']}** | {r['conv_psnr']} |")
+
+        table_md = "\n".join(md_lines)
+        print("\n" + table_md + "\n")
 
 def main():
     parser = argparse.ArgumentParser(description="Tổng hợp kết quả Đa Seed AR-TAPE v1")
@@ -149,7 +159,10 @@ def main():
         os.path.join(PROJECT_ROOT, "output", "AR_TAPE_v1_MinMax"),
         os.path.join(PROJECT_ROOT, "output", "AR_TAPE_v1_Fresh_Eval"),
         os.path.join(PROJECT_ROOT, "output", "AR_TAPE_v1_MultiSeed"),
-        os.path.join(PROJECT_ROOT, "output", "AR_TAPE_v1_MultiSeed_Fresh")
+        os.path.join(PROJECT_ROOT, "output", "AR_TAPE_v1_MultiSeed_Fresh"),
+        os.path.join(PROJECT_ROOT, "output", "AR_TAPE_v1_Cosine"),
+        os.path.join(PROJECT_ROOT, "output", "AR_TAPE_v1_Cosine_Fresh"),
+        os.path.join(PROJECT_ROOT, "output", "AR_TAPE_v1_Scheduler_Check"),
     ], help="Danh sách thư mục tìm kiếm kết quả")
     args = parser.parse_args()
 
