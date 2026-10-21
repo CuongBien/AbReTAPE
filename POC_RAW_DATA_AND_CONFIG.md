@@ -122,17 +122,23 @@ Kiểm chứng tính ổn định thống kê chuẩn IEEE / ACM trên 3 seeds �
 
 ### 3.1. Tấn công Chủ động FSHA (Feature Space Hijacking Attack - 30 Epochs)
 - **Thiết lập:** Server độc hại dùng Discriminator đa tỷ lệ và Pilot AutoEncoder ($d_{\text{target}}=32$) huấn luyện trên 25.000 ảnh phụ công khai để ép không gian đặc trưng của Client về không gian giải mã của Server.
-- **Client kiểm thử:** `artape_v0_k1024_lam0.1_s42_client.pt`.
+- **Thực nghiệm 1 (v0 cũ):** `artape_v0_k1024_lam0.1_s42` (Mode L MLP unprojector $m=512$)
+- **Thực nghiệm 2 (v1 chuẩn):** `artape_v0_k2048_linear_fixed_fixR_lam0.5_s42` (Mode F, $k=2048$)
+- **Thực nghiệm 3 (v1 đối chứng):** `artape_v0_k2048_linear_fixed_fixR_lam0.0_s42` (Mode F, $k=2048$, không Min–Max)
 
-| Kịch bản Gradient Scale | Task Acc Trước Hijack | **Acc Hội Tụ Full 10k Test** | Peak PSNR | Peak SSIM | **Final PSNR** | **Final SSIM** | Final LPIPS | Final $d\text{Cor}$ | **Nhận Định Khoa Học** |
+| Phiên Bản / Kịch Bản | Task Acc Trước Hijack | **Acc Hội Tụ Full 10k Test** | Peak PSNR | Peak SSIM | **Final PSNR** | **Final SSIM** | Final LPIPS | Final $d\text{Cor}$ | **Nhận Định Khoa Học** |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **$g_s = 1.0\times$ (Chuẩn)** | 87.40% | **89.17%** | 11.78 dB (Ep 1) | 0.0921 (Ep 1) | **10.02 dB** | **0.0228** | 0.2257 | 0.1747 | **Kháng được FSHA & Giữ vững Utility** |
-| **$g_s = 5.0\times$ (Cực đoan)**| 87.40% | **10.00%** *(sụp đổ)* | 11.97 dB (Ep 1) | 0.1162 (Ep 1) | **10.27 dB** | **0.0206** | 0.2602 | 0.0497 | **Chặn tái tạo; Utility sụp đổ vì gradient $5\times$** |
+| **v0 ($gs=1.0\times$)** | 87.40% | **89.17%** | 11.78 dB (Ep 1) | 0.0921 (Ep 1) | **10.02 dB** | **0.0228** | 0.2257 | 0.1747 | Chặn tái tạo; Acc tăng do tiếp tục fine-tune 30 ep |
+| **v0 ($gs=5.0\times$)** | 87.40% | **10.00%** *(sụp đổ)* | 11.97 dB (Ep 1) | 0.1162 (Ep 1) | **10.27 dB** | **0.0206** | 0.2602 | 0.0497 | Chặn tái tạo; Nhiệm vụ sụp đổ hoàn toàn về 10% (DoS) |
+| **v1 $\lambda=0.5$ ($gs=1.0\times$)** | 89.48% | **86.98%** | 12.27 dB (Ep 1) | 0.1104 (Ep 1) | **10.51 dB** | **0.0241** | 0.2284 | 0.3634 | Kháng FSHA tốt; Giữ vững Task Acc ở mức 87.0% |
+| **v1 $\lambda=0.5$ ($gs=5.0\times$)** | 89.48% | **83.44%** | 12.10 dB (Ep 1) | 0.0650 (Ep 1) | **11.66 dB** | **0.0377** | 0.2423 | 0.4348 | Chặn tái tạo; Giữ Acc 83.4% (không bị sụp đổ về 10% như v0) |
+| **v1 $\lambda=0.0$ ($gs=1.0\times$)** | 89.71% | **87.27%** | 12.51 dB (Ep 1) | 0.1004 (Ep 1) | **10.63 dB** | **0.0251** | 0.2324 | 0.4640 | Đối chứng: Chặn tái tạo nhờ nén rank trực giao $k=2048$ |
+| **v1 $\lambda=0.0$ ($gs=5.0\times$)** | 89.71% | **84.20%** | 11.86 dB (Ep 25)| 0.0404 (Ep 25)| **11.86 dB** | **0.0402** | 0.2392 | **0.7219** | Chặn tái tạo; nhưng $d\text{Cor}$ bị đẩy lên rất cao (0.722) |
 
-> **Nhận định quan trọng:**
-> 1. Ở mức tấn công chuẩn ($g_s = 1.0\times$), AR-TAPE v0 không những **chặn đứng hoàn toàn việc tái tạo ảnh** (SSIM rớt thảm hại về **0.0228** - mức nhiễu thuần túy, PSNR = **10.02 dB**) mà còn **bảo toàn trọn vẹn độ chính xác phân loại (89.17% trên full 10k test)**.
-> 2. Ở mức tấn công cực đoan ($g_s = 5.0\times$), dù gradient đối kháng quá lớn làm gãy nhiệm vụ phân loại (Task Acc rớt về 10.0%), **kẻ tấn công vẫn không tài nào khôi phục được ảnh** (Peak SSIM chỉ 0.1162, Final SSIM 0.0206).
-> 3. Hoàn toàn vượt trội so với các phòng thủ B0-B6 (vốn bị FSHA bẻ gãy với SSIM $> 0.85$ và PSNR $> 25\text{ dB}$).
+> **Nhận định định lượng về FSHA:**
+> 1. **Khác biệt quan trọng giữa v0 và v1:** Ở $g_s = 5.0\times$, v0 bị sụp đổ hoàn toàn nhiệm vụ phân loại về mức đoán mò $10.0\%$ do unprojector MLP hẹp $m=512$ bị gradient đối kháng bẻ gãy. Ngược lại, v1 (Mode F với ma trận $R$ cố định) bảo vệ được luồng tác vụ, duy trì Task Acc ở mức **$83.44\%$** ($\lambda=0.5$) và **$84.20\%$** ($\lambda=0.0$), loại bỏ hiện tượng task collapse.
+> 2. **Khả năng chặn tái tạo:** Cả hai phiên bản đều chặn đứng FSHA ở mức nhiễu thuần túy ($\text{SSIM} \le 0.038$, $\text{PSNR} \le 11.86\text{ dB}$).
+> 3. **Vai trò của Min–Max dưới FSHA:** Ở $\lambda=0.5$, tương quan phi tuyến $d\text{Cor}$ chỉ ở mức $0.4348$, trong khi ở $\lambda=0.0$, kẻ tấn công FSHA đẩy được $d\text{Cor}$ lên tới **$0.7219$** (rò rỉ tương quan mạnh).
 
 ### 3.2. Tấn công Đồng thích ứng Co-adapted ($N_{aux} = 10.000$ ảnh phụ)
 - **Thiết lập:** So sánh giữa Nhánh A (kẻ tấn công học song song trực tuyến theo từng epoch Split Learning trên $D_{aux}$) và Nhánh B (kẻ tấn công học Fresh trên Client đã đóng băng với cùng ngân sách 7.900 steps).
@@ -152,31 +158,36 @@ Kiểm chứng tính ổn định thống kê chuẩn IEEE / ACM trên 3 seeds �
 
 $$\Delta_{\text{best}} = 0.0940 - 0.1532 = \mathbf{-0.0591} \quad ; \quad \Delta_{\text{last10}} = 0.1382 - 0.1476 = \mathbf{-0.0094}$$
 
-> **Nhận định định lượng đột phá của Bước 3:**
-> 1. Ngay cả khi **đánh giá ở các checkpoint tốt nhất (Peak Validation SSIM)** để loại trừ hiện tượng overfitting của attacker, Nhánh A (Co-adapted) vẫn **hoàn toàn không có bất kỳ lợi thế tái tạo nào** so với Nhánh B (Fresh Matched Steps).
-> 2. Thậm chí $\Delta_{\text{best}} = -0.0591$ (âm), cho thấy việc Client liên tục xoay chuyển không gian con trong quá trình Min-Max Split Learning làm cho kẻ tấn công Co-adapted liên tục bị trôi mục tiêu, dẫn đến chất lượng tái tạo kém hơn cả đối thủ học Fresh trên Client tĩnh.
-> 3. Cả 2 nhánh đều bị chặn sâu dưới ngưỡng bảo mật (SSIM $\le 0.153$, PSNR $\le 12.41\text{ dB}$, LPIPS $\ge 0.206$). AR-TAPE v1 **bất biến tuyệt đối trước tấn công đồng thích ứng**.
+> **Nhận định khách quan về Co-adapted Attacker:**
+> 1. Trong điều kiện thử nghiệm với $N_{aux} = 10.000$ ảnh phụ và ngân sách 7.900 steps, Nhánh A (Co-adapted trực tuyến) **không đạt được ưu thế tái tạo nào** so với Nhánh B (Fresh trên Client tĩnh), thể hiện qua $\Delta_{\text{best}} = -0.0591$ và $\Delta_{\text{last10}} = -0.0094$.
+> 2. Cần lưu ý rằng đây là phép thử với đối thủ có tài nguyên hạn chế ($N_{aux}=10k$), nên mức SSIM đạt được ($\le 0.153$) thấp hơn mức Fresh MLP học trên toàn bộ 50.000 ảnh ($0.245$). Kết quả này khẳng định đối thủ trực tuyến không tích lũy được lợi thế gia tăng so với đối thủ ngoại tuyến cùng điều kiện.
 
 ---
 
 ## 4. PHÂN TÍCH CHUYÊN SÂU 4 CÂU HỎI KHOA HỌC CỐT LÕI
 
-### Câu hỏi 1: Việc giảm ~5.2% Accuracy và giảm SSIM đến từ Bottleneck hay từ Adversary?
+### Câu hỏi 1: Việc giảm Accuracy và giảm SSIM đến từ Bottleneck hay từ Adversary?
 Nhờ thực nghiệm đối chứng **Ablation $\lambda = 0.0$**, ta có câu trả lời toán học định lượng rõ ràng:
 1. **Về Utility (Accuracy):**
-   - Full Test Acc Baseline ResNet-18 (B0): $92.73\%$
-   - Full Test Acc khi có Bottleneck $k=1024$ không Adversary ($\lambda=0.0$): **$87.52\%$** (Giảm $-5.21\%$).
+   - Full Test Acc Baseline ResNet-18 (B0): **$94.71\%$**
+   - Full Test Acc khi có Bottleneck $k=1024$ không Adversary ($\lambda=0.0$): **$87.52\%$** (Giảm $-7.19\%$).
    - Full Test Acc khi có Bottleneck $k=1024$ VÀ Adversary $\lambda=0.1$: **$87.34\%$** (Chỉ giảm thêm $-0.18\%$).
-   $$\implies \mathbf{96.6\%} \text{ mức suy giảm accuracy là do Bottleneck } k=1024; \text{ Adversary chỉ chiếm } \mathbf{3.4\%}.$$
+   - Tổng mức suy giảm: $7.19\% + 0.18\% = 7.37\%$.
+   $$\implies \mathbf{97.6\%} \text{ mức suy giảm accuracy là do Bottleneck } k=1024; \text{ Adversary chỉ chiếm } \mathbf{2.4\%}.$$
 2. **Về Privacy (Khả năng chặn tái tạo ảnh):**
-   - **Đối với Fresh MLP Attacker:** SSIM là $0.1820$ ($\lambda=0$) vs $0.1874$ ($\lambda=0.1$). Bottleneck $k=1024$ đóng vai trò chủ chốt cắt giảm chiều thông tin không gian (từ 65.536 xuống 1024).
-   - **Đối với Fresh Conv Attacker:** SSIM giảm từ **$0.1465$ ($\lambda=0$) xuống $0.1172$ ($\lambda=0.1$)**, và MSE tăng từ $1.4022$ lên $1.6508$. Điều này chứng minh **Adversary Min-Max $\lambda=0.1$ có vai trò triệt tiêu dứt điểm các thành phần cấu trúc tích chập cục bộ**, ngăn chặn hoàn toàn kẻ tấn công dạng Conv.
+   - **Ở v0 (Mode L MLP unprojector $m=512$):** Tại $\lambda=0.0$, Fresh MLP SSIM đã là $0.1820$ và Fresh Conv là $0.1465$. Như vậy ở v0, **phần lớn năng lực bảo vệ quyền riêng tư đến từ nút thắt cổ chai phi tuyến hẹp $m=512$**, min–max chỉ đóng góp thêm một phần nhỏ ($0.1465 \to 0.1172$).
+   - **Ở v1 (Mode F trực giao $k=2048$):** Tại $\lambda=0.0$, smashed data bị rò rỉ rất nặng (Fresh MLP SSIM **0.6925**, Fresh Conv **0.5448**). Khi bật Min–Max $\lambda=0.5$, SSIM giảm sốc xuống **0.2450** và **0.2131**. Do đó, **ở v1, toàn bộ năng lực bảo mật bổ sung đến từ tối ưu hóa đối kháng Min–Max**.
 
-### Câu hỏi 2: Vì sao $k=2048$ vẫn đạt ~87.4% thay vì tăng lên 92.7% như B7 Mode F?
-- Trong mã nguồn B7 (`src/defenses/lightsplit.py`), kết quả **92.73%** đạt được ở **Mode F (Fixed Orthogonal Pseudo-inverse)**, tức Server giải nén bằng ma trận chuyển vị $R^T$: $\hat{z} = z_t R^T$ (phép chiếu tuyến tính trực giao).
-- Khi B7 chạy ở **Mode L (Learned MLP Unprojector $k \to m \to D$)**, accuracy của B7 cũng tụt xuống **88.08%**.
-- AR-TAPE v0 sử dụng kiến trúc unprojector là một mạng MLP phi tuyến ($1024 \to 512 \to 65536$). Do đó, mức accuracy **$87.42\% \sim 87.52\%$** là mức bão hòa tự nhiên của kiến trúc MLP phẳng (Mode L).
-- **Giải pháp để đưa Utility vượt $\ge 92.0\%$:** Ở phiên bản v1, Server có thể áp dụng tầng unprojector tuyến tính trực giao $R^T$ cho nhánh chính của Task và giữ MLP/ConvDecoder cho nhánh Adversary.
+### Câu hỏi 2: Vì sao v1 $\lambda=0$ đạt 89.58% thay vì 92.73% như B7 Mode F?
+B7 Mode F và v1 $\lambda=0$ có cùng kiến trúc toán học (chiếu trực giao ngẫu nhiên $R \in \mathbb{R}^{65536 \times 2048}$ cố định, giải nén $R^T$). Khoảng cách ~3% đã được kiểm chứng thực nghiệm trực tiếp tại `output/AR_TAPE_v1_Scheduler_Check`:
+1. **Tác động của LR Scheduler:**
+   - Khi chạy bằng `MultiStepLR([50, 75])`: Full 10k Test Acc đạt **$89.58 \pm 0.46\%$** (89.71% seed 42).
+   - Khi chuyển sang `CosineAnnealingLR(T_max=100)` (đúng cấu hình gốc của B7): Full 10k Test Acc nhảy vọt lên **$91.28\%$** (+1.57%), và Fast Eval 2k đạt đỉnh **$93.05\%$** (Epoch 98, trung bình 10 epoch cuối: **$92.87\%$**).
+   - Như vậy, **hơn một nửa khoảng cách (1.57%) được giải thích trực tiếp bởi bộ điều chỉnh tốc độ học Cosine Annealing**.
+2. **Các yếu tố kỹ thuật còn lại (1.45%):**
+   - B7 dùng 2 optimizer SGD độc lập (`opt_c` và `opt_s`) cho Client và Server qua gradient tách rời, trong khi v1 tối ưu chung qua 1 đối tượng `opt_cs`.
+   - B7 dùng `train_seed = 0`, trong khi v1 dùng `seed = 42`.
+   - Hiện tượng trôi thống kê BatchNorm qua bottleneck trực giao (~0.6%).
 
 ### Câu hỏi 3: Tấn công FSHA và Co-adapted có đe dọa được AR-TAPE v0 không?
 - **Hoàn toàn KHÔNG.**
@@ -253,25 +264,20 @@ Attacker Benchmarks:
 
 ## 7. ĐÁNH GIÁ TRẠNG THÁI PoC & KẾ HOẠCH HÀNH ĐỘNG TIẾP THEO
 
-### 7.1. Bảng Trạng Thái PoC Toàn Diện (Cập Nhật Sau Toàn Bộ 4 Bước - 3 Seeds 42, 7, 2024)
-| Tiêu chí | Kết quả v1 đo được ($\lambda=0.5, k=2048$, Mode F, 3 Seeds) | Trạng thái | Ghi chú & Nhận định Khoa Học |
+### 7.1. Bảng Trạng Thái PoC Toàn Diện (Cập Nhật Toàn Bộ Số Liệu Thực Nghiệm Mới)
+| Tiêu chí | Kết quả thực nghiệm đo được (Mode F $k=2048$) | Trạng thái | Ghi chú & Nhận định Khoa Học Khách Quan |
 | :--- | :--- | :---: | :--- |
-| **1. Utility** | **88.41 ± 0.95%** (Full 10k test); **90.65 ± 0.74%** (2k test) | **ĐẠT (PASS)** | Baseline $\lambda=0.0$ đạt **89.58 ± 0.46%** (2k test: **91.96 ± 0.30%**, đỉnh seed 42 đạt **92.70%**). Giải quyết triệt để nút thắt rank và trôi BatchNorm. |
-| **2. Bảo mật Thụ động (Fresh MLP/Conv)** | Fresh MLP: **0.2450 ± 0.0022** (13.77 dB); Fresh Conv: **0.2131 ± 0.0102** (12.71 dB) | **ĐẠT (PASS)** | Vượt sâu ngưỡng PoC yêu cầu (SSIM < 0.30, PSNR < 15 dB). Độ lệch chuẩn cực kỳ hẹp khẳng định tính ổn định tuyệt đối. |
-| **3. Vai trò Min-Max** | $\lambda=0$ SSIM = **0.6925** $\to \lambda=0.5$ SSIM = **0.2450**; $d\text{Cor}$ giảm từ **0.5682 $\to$ 0.2783** | **ĐÃ CHỨNG MINH 100%** | Chứng minh dứt khoát: Bottleneck trực giao thuần túy rò rỉ mạnh (0.69), chính min-max đã chủ động triệt tiêu rò rỉ ($p < 0.001$). |
-| **4. Tính Ổn Định Min-Max** | 100 Epochs hội tụ mượt mà cả 3 seeds, norm gradient cân bằng 0.45 : 1.37 | **ĐẠT (PASS)** | Khắc phục hoàn toàn lỗi nổ gradient / sụp đổ của Baseline B8 ở $\lambda=0.5$. |
-| **5. Tấn công Chủ động FSHA** | Chặn tái tạo (SSIM **0.0228**); gs=1 giữ Task Acc **89.17%** | **ĐẠT (PASS)** | Kháng hoàn hảo FSHA, không làm đứt gãy nhiệm vụ phân loại. |
-| **6. Co-adapted Attacker** | $\Delta_{\text{best\_ssim}} = \mathbf{-0.0591}$; $\Delta_{\text{last10}} = \mathbf{-0.0094}$ | **ĐẠT (PASS)** | Kháng Co-adaptation tuyệt đối (kẻ tấn công học song song không có bất kỳ lợi thế nào, SSIM $\le 0.153$). |
+| **1. Utility** | MultiStep $\lambda=0.5$: **$88.41 \pm 0.95\%$** (10k), **$90.65 \pm 0.74\%$** (2k).<br>Cosine $\lambda=0.0$: **$91.28\%$** (10k), đỉnh 2k đạt **$93.05\%$**. | **CHƯA ĐẠT ngưỡng gốc ($\ge 92.7\%$)** | Thấp hơn B0 (94.71%) khoảng 6.3%. Đề xuất chốt ngưỡng vận hành thực tế mới: $\ge 88.0\%$ (10k) hoặc $\ge 90.0\%$ (2k) vì đây là đánh đổi bắt buộc để triệt tiêu rò rỉ của B7 F. |
+| **2. Bảo mật Thụ động (Fresh MLP/Conv)** | Fresh MLP: **$0.2450 \pm 0.0022$** ($13.77\text{ dB}$);<br>Fresh Conv: **$0.2131 \pm 0.0102$** ($12.71\text{ dB}$) | **ĐẠT** | Vượt sâu ngưỡng PoC yêu cầu (SSIM < 0.30, PSNR < 15 dB). Độ lệch chuẩn hẹp khẳng định tính ổn định thực nghiệm. |
+| **3. Vai trò của Min–Max** | Mode F: $\lambda=0.0$ rò rỉ SSIM = **0.6925** $\to \lambda=0.5$ giảm còn **0.2450**; $d\text{Cor}$ giảm từ **0.5682 $\to$ 0.2783** | **ĐÃ CHỨNG MINH CHO v1** | Bác bỏ giả thuyết "bottleneck tự nó bảo mật" ở Mode F. Lưu ý: Ở v0, privacy chủ yếu đến từ nút thắt MLP $m=512$. |
+| **4. Tính Ổn Định Huấn Luyện** | Hội tụ ổn định suốt 100 epochs cả 3 seeds, gradient norm cân bằng (0.45 : 1.37), $G \le +0.09$ | **ĐẠT** | Khoảng cách tổng quát hóa $G$ nhỏ; khắc phục hoàn toàn lỗi sụp đổ huấn luyện của B8. |
+| **5. Tấn công Chủ động FSHA (Đo trên v1)** | $gs=1.0$: Acc **86.98%**, SSIM **0.0241**;<br>$gs=5.0$: Acc **83.44%**, SSIM **0.0377** | **ĐẠT** | Khác với v0 (bị sụp đổ về 10% ở $gs=5.0$), v1 Mode F giữ được Task Acc 83.44% và chặn hoàn toàn tái tạo ảnh. |
+| **6. Co-adapted Attacker** | $\Delta_{\text{best\_ssim}} = \mathbf{-0.0591}$; $\Delta_{\text{last10}} = \mathbf{-0.0094}$ ($N_{aux}=10k$) | **ĐẠT TRONG ĐIỀU KIỆN THỬ NGHIỆM** | Đối thủ trực tuyến trong ngân sách thử nghiệm này không tích lũy được ưu thế so với đối thủ ngoại tuyến cùng điều kiện. |
 
-> **KẾT LUẬN TỔNG THỂ PoC:**  
-> **AR-TAPE v1 đã hoàn thành trọn vẹn 100% tất cả 4 bước và đạt toàn bộ các tiêu chí khoa học của Proof-of-Concept!**  
-> Toàn bộ các nghi vấn trước đây:
-> 1. *Nút thắt Utility:* Được giải tỏa bởi Mode F orthogonal pseudo-inverse $R^T$.
-> 2. *Vai trò thực sự của Min-Max:* Được chứng minh định lượng với mức giảm SSIM từ 0.69 xuống 0.24 và giảm dCor 51% (thống kê $p < 0.001$).
-> 3. *Đánh giá thiên vị Co-adapted:* Loại trừ bằng đánh giá checkpoint đỉnh ($\Delta = -0.0591$).
-> 4. *Độ tin cậy thống kê:* Xác thực trên 3 seeds độc lập với phương sai cực nhỏ.
->
-> **Hệ thống AR-TAPE hoàn toàn sẵn sàng cho giai đoạn hoàn thiện đồ án và công bố bài báo khoa học.**
+> **KẾT LUẬN TỔNG THỂ VỀ TÌNH TRẠNG PoC:**  
+> 1. **Về Quyền Riêng Tư (Privacy):** Đạt đầy đủ tất cả các chỉ số (Fresh MLP < 0.25, Fresh Conv < 0.22, FSHA SSIM < 0.04, Co-adapted $\Delta < 0$).
+> 2. **Về Nhiệm Vụ (Utility):** Không đạt ngưỡng gốc ban đầu ($\ge 92.7\%$). Ở chế độ MultiStep chuẩn, v1 $\lambda=0.5$ đạt **$88.41 \pm 0.95\%$** (full 10k) và **$90.65 \pm 0.74\%$** (2k eval). Khi áp dụng CosineAnnealingLR, $\lambda=0.0$ vươn lên **$91.28\%$** (full) và **$93.05\%$** (2k eval).
+> 3. **Bản chất của AR-TAPE:** AR-TAPE cung cấp một cơ chế phòng thủ chủ động để "vá" lỗ hổng rò rỉ nghiêm trọng của các phương pháp nén trực giao như B7 LightSplit (kéo Fresh SSIM từ $0.69 \to 0.24$), với sự đánh đổi chấp nhận được về utility (~$1.17\%$ so với baseline $\lambda=0$ cùng kiến trúc, và ~$6\%$ so với Vanilla B0).
 
 
 
