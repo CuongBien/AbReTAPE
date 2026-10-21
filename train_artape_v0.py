@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.optim.lr_scheduler import MultiStepLR
+from torch.optim.lr_scheduler import MultiStepLR, CosineAnnealingLR
 from torchvision.datasets import CIFAR10
 import torchvision.transforms as T
 from torch.utils.data import DataLoader, Subset
@@ -411,7 +411,10 @@ def train_single_artape_v0(lam, args, device):
         trainable_cs,
         lr=args.lr, momentum=0.9, weight_decay=5e-4
     )
-    sched_cs = MultiStepLR(opt_cs, milestones=[50, 75], gamma=0.1)
+    if getattr(args, "scheduler", "multistep") == "cosine":
+        sched_cs = CosineAnnealingLR(opt_cs, T_max=args.epochs)
+    else:
+        sched_cs = MultiStepLR(opt_cs, milestones=[50, 75], gamma=0.1)
     opt_adv = torch.optim.Adam(adv.parameters(), lr=args.adv_lr)
 
     criterion_task = nn.CrossEntropyLoss()
@@ -708,6 +711,7 @@ def main():
     parser.add_argument("--test-eval-size", type=int, default=2000, help="Kích thước tập test nhanh (mặc định: 2000)")
     parser.add_argument("--clip-grad", type=float, default=None, help="Cắt gradient norm tổng thể (mặc định: None)")
     parser.add_argument("--clip-rec-grad", type=float, default=None, help="Cắt riêng gradient norm của rec_mse trên client")
+    parser.add_argument("--scheduler", type=str, default="multistep", choices=["multistep", "cosine"], help="Bộ điều chỉnh learning rate: 'multistep' ([50, 75]) hoặc 'cosine'")
     parser.add_argument("--warmup-epochs", type=int, default=0, help="Số epoch warmup lambda từ 0 (mặc định: 0)")
     parser.add_argument("--num-workers", type=int, default=0 if sys.platform == "win32" else 2)
     parser.add_argument("--data-dir", type=str, default=os.path.join(PROJECT_ROOT, "data"))

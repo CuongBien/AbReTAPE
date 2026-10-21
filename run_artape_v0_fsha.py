@@ -174,7 +174,10 @@ def run_artape_fsha_single(
     device,
     lpips_fn=None
 ):
-    scenario_id = f"fsha_artape_v0_k{args.k}_lam{args.lambda_val}_s{args.seed}_gs{grad_scale}"
+    mode_str = f"_{args.unprojector_mode}" if args.unprojector_mode != "mlp" else ""
+    fix_str = "_fixR" if getattr(args, "fixed_bottleneck", False) else ""
+    ver_str = "v1" if getattr(args, "fixed_bottleneck", False) else "v0"
+    scenario_id = f"fsha_artape_{ver_str}_k{args.k}{mode_str}{fix_str}_lam{args.lambda_val}_s{args.seed}_gs{grad_scale}"
     print("\n" + "=" * 90)
     print(f"KHỞI CHẠY FSHA TRÊN AR-TAPE v0 | GRAD SCALE: {grad_scale}x | SEED: {args.seed}")
     print(f"Scenario ID: {scenario_id}")
