@@ -41,6 +41,7 @@ output/**/*.pt
 !output/AbReTAPE_Step0/b0_vanilla.pt
 !output/AbReTAPE_Step1/best_b1_decoder.pt
 !output/**/checkpoints/b8_*_client.pt
+!output/**/checkpoints/b7_*_client.pt
 /checkpoints/
 
 # Logs & scratch
