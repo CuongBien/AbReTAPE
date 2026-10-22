@@ -176,6 +176,7 @@ def train_fresh_attacker(attacker_type, client_ckpt_path, lam, args, train_loade
     os.makedirs(checkpoint_dir, exist_ok=True)
 
     t_start = time.time()
+    history = []
     for ep in range(1, args.epochs + 1):
         attacker.train()
         train_loss_sum = 0.0
@@ -205,6 +206,13 @@ def train_fresh_attacker(attacker_type, client_ckpt_path, lam, args, train_loade
             cur_psnr = eval_res["psnr"]
             cur_ssim = eval_res["ssim"]
 
+            history.append({
+                "epoch": ep,
+                "train_mse": round(train_mse, 4),
+                "test_psnr": round(cur_psnr, 2),
+                "test_ssim": round(cur_ssim, 4)
+            })
+
             if cur_ssim > best_ssim:
                 best_ssim = cur_ssim
                 best_psnr = cur_psnr
@@ -230,6 +238,40 @@ def train_fresh_attacker(attacker_type, client_ckpt_path, lam, args, train_loade
 
     res_2k = evaluate_fresh_attacker(client, attacker, test_eval_loader, device, lpips_fn=lpips_fn)
     res_10k = evaluate_fresh_attacker(client, attacker, test_full_loader, device, lpips_fn=None)
+
+    # Vẽ và lưu biểu đồ learning curve theo epoch
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        eps = [h["epoch"] for h in history]
+        ssims = [h["test_ssim"] for h in history]
+        psnrs = [h["test_psnr"] for h in history]
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+        ax1.plot(eps, ssims, "b-o", markersize=3, label="Test SSIM (2k)")
+        ax1.axhline(0.30, color="r", linestyle="--", label="PoC Ceiling 0.30")
+        ax1.set_xlabel("Epoch")
+        ax1.set_ylabel("SSIM")
+        ax1.set_title(f"Fresh {attacker_type.upper()} SSIM (Max: {best_ssim:.4f})")
+        ax1.grid(True)
+        ax1.legend()
+
+        ax2.plot(eps, psnrs, "g-o", markersize=3, label="Test PSNR (2k)")
+        ax2.axhline(15.0, color="r", linestyle="--", label="PoC Ceiling 15 dB")
+        ax2.set_xlabel("Epoch")
+        ax2.set_ylabel("PSNR (dB)")
+        ax2.set_title(f"Fresh {attacker_type.upper()} PSNR (Max: {best_psnr:.2f} dB)")
+        ax2.grid(True)
+        ax2.legend()
+
+        plt.tight_layout()
+        curve_path = os.path.join(args.output_dir, f"curve_fresh_{attacker_type}_lam{lam}_s{args.seed}.png")
+        plt.savefig(curve_path, dpi=150)
+        plt.close()
+    except Exception as e:
+        print(f"[WARN] Không vẽ được learning curve: {e}")
 
     # Đọc in-train adversary SSIM từ results_artape_v0.json
     in_train_ssim = None
@@ -270,7 +312,8 @@ def train_fresh_attacker(attacker_type, client_ckpt_path, lam, args, train_loade
         "fresh_psnr_10k": round(res_10k["psnr"], 2),
         "discrepancy_G": round(gap_g, 4) if gap_g is not None else None,
         "best_epoch": best_ep,
-        "training_time_s": round(train_time, 1)
+        "training_time_s": round(train_time, 1),
+        "history": history
     }
 
 

@@ -111,6 +111,15 @@ class ClientWithBottleneck(nn.Module):
         clean_sd = {}
         for k, v in state_dict.items():
             clean_sd[k] = v
+        # Tương thích với B7 và các checkpoint không có tiền tố base_client.
+        if not any(k.startswith("base_client.") for k in clean_sd.keys()):
+            new_sd = {}
+            for k, v in clean_sd.items():
+                if k not in ["R", "bottleneck.weight"]:
+                    new_sd[f"base_client.{k}"] = v
+                else:
+                    new_sd[k] = v
+            clean_sd = new_sd
         # Tương thích chéo: nếu state_dict có 'R' nhưng model dùng 'bottleneck.weight'
         if "R" in clean_sd and hasattr(self, "bottleneck") and self.bottleneck is not None:
             self.bottleneck.weight.data.copy_(clean_sd["R"].t())
