@@ -116,23 +116,30 @@ Kiểm chứng tính ổn định thống kê chuẩn IEEE / ACM trên 3 seeds �
 
 ---
 
-### 2.4. Bảng Kết Quả Nâng Cấp Cosine Scheduler & Kiểm Tra Trần Năng Lực Adversary (21/10/2026)
+### 2.4. Bảng Kết Quả Nâng Cấp Cosine Scheduler (Đa Seed 42, 7, 2024) & Kiểm Tra Trần Năng Lực Adversary
 
-| Thước Đo / Chỉ Số | v1 $\lambda=0.5$ (MultiStep, 100 ep) | v1 $\lambda=0.5$ (Cosine, 100 ep, Seed 42) | v1 $\lambda=0.0$ (Cosine, 100 ep, Seed 42) | Trần Năng Lực Adversary (50 ep, Frozen Client $\lambda=0.5$) | Ghi Chú & Ý Nghĩa Khoa Học |
+Đo lường toàn diện trên 3 seeds độc lập (42, 7, 2024) cho cấu hình v1 Mode F ($k=2048$, `linear_fixed`, `fixed-bottleneck`, $\lambda=0.5$, warmup 10) với `CosineAnnealingLR`:
+
+* **Chi tiết từng Seed v1 $\lambda=0.5$ (Cosine):**
+  - Seed 42: Full Acc = 89.81%, 2k Eval = 91.53%, dCor = 0.2370, MLP SSIM = 0.2488 (14.12 dB), Conv SSIM = 0.2359 (13.04 dB)
+  - Seed 7: Full Acc = 88.85%, 2k Eval = 90.08%, dCor = 0.2199, MLP SSIM = 0.2261 (13.81 dB), Conv SSIM = 0.2322 (12.95 dB)
+  - Seed 2024: Full Acc = 89.58%, 2k Eval = 91.24%, dCor = 0.2644, MLP SSIM = 0.2527 (13.99 dB), Conv SSIM = 0.2263 (12.85 dB)
+
+| Thước Đo / Chỉ Số | v1 $\lambda=0.5$ (MultiStep, 3 Seeds) | **v1 $\lambda=0.5$ (Cosine, 3 Seeds)** | v1 $\lambda=0.0$ (Cosine, Seed 42) | Trần Năng Lực Adversary (50 ep, Frozen Client $\lambda=0.5$) | Ghi Chú & Ý Nghĩa Khoa Học |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| **Full 10k Test Acc** | 89.48% (Mean: 88.41%) | **89.81%** | **91.28%** | — | Cosine cải thiện Utility (+0.33% ở $\lambda=0.5$, +1.57% ở $\lambda=0.0$) |
-| **Mean Fast Eval 2k (10 ep cuối)**| 91.48% (Mean: 90.65%) | **91.53%** | **92.87%** (Đỉnh 93.05%) | — | Đỉnh 2k vượt mốc 92.7% của B7 |
-| **Full 10k Test Acc (Train Mode)**| 88.87% | **89.31%** | **90.57%** | — | Độ lệch trôi BatchNorm kiểm soát ở mức 0.50 - 0.71% |
-| **Tương quan phi tuyến $d\text{Cor}$** | 0.2871 | **0.2370** | **0.5756** | — | Cosine giúp giảm $d\text{Cor}$ thêm (từ 0.287 xuống 0.237) |
-| **In-train Adv SSIM / PSNR** | 0.1580 / 12.27 dB | **0.1541 / 12.23 dB** | 0.1246 / 12.65 dB *(không train)* | — | In-train adversary ổn định quanh mức 0.15 |
-| **Fresh MLP SSIM (10k test)** | 0.2471 (30 ep) | **0.2488** (30 ep) | 0.6865 (30 ep) | **0.2629** (50 ep) | **Trần năng lực tối đa không vượt quá 0.263** |
-| **Fresh MLP PSNR (10k test)** | 13.69 dB | **14.12 dB** | 20.82 dB | **13.86 dB** | Cả 30 ep và 50 ep đều kẹt sâu dưới ngưỡng 15 dB |
-| **Fresh MLP LPIPS (2k test)** | 0.2312 | **0.2312** | 0.0862 | **0.2096** | Méo thị giác mạnh |
-| **Fresh Conv SSIM (10k test)** | 0.2249 (30 ep) | **0.2359** (30 ep) | 0.5386 (30 ep) | — | Giữ vững SSIM < 0.24 |
-| **Fresh Conv PSNR (10k test)** | 12.78 dB | **13.04 dB** | 17.99 dB | — | Giữ vững PSNR < 15 dB |
+| **Full 10k Test Acc** | 88.41 ± 0.95% | **89.41 ± 0.50%** | **91.28%** | — | Cosine tăng Utility **+1.00%**, độ lệch chuẩn giảm một nửa ($\pm 0.50\%$) |
+| **Mean Fast Eval 2k (10 ep cuối)**| 90.65 ± 0.74% | **90.95 ± 0.77%** | **92.87%** (Đỉnh 93.05%) | — | Đỉnh cá nhân vượt 91.90% |
+| **Full 10k Test Acc (Train Mode)**| 87.79 ± 1.02% | **89.05 ± 0.59%** | **90.57%** | — | Độ lệch trôi BatchNorm kiểm soát rất hẹp (~0.36%) |
+| **Tương quan phi tuyến $d\text{Cor}$** | 0.2783 ± 0.0250 | **0.2404 ± 0.0224** | **0.5756** | — | Cosine giúp giảm tương quan sâu hơn (giảm thêm $-13.6\%$) |
+| **In-train Adv SSIM / PSNR** | 0.1580 / 12.27 dB | **0.1542 ± 0.0021 / 12.26 dB** | 0.1246 / 12.65 dB *(không train)* | — | In-train adversary cực kỳ ổn định |
+| **Fresh MLP SSIM (10k test)** | 0.2450 ± 0.0022 | **0.2425 ± 0.0144** | 0.6865 (30 ep) | **0.2629** (50 ep) | **Trần năng lực tối đa không vượt quá 0.263** |
+| **Fresh MLP PSNR (10k test)** | 13.77 ± 0.08 dB | **13.97 ± 0.16 dB** | 20.82 dB | **13.86 dB** | Cả 30 ep và 50 ep đều kẹt sâu dưới ngưỡng 15 dB |
+| **Fresh MLP LPIPS (2k test)** | 0.2357 ± 0.0069 | **0.2354 ± 0.0135** | 0.0862 | **0.2096** | Méo thị giác mạnh |
+| **Fresh Conv SSIM (10k test)** | 0.2131 ± 0.0102 | **0.2315 ± 0.0048** | 0.5386 (30 ep) | — | Độ lệch chuẩn cực hẹp ($\sigma = \pm 0.0048$) |
+| **Fresh Conv PSNR (10k test)** | 12.71 ± 0.10 dB | **12.95 ± 0.10 dB** | 17.99 dB | — | Giữ vững PSNR < 13 dB |
 
 > **Phát hiện thực nghiệm cốt lõi từ kiểm tra trần năng lực Adversary:**
-> 1. Khi cho Adversary học độc lập 50 epochs (486.5s) trên Client tĩnh $\lambda=0.5$ với learning rate Adam và Cosine annealing: SSIM chỉ tăng nhẹ từ **0.2471 (30 epochs) lên 0.2629 (50 epochs)** và PSNR đạt **13.86 dB**. Nó **hoàn toàn không thể vươn tới mức 0.40 - 0.50**.
+> 1. Khi cho Adversary học độc lập 50 epochs (486.5s) trên Client tĩnh $\lambda=0.5$ với learning rate Adam và Cosine annealing: SSIM chỉ tăng nhẹ từ **0.2488 (30 epochs) lên 0.2629 (50 epochs)** và PSNR đạt **13.86 dB**. Nó **hoàn toàn không thể vươn tới mức 0.40 - 0.50**.
 > 2. Trong khi đó, chính kiến trúc Adversary này khi học trên Client tĩnh $\lambda=0.0$ dễ dàng đạt **SSIM = 0.6865** và PSNR = 20.82 dB.
 > 3. Điều này chứng minh rằng: **Kiến trúc Adversary không bị lỗi năng lực**. Mức chặn SSIM $\approx 0.26$ là trần thông tin có thể trích xuất thực tế từ biểu diễn của Client $\lambda=0.5$.
 > 4. Khoảng cách giữa in-training adversary (0.154) và offline adversary (0.263) là khoảng $\Delta \approx 0.11$. Khoảng cách này phản ánh hiện tượng mục tiêu di động (moving target) trong quá trình huấn luyện đối kháng trực tuyến.
@@ -290,8 +297,8 @@ Attacker Benchmarks:
 ### 7.1. Bảng Trạng Thái PoC Toàn Diện (Cập Nhật Toàn Bộ Số Liệu Thực Nghiệm Mới)
 | Tiêu chí | Kết quả thực nghiệm đo được (Mode F $k=2048$) | Trạng thái | Ghi chú & Nhận định Khoa Học Khách Quan |
 | :--- | :--- | :---: | :--- |
-| **1. Utility** | MultiStep $\lambda=0.5$: **$88.41 \pm 0.95\%$** (10k), **$90.65 \pm 0.74\%$** (2k).<br>Cosine $\lambda=0.0$: **$91.28\%$** (10k), đỉnh 2k đạt **$93.05\%$**. | **CHƯA ĐẠT ngưỡng gốc ($\ge 92.7\%$)** | Thấp hơn B0 (94.71%) khoảng 6.3%. Đề xuất chốt ngưỡng vận hành thực tế mới: $\ge 88.0\%$ (10k) hoặc $\ge 90.0\%$ (2k) vì đây là đánh đổi bắt buộc để triệt tiêu rò rỉ của B7 F. |
-| **2. Bảo mật Thụ động (Fresh MLP/Conv)** | Fresh MLP: **$0.2450 \pm 0.0022$** ($13.77\text{ dB}$);<br>Fresh Conv: **$0.2131 \pm 0.0102$** ($12.71\text{ dB}$) | **ĐẠT** | Vượt sâu ngưỡng PoC yêu cầu (SSIM < 0.30, PSNR < 15 dB). Độ lệch chuẩn hẹp khẳng định tính ổn định thực nghiệm. |
+| **1. Utility** | MultiStep $\lambda=0.5$: **$88.41 \pm 0.95\%$** (10k), **$90.65 \pm 0.74\%$** (2k).<br>**Cosine $\lambda=0.5$ (3 Seeds):** **$89.41 \pm 0.50\%$** (10k), **$90.95 \pm 0.77\%$** (2k).<br>Cosine $\lambda=0.0$: **$91.28\%$** (10k), đỉnh 2k đạt **$93.05\%$**. | **CHƯA ĐẠT ngưỡng gốc ($\ge 92.7\%$)** | Cosine tăng Utility thêm **+1.00%**, đưa test acc ổn định ở ~89.4% (đỉnh 89.81%). Thấp hơn B0 (94.71%) khoảng 5.3%, và thấp hơn B7 Mode F (92.73%) khoảng 3.3%. Đề xuất chốt ngưỡng vận hành thực tế mới: $\ge 88.0\%$ (10k) hoặc $\ge 90.0\%$ (2k). |
+| **2. Bảo mật Thụ động (Fresh MLP/Conv)** | Fresh MLP (Cosine): **$0.2425 \pm 0.0144$** ($13.97\text{ dB}$);<br>Fresh Conv (Cosine): **$0.2315 \pm 0.0048$** ($12.95\text{ dB}$);<br>Trần năng lực 50 ep: **$0.2629$** | **ĐẠT** | Vượt sâu ngưỡng PoC yêu cầu (SSIM < 0.30, PSNR < 15 dB). Độ lệch chuẩn hẹp khẳng định tính ổn định thực nghiệm bất biến qua các seed. |
 | **3. Vai trò của Min–Max** | Mode F: $\lambda=0.0$ rò rỉ SSIM = **0.6925** $\to \lambda=0.5$ giảm còn **0.2450**; $d\text{Cor}$ giảm từ **0.5682 $\to$ 0.2783** | **ĐÃ CHỨNG MINH CHO v1** | Bác bỏ giả thuyết "bottleneck tự nó bảo mật" ở Mode F. Lưu ý: Ở v0, privacy chủ yếu đến từ nút thắt MLP $m=512$. |
 | **4. Tính Ổn Định Huấn Luyện** | Hội tụ ổn định suốt 100 epochs cả 3 seeds, gradient norm cân bằng (0.45 : 1.37), $G \le +0.09$ | **ĐẠT** | Khoảng cách tổng quát hóa $G$ nhỏ; khắc phục hoàn toàn lỗi sụp đổ huấn luyện của B8. |
 | **5. Tấn công Chủ động FSHA (Đo trên v1)** | $gs=1.0$: Acc **86.98%**, SSIM **0.0241**;<br>$gs=5.0$: Acc **83.44%**, SSIM **0.0377** | **ĐẠT** | Khác với v0 (bị sụp đổ về 10% ở $gs=5.0$), v1 Mode F giữ được Task Acc 83.44% và chặn hoàn toàn tái tạo ảnh. |
