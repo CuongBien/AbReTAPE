@@ -165,7 +165,7 @@ def train_fresh_attacker(attacker_type, client_ckpt_path, lam, args, train_loade
         raise ValueError(f"Không hỗ trợ attacker_type: {attacker_type}")
 
     optimizer = torch.optim.Adam(attacker.parameters(), lr=args.lr, weight_decay=1e-5)
-    scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs)
+    scheduler = None if getattr(args, "constant_lr", False) else CosineAnnealingLR(optimizer, T_max=args.epochs)
     criterion = nn.MSELoss()
 
     best_ssim = 0.0
@@ -198,7 +198,8 @@ def train_fresh_attacker(attacker_type, client_ckpt_path, lam, args, train_loade
             train_loss_sum += loss.item() * b
             n_train += b
 
-        scheduler.step()
+        if scheduler is not None:
+            scheduler.step()
         train_mse = train_loss_sum / max(n_train, 1)
 
         if ep % args.eval_freq == 0 or ep == args.epochs:
@@ -332,6 +333,7 @@ def main():
     parser.add_argument("--epochs", type=int, default=30, help="Số epochs huấn luyện attacker (mặc định: 30)")
     parser.add_argument("--batch-size", type=int, default=128, help="Batch size (mặc định: 128)")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate Adam")
+    parser.add_argument("--constant-lr", action="store_true", help="Giữ learning rate không đổi (không dùng CosineAnnealingLR)")
     parser.add_argument("--eval-freq", type=int, default=5, help="Tần suất đánh giá")
     parser.add_argument("--num-workers", type=int, default=0 if sys.platform == "win32" else 2)
     parser.add_argument("--data-dir", type=str, default=os.path.join(PROJECT_ROOT, "data"))
