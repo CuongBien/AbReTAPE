@@ -160,18 +160,32 @@ def build_master_records():
     b8_s_acc_10k = b8_stab_sweep["b8_conv_lam0.1_s42"]["task_test_acc"] if b8_stab_sweep else None
     b8_s_acc_2k = b8_stab_sweep["b8_conv_lam0.1_s42"]["mean_task_acc_last10"] if b8_stab_sweep else None
 
+    # Load real fresh attackers and FSHA on B8 Stabilized
+    b8_s_f_mlp = load_json("B8_Stabilized_Attackers_Real/fresh_mlp/results_b8_fresh_learned_mlp.json")
+    b8_s_f_conv = load_json("B8_Stabilized_Attackers_Real/fresh_conv/results_b8_fresh_conv.json")
+    b8_s_fsha = load_json("B8_Stabilized_Attackers_Real/fsha/results_fsha_b8.json")
+
+    b8_s_mlp_ssim = b8_s_f_mlp[0]["fresh_mlp_ssim_10k"] if b8_s_f_mlp else None
+    b8_s_conv_ssim = b8_s_f_conv[0]["fresh_conv_ssim_10k"] if b8_s_f_conv else None
+    
+    # FSHA scenario gs5.0 for fair comparison with B7 and v1 (which both use gs5.0 in table)
+    b8_s_fsha_gs5 = next((x for x in b8_s_fsha if "gs5.0" in x.get("scenario_id", "")), None) if b8_s_fsha else None
+    b8_s_fsha_ssim = b8_s_fsha_gs5["ssim_final"] if b8_s_fsha_gs5 and "ssim_final" in b8_s_fsha_gs5 else (b8_s_fsha_gs5["ssim"] if b8_s_fsha_gs5 else None)
+    b8_s_fsha_acc = b8_s_fsha_gs5["test_acc"] * 100 if b8_s_fsha_gs5 else None
+    b8_s_dcor = b8_s_fsha_gs5["dcor_after"] if b8_s_fsha_gs5 else None
+
     b8_st_row = {
         "method": "B8 Stabilized",
         "bottleneck": "Full (D=65536)",
         "lambda": "0.1",
         "acc_10k": f"{b8_s_acc_10k:.2f}%" if b8_s_acc_10k is not None else "N/A",
         "acc_2k": f"{b8_s_acc_2k:.2f}%" if b8_s_acc_2k is not None else "N/A",
-        "mlp_ssim_10k": "N/A (Chưa chạy)",
-        "conv_ssim_10k": "N/A (Chưa chạy)",
-        "fsha_ssim": "N/A (Chưa chạy)",
-        "fsha_acc": "N/A (Chưa chạy)",
-        "dcor": "N/A",
-        "json_source": "AbReTAPE_Step3_B8_Stabilized/results_b8_conv_sweep.json"
+        "mlp_ssim_10k": f"{b8_s_mlp_ssim:.4f}" if b8_s_mlp_ssim is not None else "N/A (Chưa chạy)",
+        "conv_ssim_10k": f"{b8_s_conv_ssim:.4f}" if b8_s_conv_ssim is not None else "N/A (Chưa chạy)",
+        "fsha_ssim": f"{b8_s_fsha_ssim:.4f}" if b8_s_fsha_ssim is not None else "N/A (Chưa chạy)",
+        "fsha_acc": f"{b8_s_fsha_acc:.2f}%" if b8_s_fsha_acc is not None else "N/A (Chưa chạy)",
+        "dcor": f"{b8_s_dcor:.4f}" if b8_s_dcor is not None else "N/A",
+        "json_source": "B8_Stabilized_Attackers_Real/{fresh_mlp, fresh_conv, fsha}/*.json, AbReTAPE_Step3_B8_Stabilized/*.json"
     }
     records.append(b8_st_row)
 

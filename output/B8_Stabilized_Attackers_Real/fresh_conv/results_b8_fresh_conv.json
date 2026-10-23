@@ -1,0 +1,16 @@
+[
+  {
+    "lambda": 0.1,
+    "seed": 42,
+    "in_train_adv_ssim": 0.4262,
+    "fresh_conv_ssim_2k": 0.643,
+    "fresh_conv_psnr_2k": 15.93,
+    "fresh_conv_lpips_2k": 0.0625,
+    "fresh_conv_mse_norm_2k": 0.7535,
+    "fresh_conv_ssim_10k": 0.6431,
+    "fresh_conv_psnr_10k": 15.87,
+    "discrepancy_G": 0.2168,
+    "best_epoch": 30,
+    "training_time_s": 297.3
+  }
+]
