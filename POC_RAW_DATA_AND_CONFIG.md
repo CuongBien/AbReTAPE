@@ -311,39 +311,65 @@ Attacker Benchmarks:
 
 ---
 
-## 8. BẢNG TỔNG HỢP MASTER BENCHMARK & BẰNG CHỨNG PARETO ĐỘT PHÁ (23/10/2026)
+## 8. BẢNG TỔNG HỢP MASTER BENCHMARK & BẰNG CHỨNG THỰC NGHIỆM ĐỐI CHUẨN (24/10/2026)
 
-### 8.1. Bảng Đối Chuẩn Toàn Thể (Master Benchmark Across All Baselines)
+### 8.1. Bảng Đối Chuẩn Toàn Thể (Master Benchmark - 100% Trích Xuất Trực Tiếp Từ JSON, ddof=1)
 
-| Phương Pháp / Cấu Hình | Bottleneck ($k$) | Cơ Chế Min–Max ($\lambda$) | Full 10k Test Acc | Fast 2k Test Acc | Fresh MLP SSIM (10k) | Fresh Conv SSIM (10k) | FSHA SSIM | $d\text{Cor}(X, Z)$ | Trạng Thái Bảo Mật & Đánh Giá |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **B0 Vanilla SL** | Không ($D=65536$) | Không | **94.71%** | 94.71% | 0.6925 | 0.7240 | 0.7850 | 0.8844 | ❌ Rò rỉ toàn bộ, sụp đổ trước mọi attacker |
-| **B7 Mode F ($k=2048$)** | Cố định ($k=2048$) | Không | **92.73%** | 93.85% | 0.6865 | 0.5138 | 0.4670 | 0.5820 | ❌ Nén trực giao $32\times$, MLP vẫn tái tạo rõ (0.687) |
-| **B7 Mode F ($k=1024$)** | Cố định ($k=1024$) | Không | **91.53%** | 92.95% | 0.5461 | 0.3597 | 0.3420 | 0.4910 | ❌ Nén $64\times$, MLP vẫn rò rỉ cấu trúc (0.546) |
-| **B7 Mode F ($k=512$)** | Cố định ($k=512$) | Không | **88.54%** | 90.15% | **0.4394** | 0.2632 | 0.2850 | 0.4120 | ⚠️ Nén cực đoan $128\times$, Conv hạ còn 0.26 nhưng MLP vẫn lộ rõ (**0.439**) |
-| **B8 Stabilized** | Không ($D=65536$) | Có ($\lambda=0.1$) | **92.38%** | 93.42% | 0.3540 | 0.6920 | **0.7330** | **0.9026** | ❌ Sụp đổ trước FSHA (Acc $\to 38.4\%$), $G_{\text{Conv}} = +0.338$ |
-| **AR-TAPE v1 ($\lambda=0.0$, Cosine)** | Cố định ($k=2048$) | Không | **$91.05 \pm 0.36\%$** | **$92.78 \pm 0.13\%$** | **$0.7077 \pm 0.0048$** | **$0.5627 \pm 0.0053$** | 0.4670 | $0.5717$ | ⚠️ Baseline đối chứng chuẩn 3 seed: Nén đơn thuần không bảo mật |
-| **AR-TAPE v1 ($\lambda=0.5$, Cosine)** | Cố định ($k=2048$) | Có ($\lambda=0.5$) | **$89.41 \pm 0.50\%$** | **$90.95 \pm 0.77\%$** | **$0.2425 \pm 0.0117$** | **$0.2315 \pm 0.0040$** | **$\le 0.0380$** | **$0.2404$** | **ĐẠT TRỌN VẸN: Vượt trội B7 $k=512$ trên cả Utility lẫn Privacy** |
+| Phương Pháp | Bottleneck ($k$) | λ | Acc (10k Full) | Acc (2k Fast) | Fresh MLP (10k) | Fresh Conv (10k) | FSHA SSIM (Final) | FSHA Task Acc (Final) | $d\text{Cor}(X, Z)$ |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **B0 Vanilla SL** | Full ($D=65536$) | None | 94.71% | N/A | N/A | 0.9955 | 0.9709 | 94.43% | 0.7192 |
+| **B7 Mode F ($k=2048$)** | $k=2048$ | 0.0 | 92.73% | N/A | N/A *(Chưa chạy riêng)* | N/A *(Chưa chạy riêng)* | 0.1083 | 24.86% | N/A |
+| **B7 Mode F ($k=1024$)** | $k=1024$ | 0.0 | 91.53% | N/A | 0.5461 | 0.3597 | 0.0985 | 48.90% | N/A |
+| **B7 Mode F ($k=512$)** | $k=512$ | 0.0 | 88.54% | N/A | 0.4394 | 0.2632 | 0.0720 | 44.65% | N/A |
+| **B8 Un-stabilized** | Full ($D=65536$) | 0.1 | 92.38% | 93.42% | 0.4580 | 0.7652 | N/A *(Chưa chạy)* | N/A *(Chưa chạy)* | N/A |
+| **B8 Stabilized** | Full ($D=65536$) | 0.1 | 88.98% | 93.53% | **0.2621** | **0.6431** | 0.0856 | 44.34% | 0.6303 |
+| **AR-TAPE v1 (Cosine $\lambda=0.0$)** | $k=2048$ | 0.0 | 91.05 ± 0.36% | 92.78 ± 0.13% | 0.7077 ± 0.0059 | 0.5627 ± 0.0065 | 0.0402 | 84.20% | 0.7219 |
+| **AR-TAPE v1 (Cosine $\lambda=0.5$)** | $k=2048$ | 0.5 | 89.41 ± 0.50% | 90.95 ± 0.77% | **0.2425 ± 0.0144** | **0.2315 ± 0.0048** | **0.0377** | **83.44%** | 0.4348 |
 
 ---
 
-### 8.2. Hai Phát Hiện Khoa Học Đột Phá
+### 8.2. Phân Tích Khoa Học & Các Phát Hiện Thực Nghiệm Cốt Lõi
 
-#### 1. Bằng chứng mở rộng biên Pareto (Pareto Superiority over B7):
-- Khi so sánh ở cùng phân khúc Utility (~88.5% - 89.4%):
-  * **Độ chính xác:** AR-TAPE v1 ($89.41 \pm 0.50\%$) **cao hơn** B7 $k=512$ ($88.54\%$).
-  * **Bảo mật trước Fresh MLP (Kẻ tấn công thích nghi phi tuyến):** B7 $k=512$ bị rò rỉ nặng với SSIM = **0.4394** (PSNR 17.41 dB, vượt xa ngưỡng an toàn 0.40). Trong khi đó, AR-TAPE v1 $\lambda=0.5$ khóa cứng SSIM ở mức **0.2425** (PSNR 13.97 dB), tức **giảm 44.8% độ rò rỉ cấu trúc** so với B7 $k=512$.
-  * **Bảo mật trước FSHA (Kẻ tấn công chủ động):** B7 $k=512$ đạt SSIM = 0.2850, còn AR-TAPE v1 hạ xuống **$\le 0.0380$** (triệt tiêu $86.7\%$).
-- **Kết luận:** AR-TAPE v1 không đơn thuần di chuyển dọc theo đường đánh đổi của B7, mà **chính thức đẩy đường cong Pareto vượt ra ngoài năng lực của phép nén rank đơn thuần**.
+#### 1. Hiện tượng vỡ trận của B8 trước Kẻ tấn công Conv (Generalization Gap N1):
+- **Bản chất của Client B8 Stabilized:** $\lambda=0.1$, cap=$1.5586$, warmup=$10$, clip=$1.0$, seed=$42$. Trong quá trình huấn luyện SL, in-training adversary có kiến trúc MLP đạt SSIM cuối là **0.3483** (trung bình 10 epoch cuối là **0.3888**). Task accuracy gốc là **88.98%** (10k test) và **93.53%** (2k eval).
+- **Đính chính độ chênh lệch tổng quát hóa $G$:**
+  * *Fresh Conv:* Đạt SSIM 10k = **0.6431** (2k = 0.6430). Độ chênh lệch thực tế so với in-train adv ($0.3483$) là:
+    $$G_{\text{Conv}} = 0.6431 - 0.3483 = \mathbf{+0.2948 \approx +0.295}$$
+    *(Lưu ý: Giá trị $+0.217$ ghi trong file log thô trước đó là do dùng nhầm mốc 0.4262 của client chưa ổn định hóa).*
+  * *Fresh MLP:* Đạt SSIM 10k = **0.2621** (2k = 0.2619). Độ chênh lệch thực tế là:
+    $$G_{\text{MLP}} = 0.2621 - 0.3483 = \mathbf{-0.0862 \approx -0.086}$$
+    *(Lưu ý: Giá trị $-0.164$ ghi trong file log thô trước đó cũng xuất phát từ việc trừ nhầm mốc 0.4262).*
+- **Ý nghĩa:** Client B8 học các đặc trưng đánh lừa được adversary MLP nội bộ (kéo Fresh MLP xuống 0.2621), nhưng hoàn toàn bị rò rỉ dữ liệu khi gặp Fresh Conv chưa từng thấy trong huấn luyện (vọt lên 0.6431). Đây là bằng chứng thực nghiệm rõ ràng nhất về việc phòng thủ min-max thuần túy (không ràng buộc kiến trúc) bị overfit vào cấu trúc của in-training adversary.
 
-#### 2. Vai trò then chốt của Min–Max trên 3 seed Cosine:
-- Khi chuyển từ $\lambda=0.0 \to \lambda=0.5$ với cùng kiến trúc và bộ điều chỉnh Cosine:
-  * Fresh MLP SSIM hạ từ **$0.7077 \pm 0.0048 \to 0.2425 \pm 0.0117$** (giảm $-0.4652$, tương đương $-65.7\%$).
-  * Fresh Conv SSIM hạ từ **$0.5627 \pm 0.0053 \to 0.2315 \pm 0.0040$** (giảm $-0.3312$, tương đương $-58.9\%$).
-  * Khoảng cách tương quan phi tuyến $d\text{Cor}$ giảm từ **$0.5717 \to 0.2404$** (giảm $-57.9\%$).
-  * Đánh đổi Utility: Chỉ mất **$-1.64\%$** Test Acc ($91.05\% \to 89.41\%$).
-- **Trần thông tin nội sinh:** Thử nghiệm 100 epochs với LR Hằng số (không Cosine decay) xác nhận trần bão hòa thực tế là **0.278** (PSNR 14.24 dB), khẳng định tính chất bảo mật nội sinh bất biến của biểu diễn AR-TAPE.
+#### 2. Đánh giá Tấn công Chủ động FSHA trên B8:
+- **Nguyên tắc báo cáo:** Báo cáo các chỉ số tại epoch cuối (epoch 30) thay vì chọn theo đỉnh test / best loss. Các chỉ số SSIM 0.1240 (gs=1) và 0.1125 (gs=5) tại `best_epoch = 1` chỉ là kết quả bước đầu chọn theo test khi mạng giải mã chưa học xong.
+- **Diễn biến thực tế qua các epoch mẫu:**
+  * Ở $gs=1.0$: Đỉnh SSIM thực tế trong quá trình huấn luyện đạt **0.2070** (tại epoch 15). Đến epoch 30 cuối, tái tạo sụp đổ về nhiễu (`ssim_final = -0.0322`), nhưng Task Accuracy sụp đổ từ $88.98\%$ xuống **54.14%** (mất $-34.84\%$ utility).
+  * Ở $gs=5.0$: Đỉnh SSIM thực tế đạt **0.2400** (tại epoch 20). Đến epoch 30 cuối, `ssim_final = 0.0856`, và Task Accuracy sụp đổ từ $88.98\%$ xuống **44.34%** (mất $-44.64\%$ utility).
+- **So sánh với AR-TAPE v1:** Khi đối mặt với FSHA ($gs=5.0$), AR-TAPE v1 duy trì Task Accuracy ở mức **83.44%** và khóa chặt tái tạo ở mức **0.0377**. Trong khi B8 bị FSHA đánh sập hoàn toàn nhiệm vụ chính (acc chỉ còn 44.34%).
 
+#### 3. Bằng chứng mở rộng biên Pareto so với B7 ($k=512$):
+- Khi so sánh ở cùng phân khúc Utility (~88.5% – 89.4%):
+  * **Độ chính xác nhiệm vụ:** AR-TAPE v1 ($89.41 \pm 0.50\%$) cao hơn B7 $k=512$ ($88.54\%$).
+  * **Bảo mật trước Fresh MLP:** B7 $k=512$ rò rỉ nặng với SSIM = **0.4394** (PSNR 17.41 dB). AR-TAPE v1 $\lambda=0.5$ giữ SSIM ở mức **0.2425 \pm 0.0144** (PSNR 13.97 dB), tức giảm $44.8\%$ độ rò rỉ cấu trúc.
+  * **Bảo mật trước Fresh Conv:** B7 $k=512$ đạt SSIM = **0.2632**, AR-TAPE v1 đạt **0.2315 \pm 0.0048**.
+  * **Kháng cự FSHA:** B7 $k=512$ sụp đổ task acc về **44.65%**, trong khi AR-TAPE v1 đứng vững ở **83.44%**.
+- **Kết luận:** AR-TAPE v1 không chỉ di chuyển dọc theo đường đánh đổi của B7 mà thực sự **mở rộng biên Pareto ra phía ngoài** so với phép nén rank thuần túy.
+
+#### 4. Đánh giá Trần Năng Lực Adversary Dưới Tốc Độ Học Hằng Số (Constant LR):
+- Tại Epoch 100 với LR Hằng số (không Cosine decay), đường cong tái tạo trên 2k eval vẫn tiếp tục tăng nhẹ từ Epoch 90 đến Epoch 100:
+  * Fresh MLP: $0.2730 \to 0.2759 \to 0.2781$ (Full 10k test: **0.2792**).
+  * Fresh Conv: $0.2739 \to 0.2751 \to 0.2783$ (Full 10k test: **0.2788**).
+- **Nhận định khoa học khách quan:** Attacker 100 epoch với LR hằng **chưa đạt trạng thái bão hòa hoàn toàn**, do đó chưa đủ bằng chứng để khẳng định 0.279 là 'rào cản thông tin nội sinh tuyệt đối'. Con số trung thực cho trần năng lực của adversary thụ động là xấp xỉ **$\approx 0.30$ (borderline)**.
+
+---
+
+### 8.3. Hạn Chế Còn Lại & Kế Hoạch Sau PoC (Limitations & Future Work)
+1. **Attacker Co-adapted trên B8:** Hiện tại mới hoàn thành 3/4 nhóm attacker trên B8 Stabilized (Fresh MLP, Fresh Conv, FSHA). Kịch bản Co-adapted trên B8 chưa thực hiện, được ghi nhận vào phần hạn chế và sẽ triển khai mở rộng sau giai đoạn PoC.
+2. **Ngưỡng Utility:** Thừa nhận minh bạch rằng mục tiêu ban đầu $\ge 92.7\%$ không đạt được trên tập 10k (đạt $89.41 \pm 0.50\%$, thấp hơn trần B7 k=2048 khoảng $3.3\%$). Sự đánh đổi này là cần thiết để đạt mức bảo mật thụ động (SSIM < 0.25) và khả năng sống sót trước FSHA (Acc > 83%).
+3. **Đo trần bão hòa thực sự của Adversary:** Cần mở rộng số epoch tấn công lên 200 epochs để xác định điểm bão hòa tiệm cận của kẻ tấn công dưới LR hằng.
+
+---
 
 ### 7.1. Bảng Trạng Thái PoC Toàn Diện (Cập Nhật Toàn Bộ Số Liệu Thực Nghiệm Mới)
 | Tiêu chí | Kết quả thực nghiệm đo được (Mode F $k=2048$) | Trạng thái | Ghi chú & Nhận định Khoa Học Khách Quan |
