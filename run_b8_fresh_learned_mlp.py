@@ -290,6 +290,7 @@ def main():
     parser.add_argument("--num-workers", type=int, default=0 if sys.platform == "win32" else 2)
     parser.add_argument("--data-dir", type=str, default=os.path.join(PROJECT_ROOT, "data"))
     parser.add_argument("--output-dir", type=str, default=os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step3_B8"))
+    parser.add_argument("--ckpt-dir", type=str, default=None, help="Thư mục chứa checkpoint Client (mặc định: output-dir/checkpoints)")
     parser.add_argument("--suffix", type=str, default="", help="Hậu tố tên file kết quả (ví dụ: '_cap1.5586')")
     parser.add_argument("--dry-run", action="store_true", help="Chạy thử 1 epoch rút gọn để kiểm tra lỗi cú pháp/logic")
     args = parser.parse_args()
@@ -321,10 +322,13 @@ def main():
 
     lpips_fn = get_lpips_fn(device=device)
 
+    if args.ckpt_dir is None:
+        args.ckpt_dir = os.path.join(args.output_dir, "checkpoints")
+
     all_results = []
     for lam in args.lambdas:
         client_ckpt_name = f"b8_conv_lam{lam}_s{args.seed}_client.pt"
-        client_ckpt_path = os.path.join(args.output_dir, "checkpoints", client_ckpt_name)
+        client_ckpt_path = os.path.join(args.ckpt_dir, client_ckpt_name)
 
         if not os.path.isfile(client_ckpt_path):
             print(f"[WARN] Bỏ qua λ={lam}: Không tìm thấy {client_ckpt_path}")
