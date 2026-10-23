@@ -1,0 +1,32 @@
+[
+  {
+    "attacker_type": "mlp",
+    "lambda": 1.0,
+    "seed": 42,
+    "in_train_adv_ssim": null,
+    "fresh_ssim_2k": 0.2313,
+    "fresh_psnr_2k": 13.74,
+    "fresh_lpips_2k": 0.244,
+    "fresh_mse_norm_2k": 1.2008,
+    "fresh_ssim_10k": 0.2344,
+    "fresh_psnr_10k": 13.73,
+    "discrepancy_G": null,
+    "best_epoch": 30,
+    "training_time_s": 292.9
+  },
+  {
+    "attacker_type": "conv",
+    "lambda": 1.0,
+    "seed": 42,
+    "in_train_adv_ssim": null,
+    "fresh_ssim_2k": 0.2609,
+    "fresh_psnr_2k": 13.01,
+    "fresh_lpips_2k": 0.1684,
+    "fresh_mse_norm_2k": 1.3934,
+    "fresh_ssim_10k": 0.2613,
+    "fresh_psnr_10k": 13.01,
+    "discrepancy_G": null,
+    "best_epoch": 30,
+    "training_time_s": 302.2
+  }
+]

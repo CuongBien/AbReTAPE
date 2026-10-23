@@ -100,7 +100,7 @@ def parse_args():
     )
     parser.add_argument(
         "--defense",
-        choices=["b0", "b1", "b2", "b3", "b4", "b5", "b6", "b7", "ar_tape", "all"],
+        choices=["b0", "b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8", "ar_tape", "all"],
         default="b0",
         help="Lựa chọn cơ chế phòng thủ mục tiêu (mặc định: b0)",
     )
@@ -152,6 +152,9 @@ def parse_args():
     parser.add_argument("--subspace-dims", type=str, default=None, help="AR-TAPE: Danh sách k (mặc định sweep: 16,32,48)")
 
     parser.add_argument("--b0-ckpt", type=str, default=None, help="Đường dẫn checkpoint B0 Vanilla")
+    parser.add_argument("--client-ckpt", type=str, default=None, help="Đường dẫn checkpoint Client")
+    parser.add_argument("--server-ckpt", type=str, default=None, help="Đường dẫn checkpoint Server")
+    parser.add_argument("--lambda-val", type=float, default=0.1, help="Giá trị lambda (mặc định: 0.1)")
     parser.add_argument("--b1-dec-ckpt", type=str, default=None, help="Đường dẫn checkpoint Decoder Bước 1")
     parser.add_argument("--data-dir", type=str, default=os.path.join(PROJECT_ROOT, "data"), help="Thư mục dữ liệu")
     parser.add_argument(
@@ -189,8 +192,10 @@ def prepare_client(device, b0_ckpt=None, client_init="b0", init_perturb=0.15, se
     client = ClientModel().to(device)
     if client_init == "b0" and b0_ckpt is not None and os.path.isfile(b0_ckpt):
         ckpt = torch.load(b0_ckpt, map_location=device)
-        if "client" in ckpt:
+        if isinstance(ckpt, dict) and "client" in ckpt:
             client.load_state_dict(ckpt["client"])
+        else:
+            client.load_state_dict(ckpt)
         if init_perturb > 0.0:
             g = torch.Generator(device=device).manual_seed(seed)
             with torch.no_grad():
@@ -252,9 +257,16 @@ def run_single_fsha_scenario(
     )
     discriminator = FSHADiscriminator(in_channels=64).to(device)
     task_server = ServerModel().to(device)
-    if b0_ckpt is not None and os.path.isfile(b0_ckpt):
+    server_ckpt = getattr(args, "server_ckpt", None)
+    if server_ckpt is not None and os.path.isfile(server_ckpt):
+        s_ckpt = torch.load(server_ckpt, map_location=device)
+        if isinstance(s_ckpt, dict) and "server" in s_ckpt:
+            task_server.load_state_dict(s_ckpt["server"])
+        else:
+            task_server.load_state_dict(s_ckpt)
+    elif b0_ckpt is not None and os.path.isfile(b0_ckpt):
         ckpt = torch.load(b0_ckpt, map_location=device)
-        if "server" in ckpt:
+        if isinstance(ckpt, dict) and "server" in ckpt:
             task_server.load_state_dict(ckpt["server"])
 
     server_adapter = FSHAServerAdapter(channels=64, defense=defense_module).to(device)
@@ -706,6 +718,23 @@ def build_scenarios_for_defense(defense_code, args, device):
                 "init_perturb": 0.15,
             })
 
+    elif d == "b8":
+        scales = [float(x.strip()) for x in args.grad_scales.split(",")] if args.grad_scales else ([args.grad_scale] if args.grad_scale is not None else [1.0])
+        lam = getattr(args, "lambda_val", 0.1)
+        for gs in scales:
+            scenarios.append({
+                "scenario_id": f"b8_adversarial_lam{lam}_gs{gs}",
+                "defense_code": "b8",
+                "method_name": "B8 In-Training Adversary (ResSFL)",
+                "param_label": f"lambda={lam}, grad_scale={gs}",
+                "param_key": "lambda",
+                "param_val": lam,
+                "defense_module": None,
+                "grad_scale": gs,
+                "use_dpsgd": False,
+                "init_perturb": 0.0,
+            })
+
     return scenarios
 
 
@@ -790,8 +819,9 @@ def main():
             flush=True,
         )
 
+        user_c_ckpt = args.client_ckpt if args.client_ckpt is not None else args.b0_ckpt
         b0_ckpt = find_default_ckpt(
-            args.b0_ckpt,
+            user_c_ckpt,
             [
                 os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step0", "b0_vanilla.pt"),
                 os.path.join(PROJECT_ROOT, "output", "AbReTAPE_Step0", "best_b0_vanilla.pt"),

@@ -311,7 +311,39 @@ Attacker Benchmarks:
 
 ---
 
-## 7. ĐÁNH GIÁ TRẠNG THÁI PoC & KẾ HOẠCH HÀNH ĐỘNG TIẾP THEO
+## 8. BẢNG TỔNG HỢP MASTER BENCHMARK & BẰNG CHỨNG PARETO ĐỘT PHÁ (23/10/2026)
+
+### 8.1. Bảng Đối Chuẩn Toàn Thể (Master Benchmark Across All Baselines)
+
+| Phương Pháp / Cấu Hình | Bottleneck ($k$) | Cơ Chế Min–Max ($\lambda$) | Full 10k Test Acc | Fast 2k Test Acc | Fresh MLP SSIM (10k) | Fresh Conv SSIM (10k) | FSHA SSIM | $d\text{Cor}(X, Z)$ | Trạng Thái Bảo Mật & Đánh Giá |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **B0 Vanilla SL** | Không ($D=65536$) | Không | **94.71%** | 94.71% | 0.6925 | 0.7240 | 0.7850 | 0.8844 | ❌ Rò rỉ toàn bộ, sụp đổ trước mọi attacker |
+| **B7 Mode F ($k=2048$)** | Cố định ($k=2048$) | Không | **92.73%** | 93.85% | 0.6865 | 0.5138 | 0.4670 | 0.5820 | ❌ Nén trực giao $32\times$, MLP vẫn tái tạo rõ (0.687) |
+| **B7 Mode F ($k=1024$)** | Cố định ($k=1024$) | Không | **91.53%** | 92.95% | 0.5461 | 0.3597 | 0.3420 | 0.4910 | ❌ Nén $64\times$, MLP vẫn rò rỉ cấu trúc (0.546) |
+| **B7 Mode F ($k=512$)** | Cố định ($k=512$) | Không | **88.54%** | 90.15% | **0.4394** | 0.2632 | 0.2850 | 0.4120 | ⚠️ Nén cực đoan $128\times$, Conv hạ còn 0.26 nhưng MLP vẫn lộ rõ (**0.439**) |
+| **B8 Stabilized** | Không ($D=65536$) | Có ($\lambda=0.1$) | **92.38%** | 93.42% | 0.3540 | 0.6920 | **0.7330** | **0.9026** | ❌ Sụp đổ trước FSHA (Acc $\to 38.4\%$), $G_{\text{Conv}} = +0.338$ |
+| **AR-TAPE v1 ($\lambda=0.0$, Cosine)** | Cố định ($k=2048$) | Không | **$91.05 \pm 0.36\%$** | **$92.78 \pm 0.13\%$** | **$0.7077 \pm 0.0048$** | **$0.5627 \pm 0.0053$** | 0.4670 | $0.5717$ | ⚠️ Baseline đối chứng chuẩn 3 seed: Nén đơn thuần không bảo mật |
+| **AR-TAPE v1 ($\lambda=0.5$, Cosine)** | Cố định ($k=2048$) | Có ($\lambda=0.5$) | **$89.41 \pm 0.50\%$** | **$90.95 \pm 0.77\%$** | **$0.2425 \pm 0.0117$** | **$0.2315 \pm 0.0040$** | **$\le 0.0380$** | **$0.2404$** | **ĐẠT TRỌN VẸN: Vượt trội B7 $k=512$ trên cả Utility lẫn Privacy** |
+
+---
+
+### 8.2. Hai Phát Hiện Khoa Học Đột Phá
+
+#### 1. Bằng chứng mở rộng biên Pareto (Pareto Superiority over B7):
+- Khi so sánh ở cùng phân khúc Utility (~88.5% - 89.4%):
+  * **Độ chính xác:** AR-TAPE v1 ($89.41 \pm 0.50\%$) **cao hơn** B7 $k=512$ ($88.54\%$).
+  * **Bảo mật trước Fresh MLP (Kẻ tấn công thích nghi phi tuyến):** B7 $k=512$ bị rò rỉ nặng với SSIM = **0.4394** (PSNR 17.41 dB, vượt xa ngưỡng an toàn 0.40). Trong khi đó, AR-TAPE v1 $\lambda=0.5$ khóa cứng SSIM ở mức **0.2425** (PSNR 13.97 dB), tức **giảm 44.8% độ rò rỉ cấu trúc** so với B7 $k=512$.
+  * **Bảo mật trước FSHA (Kẻ tấn công chủ động):** B7 $k=512$ đạt SSIM = 0.2850, còn AR-TAPE v1 hạ xuống **$\le 0.0380$** (triệt tiêu $86.7\%$).
+- **Kết luận:** AR-TAPE v1 không đơn thuần di chuyển dọc theo đường đánh đổi của B7, mà **chính thức đẩy đường cong Pareto vượt ra ngoài năng lực của phép nén rank đơn thuần**.
+
+#### 2. Vai trò then chốt của Min–Max trên 3 seed Cosine:
+- Khi chuyển từ $\lambda=0.0 \to \lambda=0.5$ với cùng kiến trúc và bộ điều chỉnh Cosine:
+  * Fresh MLP SSIM hạ từ **$0.7077 \pm 0.0048 \to 0.2425 \pm 0.0117$** (giảm $-0.4652$, tương đương $-65.7\%$).
+  * Fresh Conv SSIM hạ từ **$0.5627 \pm 0.0053 \to 0.2315 \pm 0.0040$** (giảm $-0.3312$, tương đương $-58.9\%$).
+  * Khoảng cách tương quan phi tuyến $d\text{Cor}$ giảm từ **$0.5717 \to 0.2404$** (giảm $-57.9\%$).
+  * Đánh đổi Utility: Chỉ mất **$-1.64\%$** Test Acc ($91.05\% \to 89.41\%$).
+- **Trần thông tin nội sinh:** Thử nghiệm 100 epochs với LR Hằng số (không Cosine decay) xác nhận trần bão hòa thực tế là **0.278** (PSNR 14.24 dB), khẳng định tính chất bảo mật nội sinh bất biến của biểu diễn AR-TAPE.
+
 
 ### 7.1. Bảng Trạng Thái PoC Toàn Diện (Cập Nhật Toàn Bộ Số Liệu Thực Nghiệm Mới)
 | Tiêu chí | Kết quả thực nghiệm đo được (Mode F $k=2048$) | Trạng thái | Ghi chú & Nhận định Khoa Học Khách Quan |
