@@ -230,15 +230,35 @@ def train_fresh_attacker(attacker_type, client_ckpt_path, lam, args, train_loade
             print(f"  [Epoch {ep:2d}/{args.epochs}] Train MSE: {train_mse:.4f} | Test(2k) PSNR: {cur_psnr:.2f} dB | SSIM: {cur_ssim:.4f} (Best: {best_ssim:.4f} @ Ep {best_ep})", flush=True)
 
     train_time = time.time() - t_start
-    print(f"[HOÀN TẤT] Huấn luyện {attacker_type} λ={lam} xong trong {train_time:.1f}s. Đang nạp model tốt nhất để đánh giá...")
+    print(f"[HOÀN TẤT] Huấn luyện {attacker_type} λ={lam} xong trong {train_time:.1f}s.")
+    print(f"Đang đánh giá trực tiếp model tại Epoch cuối ({args.epochs}) không chọn theo test...")
 
+    # 1. Đánh giá trực tiếp model tại Epoch cuối (trung thực, không chọn checkpoint theo test)
+    res_2k_final = evaluate_fresh_attacker(client, attacker, test_eval_loader, device, lpips_fn=lpips_fn)
+    res_10k_final = evaluate_fresh_attacker(client, attacker, test_full_loader, device, lpips_fn=None)
+
+    # Lưu checkpoint epoch cuối
+    final_ckpt_path = os.path.join(checkpoint_dir, f"artape_v0_fresh_{attacker_type}_lam{lam}_s{args.seed}_final.pt")
+    torch.save({
+        "attacker": attacker.state_dict(),
+        "epoch": args.epochs,
+        "lambda": lam,
+        "ssim_final_2k": res_2k_final["ssim"],
+        "ssim_final_10k": res_10k_final["ssim"]
+    }, final_ckpt_path)
+
+    # 2. Đánh giá thêm model best-on-test (để đối chiếu minh bạch nếu cần)
     best_ckpt_path = os.path.join(checkpoint_dir, f"artape_v0_fresh_{attacker_type}_lam{lam}_s{args.seed}_best.pt")
+    res_2k_best, res_10k_best = res_2k_final, res_10k_final
     if os.path.isfile(best_ckpt_path):
         b_ckpt = torch.load(best_ckpt_path, map_location=device)
         attacker.load_state_dict(b_ckpt["attacker"])
+        res_2k_best = evaluate_fresh_attacker(client, attacker, test_eval_loader, device, lpips_fn=lpips_fn)
+        res_10k_best = evaluate_fresh_attacker(client, attacker, test_full_loader, device, lpips_fn=None)
 
-    res_2k = evaluate_fresh_attacker(client, attacker, test_eval_loader, device, lpips_fn=lpips_fn)
-    res_10k = evaluate_fresh_attacker(client, attacker, test_full_loader, device, lpips_fn=None)
+    # Sử dụng số liệu epoch cuối làm giá trị mặc định chuẩn tắc
+    res_2k = res_2k_final
+    res_10k = res_10k_final
 
     # Vẽ và lưu biểu đồ learning curve theo epoch
     try:
@@ -305,12 +325,16 @@ def train_fresh_attacker(attacker_type, client_ckpt_path, lam, args, train_loade
         "lambda": lam,
         "seed": args.seed,
         "in_train_adv_ssim": in_train_ssim,
-        "fresh_ssim_2k": round(res_2k["ssim"], 4),
-        "fresh_psnr_2k": round(res_2k["psnr"], 2),
-        "fresh_lpips_2k": round(res_2k["lpips"], 4) if res_2k["lpips"] else None,
-        "fresh_mse_norm_2k": round(res_2k["mse_norm"], 4),
-        "fresh_ssim_10k": round(res_10k["ssim"], 4),
-        "fresh_psnr_10k": round(res_10k["psnr"], 2),
+        "fresh_ssim_2k": round(res_2k_final["ssim"], 4),
+        "fresh_psnr_2k": round(res_2k_final["psnr"], 2),
+        "fresh_lpips_2k": round(res_2k_final["lpips"], 4) if res_2k_final["lpips"] else None,
+        "fresh_mse_norm_2k": round(res_2k_final["mse_norm"], 4),
+        "fresh_ssim_10k": round(res_10k_final["ssim"], 4),
+        "fresh_psnr_10k": round(res_10k_final["psnr"], 2),
+        "fresh_ssim_10k_final": round(res_10k_final["ssim"], 4),
+        "fresh_ssim_10k_best": round(res_10k_best["ssim"], 4),
+        "fresh_ssim_2k_final": round(res_2k_final["ssim"], 4),
+        "fresh_ssim_2k_best": round(res_2k_best["ssim"], 4),
         "discrepancy_G": round(gap_g, 4) if gap_g is not None else None,
         "best_epoch": best_ep,
         "training_time_s": round(train_time, 1),
