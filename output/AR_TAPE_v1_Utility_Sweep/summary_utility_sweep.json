@@ -1,0 +1,22 @@
+[
+  {
+    "lambda": 0.1,
+    "seed": 42,
+    "acc_10k": 90.37,
+    "acc_2k": 92.69,
+    "mlp_ssim_10k": 0.2261,
+    "mlp_psnr_10k": 13.71,
+    "conv_ssim_10k": 0.1938,
+    "conv_psnr_10k": 12.65
+  },
+  {
+    "lambda": 0.25,
+    "seed": 42,
+    "acc_10k": 90.6,
+    "acc_2k": 91.8,
+    "mlp_ssim_10k": 0.214,
+    "mlp_psnr_10k": 13.31,
+    "conv_ssim_10k": 0.2055,
+    "conv_psnr_10k": 12.47
+  }
+]

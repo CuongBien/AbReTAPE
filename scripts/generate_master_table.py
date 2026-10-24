@@ -229,7 +229,55 @@ def build_master_records():
     records.append(v1_lam0_row)
 
     # --------------------------------------------------------------------------
-    # 8. AR-TAPE v1 (Cosine lam=0.5, 3 Seeds)
+    # 8. AR-TAPE v1 Utility Sweep (lam=0.1, s42)
+    # --------------------------------------------------------------------------
+    sl_l01 = load_json("AR_TAPE_v1_Utility_Sweep/lam0.1_s42/results_artape_v0.json")
+    f_l01 = load_json("AR_TAPE_v1_Utility_Sweep/fresh_lam0.1_s42/results_artape_v0_fresh_attackers.json")
+    if sl_l01 and f_l01:
+        k01 = list(sl_l01.keys())[0]
+        mlp01 = next((x["fresh_ssim_10k"] for x in f_l01 if x["attacker_type"] == "mlp"), None)
+        conv01 = next((x["fresh_ssim_10k"] for x in f_l01 if x["attacker_type"] == "conv"), None)
+        dcor01 = sl_l01[k01].get("history", [{}])[-1].get("dcor")
+        records.append({
+            "method": "AR-TAPE v1 (Cosine lam=0.1, s42)",
+            "bottleneck": "k=2048",
+            "lambda": "0.1",
+            "acc_10k": f"{sl_l01[k01]['final_full_test_acc']:.2f}%",
+            "acc_2k": f"{sl_l01[k01]['mean_task_acc_last10_2k']:.2f}%",
+            "mlp_ssim_10k": f"{mlp01:.4f}" if mlp01 is not None else "N/A",
+            "conv_ssim_10k": f"{conv01:.4f}" if conv01 is not None else "N/A",
+            "fsha_ssim": "N/A (Chưa chạy)",
+            "fsha_acc": "N/A (Chưa chạy)",
+            "dcor": f"{dcor01:.4f}" if dcor01 is not None else "N/A",
+            "json_source": "AR_TAPE_v1_Utility_Sweep/{lam0.1_s42, fresh_lam0.1_s42}/*.json"
+        })
+
+    # --------------------------------------------------------------------------
+    # 9. AR-TAPE v1 Utility Sweep (lam=0.25, s42) - Sweet Spot
+    # --------------------------------------------------------------------------
+    sl_l025 = load_json("AR_TAPE_v1_Utility_Sweep/lam0.25_s42/results_artape_v0.json")
+    f_l025 = load_json("AR_TAPE_v1_Utility_Sweep/fresh_lam0.25_s42/results_artape_v0_fresh_attackers.json")
+    if sl_l025 and f_l025:
+        k025 = list(sl_l025.keys())[0]
+        mlp025 = next((x["fresh_ssim_10k"] for x in f_l025 if x["attacker_type"] == "mlp"), None)
+        conv025 = next((x["fresh_ssim_10k"] for x in f_l025 if x["attacker_type"] == "conv"), None)
+        dcor025 = sl_l025[k025].get("history", [{}])[-1].get("dcor")
+        records.append({
+            "method": "AR-TAPE v1 (Cosine lam=0.25, s42)",
+            "bottleneck": "k=2048",
+            "lambda": "0.25",
+            "acc_10k": f"{sl_l025[k025]['final_full_test_acc']:.2f}%",
+            "acc_2k": f"{sl_l025[k025]['mean_task_acc_last10_2k']:.2f}%",
+            "mlp_ssim_10k": f"{mlp025:.4f}" if mlp025 is not None else "N/A",
+            "conv_ssim_10k": f"{conv025:.4f}" if conv025 is not None else "N/A",
+            "fsha_ssim": "N/A (Chưa chạy)",
+            "fsha_acc": "N/A (Chưa chạy)",
+            "dcor": f"{dcor025:.4f}" if dcor025 is not None else "N/A",
+            "json_source": "AR_TAPE_v1_Utility_Sweep/{lam0.25_s42, fresh_lam0.25_s42}/*.json"
+        })
+
+    # --------------------------------------------------------------------------
+    # 10. AR-TAPE v1 (Cosine lam=0.5, 3 Seeds)
     # --------------------------------------------------------------------------
     lam05_accs_10k, lam05_accs_2k = [], []
     lam05_mlps, lam05_convs = [], []
