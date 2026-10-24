@@ -49,6 +49,7 @@ def main():
                         help="Thư mục gốc lưu kết quả trên Google Drive")
     parser.add_argument("--epochs", type=int, default=100, help="Số epochs Split Learning")
     parser.add_argument("--fresh-epochs", type=int, default=30, help="Số epochs đánh giá Fresh Attacker")
+    parser.add_argument("--force", action="store_true", help="Bắt buộc chạy lại từ đầu kể cả khi checkpoint đã tồn tại")
     parser.add_argument("--dry-run", action="store_true", help="Chạy thử nghiệm rút gọn (1 epoch)")
     args = parser.parse_args()
 
@@ -69,54 +70,74 @@ def main():
         os.makedirs(fresh_out, exist_ok=True)
 
         ckpt_path = os.path.join(sl_out, "checkpoints", f"artape_v0_k{args.k}_linear_fixed_fixR_lam{lam}_s{args.seed}_client.pt")
+        sl_json = os.path.join(sl_out, "results_artape_v0.json")
 
         # ----------------------------------------------------------------------
         # 1. Huấn luyện Split Learning (100 epochs, Cosine Scheduler)
         # ----------------------------------------------------------------------
-        cmd_sl = [
-            python_bin, "train_artape_v0.py",
-            "--k", str(args.k),
-            "--m", str(args.m),
-            "--unprojector-mode", "linear_fixed",
-            "--fixed-bottleneck",
-            "--lambdas", str(lam),
-            "--warmup-epochs", "10",
-            "--scheduler", "cosine",
-            "--seed", str(args.seed),
-            "--epochs", str(args.epochs),
-            "--batch-size", "128",
-            "--lr", "0.1",
-            "--adv-lr", "1e-3",
-            "--cap", "1.5586",
-            "--data-dir", args.data_dir,
-            "--output-dir", sl_out
-        ]
-        if args.dry_run:
-            cmd_sl.append("--dry-run")
+        sl_done = os.path.isfile(ckpt_path) and os.path.isfile(sl_json)
+        if sl_done and not args.force:
+            print(f"[RESUME / SKIP] Đã tìm thấy checkpoint client và file kết quả SL tại:\n  -> {ckpt_path}\nBỏ qua 100 epochs huấn luyện Split Learning để tiết kiệm thời gian!\n", flush=True)
+        else:
+            cmd_sl = [
+                python_bin, "train_artape_v0.py",
+                "--k", str(args.k),
+                "--m", str(args.m),
+                "--unprojector-mode", "linear_fixed",
+                "--fixed-bottleneck",
+                "--lambdas", str(lam),
+                "--warmup-epochs", "10",
+                "--scheduler", "cosine",
+                "--seed", str(args.seed),
+                "--epochs", str(args.epochs),
+                "--batch-size", "128",
+                "--lr", "0.1",
+                "--adv-lr", "1e-3",
+                "--cap", "1.5586",
+                "--data-dir", args.data_dir,
+                "--output-dir", sl_out
+            ]
+            if args.dry_run:
+                cmd_sl.append("--dry-run")
 
-        run_cmd(cmd_sl, desc=f"[1/2] Huấn luyện Split Learning Cosine λ={lam} (Seed {args.seed})")
+            run_cmd(cmd_sl, desc=f"[1/2] Huấn luyện Split Learning Cosine λ={lam} (Seed {args.seed})")
 
         # ----------------------------------------------------------------------
         # 2. Đánh giá Fresh Attackers (MLP và Conv, 30 epochs)
         # ----------------------------------------------------------------------
-        cmd_fresh = [
-            python_bin, "eval_artape_v0_fresh.py",
-            "--k", str(args.k),
-            "--fixed-bottleneck",
-            "--client-ckpt", ckpt_path,
-            "--attackers", "mlp", "conv",
-            "--lambdas", str(lam),
-            "--seed", str(args.seed),
-            "--epochs", str(args.fresh_epochs),
-            "--batch-size", "128",
-            "--lr", "1e-3",
-            "--data-dir", args.data_dir,
-            "--output-dir", fresh_out
-        ]
-        if args.dry_run:
-            cmd_fresh.append("--dry-run")
+        fresh_json = os.path.join(fresh_out, "results_artape_v0_fresh_attackers.json")
+        fresh_done = False
+        if os.path.isfile(fresh_json):
+            try:
+                with open(fresh_json, "r", encoding="utf-8") as f:
+                    f_chk = json.load(f)
+                atks = [x.get("attacker_type") for x in f_chk]
+                if "mlp" in atks and "conv" in atks:
+                    fresh_done = True
+            except Exception:
+                fresh_done = False
 
-        run_cmd(cmd_fresh, desc=f"[2/2] Đánh giá Fresh MLP & Conv λ={lam} (Seed {args.seed})")
+        if fresh_done and not args.force:
+            print(f"[RESUME / SKIP] Cả 2 Fresh Attackers (MLP & Conv) cho λ={lam} đã hoàn tất tại:\n  -> {fresh_json}\nBỏ qua bước đánh giá Fresh!\n", flush=True)
+        else:
+            cmd_fresh = [
+                python_bin, "eval_artape_v0_fresh.py",
+                "--k", str(args.k),
+                "--fixed-bottleneck",
+                "--client-ckpt", ckpt_path,
+                "--attackers", "mlp", "conv",
+                "--lambdas", str(lam),
+                "--seed", str(args.seed),
+                "--epochs", str(args.fresh_epochs),
+                "--batch-size", "128",
+                "--lr", "1e-3",
+                "--data-dir", args.data_dir,
+                "--output-dir", fresh_out
+            ]
+            if args.dry_run:
+                cmd_fresh.append("--dry-run")
+
+            run_cmd(cmd_fresh, desc=f"[2/2] Đánh giá Fresh MLP & Conv λ={lam} (Seed {args.seed})")
 
         # ----------------------------------------------------------------------
         # 3. Thu thập kết quả trực tiếp từ JSON

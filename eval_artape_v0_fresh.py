@@ -428,6 +428,11 @@ def main():
             )
             all_results.append(res)
 
+            # Lưu ngay lập tức sau mỗi attacker để phòng ngừa mất điện/ngắt kết nối
+            json_path = os.path.join(args.output_dir, "results_artape_v0_fresh_attackers.json")
+            with open(json_path, "w", encoding="utf-8") as f:
+                json.dump(all_results, f, indent=2, ensure_ascii=False)
+
     json_path = os.path.join(args.output_dir, "results_artape_v0_fresh_attackers.json")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(all_results, f, indent=2, ensure_ascii=False)
