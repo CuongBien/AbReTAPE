@@ -1,0 +1,2 @@
+scenario_id,k,m,lambda,cap,seed,final_full_test_acc,final_full_test_acc_train_mode,mean_full_test_acc_last10,mean_task_acc_last10_2k,mean_adv_ssim_last10,mean_adv_psnr_last10,final_adv_ssim_eval,final_adv_ssim_train,final_adv_ssim_max,final_adv_psnr_max,final_dcor,training_time_s,meets_utility_criterion
+artape_v0_k2048_linear_fixed_fixR_lam0.0_s2024,2048,512,0.0,1.5586,2024,90.64,90.13,90.52,92.63,0.1207,12.66,0.1207,0.1207,0.1207,12.66,0.5781,1628.2,False

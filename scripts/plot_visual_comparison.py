@@ -23,49 +23,49 @@ rows_config = [
     {
         "label": "Ảnh Gốc Chuẩn (Ground Truth)",
         "sublabel": "CIFAR-10 Test Samples",
-        "path": "output/AR_TAPE_v1_Utility_Sweep/fresh_lam0.25_s42/rec_artape_v0_fresh_mlp_lam0.25_s42.png",
+        "path": "figures/sample_recon/rec_artape_v1_lam0.25.png",
         "crop_top": True,
         "color": "#2c3e50"
     },
     {
         "label": "AR-TAPE v1 (λ=0.0, Không đối kháng)",
         "sublabel": "Fresh MLP SSIM: 0.7027 | Rò rỉ cấu trúc vật thể nặng",
-        "path": "output/AR_TAPE_v1_Cosine_Fresh_lam0/seed_42/rec_artape_v0_fresh_mlp_lam0.0_s42.png",
+        "path": "figures/sample_recon/rec_artape_v1_lam0.0.png",
         "crop_top": False,
         "color": "#c0392b"
     },
     {
         "label": "B7 LightSplit (k=512, Mode F)",
         "sublabel": "Task Acc: 88.54% | Fresh MLP SSIM: 0.4394 (Vẫn nhận diện được hình dáng)",
-        "path": "output/B7_Fresh_Eval_Final/k512/rec_artape_v0_fresh_mlp_lam0.0_s42.png",
+        "path": "figures/sample_recon/rec_b7_k512.png",
         "crop_top": False,
         "color": "#d35400"
     },
     {
         "label": "B8 Stabilized (λ=0.1, Cap=1.5586)",
         "sublabel": "Task Acc: 88.98% | Fresh Conv SSIM: 0.6431 [VỠ TRẬN TRƯỚC CONV ATTACKER!]",
-        "path": "output/B8_Stabilized_Attackers_Real/fresh_conv/rec_fresh_conv_lam0.1_s42.png",
+        "path": "figures/sample_recon/rec_b8_stabilized_conv.png",
         "crop_top": False,
         "color": "#e67e22"
     },
     {
         "label": "AR-TAPE v1 (λ=0.10, Cosine)",
         "sublabel": "Task Acc: 90.37% | Fresh MLP SSIM: 0.2261 | Conv: 0.1938 (Bảo vệ mạnh)",
-        "path": "output/AR_TAPE_v1_Utility_Sweep/fresh_lam0.1_s42/rec_artape_v0_fresh_mlp_lam0.1_s42.png",
+        "path": "figures/sample_recon/rec_artape_v1_lam0.10.png",
         "crop_top": False,
         "color": "#16a085"
     },
     {
         "label": "★ AR-TAPE v1 (λ=0.25, Điểm Vận Hành Chính)",
         "sublabel": "Task Acc: 90.35 ± 0.24% | Fresh MLP: 0.2159 | Conv: 0.2014 (Triệt tiêu rò rỉ)",
-        "path": "output/AR_TAPE_v1_Utility_Sweep/fresh_lam0.25_s42/rec_artape_v0_fresh_mlp_lam0.25_s42.png",
+        "path": "figures/sample_recon/rec_artape_v1_lam0.25.png",
         "crop_top": False,
         "color": "#8e44ad"
     },
     {
         "label": "AR-TAPE v1 (λ=0.50, Phòng Thủ Biên Chặt)",
         "sublabel": "Task Acc: 89.81% | Fresh MLP: 0.2471 | Conv: 0.2249 (Khóa cứng nhiễu)",
-        "path": "output/AR_TAPE_v1_Cosine_Fresh/fresh_lam0.5_s42/rec_artape_v0_fresh_mlp_lam0.5_s42.png",
+        "path": "figures/sample_recon/rec_artape_v1_lam0.50.png",
         "crop_top": False,
         "color": "#27ae60"
     }

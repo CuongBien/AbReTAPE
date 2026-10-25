@@ -1,0 +1,3 @@
+attacker_type,lambda,seed,in_train_adv_ssim,fresh_ssim_2k,fresh_psnr_2k,fresh_lpips_2k,fresh_mse_norm_2k,fresh_ssim_10k,fresh_psnr_10k,discrepancy_G,best_epoch,training_time_s
+mlp,0.5,7,,0.2239,13.82,0.2505,1.1769,0.2261,13.81,,30,307.1
+conv,0.5,7,,0.2302,12.96,0.1749,1.4075,0.2322,12.95,,30,314.8

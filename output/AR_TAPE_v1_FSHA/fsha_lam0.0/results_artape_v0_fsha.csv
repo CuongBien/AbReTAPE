@@ -1,0 +1,3 @@
+scenario_id,defense,k,lambda,seed,grad_scale,converged_task_acc_full,converged_task_acc_2k,peak_psnr,peak_ssim,peak_epoch,final_psnr,final_ssim,final_lpips,final_dcor,init_psnr,init_ssim,total_time_s,verdict
+fsha_artape_v1_k2048_linear_fixed_fixR_lam0.0_s42_gs1.0,AR_TAPE_v0,2048,0.0,42,1.0,87.27,86.7,12.51,0.1004,1,10.63,0.0251,0.2324,0.464,12.42,0.114,350.6,Kháng được FSHA & Giữ vững Utility
+fsha_artape_v1_k2048_linear_fixed_fixR_lam0.0_s42_gs5.0,AR_TAPE_v0,2048,0.0,42,5.0,84.2,84.5,11.86,0.0404,25,11.86,0.0402,0.2392,0.7219,12.42,0.114,351.5,Chặn được tái tạo nhưng Utility suy giảm nhẹ

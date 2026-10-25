@@ -1,0 +1,108 @@
+[
+  {
+    "attacker_type": "mlp",
+    "lambda": 0.0,
+    "seed": 2024,
+    "in_train_adv_ssim": null,
+    "fresh_ssim_2k": 0.6999,
+    "fresh_psnr_2k": 21.04,
+    "fresh_lpips_2k": 0.0809,
+    "fresh_mse_norm_2k": 0.2184,
+    "fresh_ssim_10k": 0.7029,
+    "fresh_psnr_10k": 21.07,
+    "discrepancy_G": null,
+    "best_epoch": 30,
+    "training_time_s": 296.2,
+    "history": [
+      {
+        "epoch": 5,
+        "train_mse": 0.3204,
+        "test_psnr": 18.98,
+        "test_ssim": 0.5739
+      },
+      {
+        "epoch": 10,
+        "train_mse": 0.2703,
+        "test_psnr": 19.62,
+        "test_ssim": 0.6145
+      },
+      {
+        "epoch": 15,
+        "train_mse": 0.2417,
+        "test_psnr": 20.15,
+        "test_ssim": 0.6519
+      },
+      {
+        "epoch": 20,
+        "train_mse": 0.2207,
+        "test_psnr": 20.59,
+        "test_ssim": 0.6758
+      },
+      {
+        "epoch": 25,
+        "train_mse": 0.2047,
+        "test_psnr": 20.92,
+        "test_ssim": 0.6919
+      },
+      {
+        "epoch": 30,
+        "train_mse": 0.1978,
+        "test_psnr": 21.04,
+        "test_ssim": 0.6999
+      }
+    ]
+  },
+  {
+    "attacker_type": "conv",
+    "lambda": 0.0,
+    "seed": 2024,
+    "in_train_adv_ssim": null,
+    "fresh_ssim_2k": 0.5546,
+    "fresh_psnr_2k": 18.16,
+    "fresh_lpips_2k": 0.0895,
+    "fresh_mse_norm_2k": 0.4114,
+    "fresh_ssim_10k": 0.5554,
+    "fresh_psnr_10k": 18.16,
+    "discrepancy_G": null,
+    "best_epoch": 30,
+    "training_time_s": 305.5,
+    "history": [
+      {
+        "epoch": 5,
+        "train_mse": 0.5109,
+        "test_psnr": 17.39,
+        "test_ssim": 0.5084
+      },
+      {
+        "epoch": 10,
+        "train_mse": 0.4435,
+        "test_psnr": 17.84,
+        "test_ssim": 0.5308
+      },
+      {
+        "epoch": 15,
+        "train_mse": 0.4162,
+        "test_psnr": 17.95,
+        "test_ssim": 0.5445
+      },
+      {
+        "epoch": 20,
+        "train_mse": 0.402,
+        "test_psnr": 18.08,
+        "test_ssim": 0.551
+      },
+      {
+        "epoch": 25,
+        "train_mse": 0.3955,
+        "test_psnr": 18.14,
+        "test_ssim": 0.5543
+      },
+      {
+        "epoch": 30,
+        "train_mse": 0.3932,
+        "test_psnr": 18.16,
+        "test_ssim": 0.5546
+      }
+    ]
+  }
+]

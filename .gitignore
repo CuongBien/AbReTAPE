@@ -31,10 +31,11 @@ env/
 ENV/
 _legacy_steps/
 
-# Datasets
+# Datasets & archives
 /data/
 *.tar.gz
 *.zip
+cifar-10-python.tar.1.gz
 
 # Outputs & Model checkpoints
 output/**/*.pt
@@ -44,18 +45,27 @@ output/**/*.pt
 !output/**/checkpoints/b7_*_client.pt
 /checkpoints/
 
+# Intermediate training plots & grids in output (publication figures in figures/)
+output/**/*.png
+!figures/**/*.png
+
+# Obsolete notebooks & cache
+notebooks/
+*.ipynb
+.ipynb_checkpoints/
+
+# Course documents and presentations
+*.docx
+*.pptx
+presentation/
+
 # Logs & scratch
 *.log
 scratch/
 .idea/
 .vscode/
-.ipynb_checkpoints/
 
-# Training outputs
-# *.png
-# history.json
-# *history.json
-# *.csv
-cifar-10-python.tar.1.gz
+# Lockfiles and temporary files
+uv.lock
 .chart-data-*/
 test_dummy_plot.png

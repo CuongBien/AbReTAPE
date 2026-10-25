@@ -1,0 +1,32 @@
+[
+  {
+    "attacker_type": "mlp",
+    "lambda": 0.5,
+    "seed": 2024,
+    "in_train_adv_ssim": null,
+    "fresh_ssim_2k": 0.247,
+    "fresh_psnr_2k": 13.97,
+    "fresh_lpips_2k": 0.2246,
+    "fresh_mse_norm_2k": 1.1228,
+    "fresh_ssim_10k": 0.2527,
+    "fresh_psnr_10k": 13.99,
+    "discrepancy_G": null,
+    "best_epoch": 30,
+    "training_time_s": 299.1
+  },
+  {
+    "attacker_type": "conv",
+    "lambda": 0.5,
+    "seed": 2024,
+    "in_train_adv_ssim": null,
+    "fresh_ssim_2k": 0.2253,
+    "fresh_psnr_2k": 12.89,
+    "fresh_lpips_2k": 0.1785,
+    "fresh_mse_norm_2k": 1.4182,
+    "fresh_ssim_10k": 0.2263,
+    "fresh_psnr_10k": 12.85,
+    "discrepancy_G": null,
+    "best_epoch": 30,
+    "training_time_s": 308.7
+  }
+]
