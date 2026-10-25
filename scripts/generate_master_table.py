@@ -11,6 +11,7 @@ Tự động sinh bảng Master Benchmark 100% từ các file JSON trong thư m�
 import os
 import sys
 import json
+import csv
 import numpy as np
 
 if sys.platform == "win32":
@@ -41,6 +42,12 @@ def build_master_records():
     b0_eval = load_json("full_comprehensive_evaluation.json")
     b0_fsha = load_json("AbReTAPE_FSHA/results_fsha_b0.json")
 
+    # Lấy kịch bản gs5.0 ở epoch 30 cuối cùng (để đồng nhất với toàn bảng)
+    b0_fsha_sc = next((x for x in b0_fsha if x.get("grad_scale") == 5.0), b0_fsha[0]) if b0_fsha else None
+    b0_fsha_last = b0_fsha_sc["history"][-1] if b0_fsha_sc and b0_fsha_sc.get("history") else {}
+    b0_fsha_ssim_val = b0_fsha_last.get("test_ssim", b0_fsha_sc.get("ssim")) if b0_fsha_sc else None
+    b0_fsha_acc_val = b0_fsha_last.get("test_acc", b0_fsha_sc.get("test_acc")) if b0_fsha_sc else None
+
     b0_row = {
         "method": "B0 Vanilla",
         "bottleneck": "Full (D=65536)",
@@ -49,10 +56,10 @@ def build_master_records():
         "acc_2k": "N/A",
         "mlp_ssim_10k": "N/A",
         "conv_ssim_10k": f"{b0_eval['B0_Vanilla']['ssim']:.4f}" if b0_eval else "N/A",
-        "fsha_ssim": f"{b0_fsha[0]['ssim']:.4f}" if b0_fsha else "N/A",
-        "fsha_acc": f"{b0_fsha[0]['test_acc']*100:.2f}%" if b0_fsha else "N/A",
+        "fsha_ssim": f"{b0_fsha_ssim_val:.4f}" if b0_fsha_ssim_val is not None else "N/A",
+        "fsha_acc": f"{b0_fsha_acc_val*100:.2f}%" if b0_fsha_acc_val is not None else "N/A",
         "dcor": f"{b0_eval['B0_Vanilla']['dcor']:.4f}" if b0_eval else "N/A",
-        "json_source": "full_comprehensive_evaluation.json, AbReTAPE_FSHA/results_fsha_b0.json"
+        "json_source": "full_comprehensive_evaluation.json, AbReTAPE_FSHA/results_fsha_b0.json (gs=5.0, final ep 30)"
     }
     records.append(b0_row)
 
@@ -62,8 +69,11 @@ def build_master_records():
     b7_comp = load_json("AbReTAPE_Step3_B7/full_comprehensive_evaluation.json")
     b7_fsha = load_json("AbReTAPE_FSHA/results_fsha_b7.json")
 
-    # FSHA scenario for k=2048 in results_fsha_b7.json
+    # FSHA scenario for k=2048 ở epoch 30 cuối cùng
     fsha_2048 = next((x for x in b7_fsha if "k2048" in x.get("scenario_id", "")), None) if b7_fsha else None
+    fsha_2048_last = fsha_2048["history"][-1] if fsha_2048 and fsha_2048.get("history") else {}
+    fsha_2048_ssim_val = fsha_2048_last.get("test_ssim", fsha_2048.get("ssim")) if fsha_2048 else None
+    fsha_2048_acc_val = fsha_2048_last.get("test_acc", fsha_2048.get("test_acc")) if fsha_2048 else None
 
     b7_2048_row = {
         "method": "B7 Mode F (k=2048)",
@@ -73,10 +83,10 @@ def build_master_records():
         "acc_2k": "N/A",
         "mlp_ssim_10k": "N/A (Chưa chạy riêng B7)",
         "conv_ssim_10k": "N/A (Chưa chạy riêng B7)",
-        "fsha_ssim": f"{fsha_2048['ssim']:.4f}" if fsha_2048 else "N/A",
-        "fsha_acc": f"{fsha_2048['test_acc']*100:.2f}%" if fsha_2048 else "N/A",
+        "fsha_ssim": f"{fsha_2048_ssim_val:.4f}" if fsha_2048_ssim_val is not None else "N/A",
+        "fsha_acc": f"{fsha_2048_acc_val*100:.2f}%" if fsha_2048_acc_val is not None else "N/A",
         "dcor": "N/A",
-        "json_source": "AbReTAPE_Step3_B7/full_comprehensive_evaluation.json, AbReTAPE_FSHA/results_fsha_b7.json"
+        "json_source": "AbReTAPE_Step3_B7/full_comprehensive_evaluation.json, AbReTAPE_FSHA/results_fsha_b7.json (final ep 30)"
     }
     records.append(b7_2048_row)
 
@@ -85,6 +95,10 @@ def build_master_records():
     # --------------------------------------------------------------------------
     b7_1024_fresh = load_json("B7_Fresh_Eval_Final/k1024/results_artape_v0_fresh_attackers.json")
     fsha_1024 = next((x for x in b7_fsha if "k1024_F_s42_gs5.0" in x.get("scenario_id", "")), None) if b7_fsha else None
+    fsha_1024_last = fsha_1024["history"][-1] if fsha_1024 and fsha_1024.get("history") else {}
+    fsha_1024_ssim_val = fsha_1024_last.get("test_ssim", fsha_1024.get("ssim")) if fsha_1024 else None
+    fsha_1024_acc_val = fsha_1024_last.get("test_acc", fsha_1024.get("test_acc")) if fsha_1024 else None
+
     mlp_1024 = next((x["fresh_ssim_10k"] for x in b7_1024_fresh if x["attacker_type"] == "mlp"), None) if b7_1024_fresh else None
     conv_1024 = next((x["fresh_ssim_10k"] for x in b7_1024_fresh if x["attacker_type"] == "conv"), None) if b7_1024_fresh else None
 
@@ -96,10 +110,10 @@ def build_master_records():
         "acc_2k": "N/A",
         "mlp_ssim_10k": f"{mlp_1024:.4f}" if mlp_1024 is not None else "N/A",
         "conv_ssim_10k": f"{conv_1024:.4f}" if conv_1024 is not None else "N/A",
-        "fsha_ssim": f"{fsha_1024['ssim']:.4f}" if fsha_1024 else "N/A",
-        "fsha_acc": f"{fsha_1024['test_acc']*100:.2f}%" if fsha_1024 else "N/A",
+        "fsha_ssim": f"{fsha_1024_ssim_val:.4f}" if fsha_1024_ssim_val is not None else "N/A",
+        "fsha_acc": f"{fsha_1024_acc_val*100:.2f}%" if fsha_1024_acc_val is not None else "N/A",
         "dcor": "N/A",
-        "json_source": "B7_Fresh_Eval_Final/k1024/results_artape_v0_fresh_attackers.json, AbReTAPE_FSHA/results_fsha_b7.json"
+        "json_source": "B7_Fresh_Eval_Final/k1024/results_artape_v0_fresh_attackers.json, AbReTAPE_FSHA/results_fsha_b7.json (final ep 30)"
     }
     records.append(b7_1024_row)
 
@@ -108,6 +122,10 @@ def build_master_records():
     # --------------------------------------------------------------------------
     b7_512_fresh = load_json("B7_Fresh_Eval_Final/k512/results_artape_v0_fresh_attackers.json")
     fsha_512 = next((x for x in b7_fsha if "k512_F_s42_gs5.0" in x.get("scenario_id", "")), None) if b7_fsha else None
+    fsha_512_last = fsha_512["history"][-1] if fsha_512 and fsha_512.get("history") else {}
+    fsha_512_ssim_val = fsha_512_last.get("test_ssim", fsha_512.get("ssim")) if fsha_512 else None
+    fsha_512_acc_val = fsha_512_last.get("test_acc", fsha_512.get("test_acc")) if fsha_512 else None
+
     mlp_512 = next((x["fresh_ssim_10k"] for x in b7_512_fresh if x["attacker_type"] == "mlp"), None) if b7_512_fresh else None
     conv_512 = next((x["fresh_ssim_10k"] for x in b7_512_fresh if x["attacker_type"] == "conv"), None) if b7_512_fresh else None
 
@@ -119,10 +137,10 @@ def build_master_records():
         "acc_2k": "N/A",
         "mlp_ssim_10k": f"{mlp_512:.4f}" if mlp_512 is not None else "N/A",
         "conv_ssim_10k": f"{conv_512:.4f}" if conv_512 is not None else "N/A",
-        "fsha_ssim": f"{fsha_512['ssim']:.4f}" if fsha_512 else "N/A",
-        "fsha_acc": f"{fsha_512['test_acc']*100:.2f}%" if fsha_512 else "N/A",
+        "fsha_ssim": f"{fsha_512_ssim_val:.4f}" if fsha_512_ssim_val is not None else "N/A",
+        "fsha_acc": f"{fsha_512_acc_val*100:.2f}%" if fsha_512_acc_val is not None else "N/A",
         "dcor": "N/A",
-        "json_source": "B7_Fresh_Eval_Final/k512/results_artape_v0_fresh_attackers.json, AbReTAPE_FSHA/results_fsha_b7.json"
+        "json_source": "B7_Fresh_Eval_Final/k512/results_artape_v0_fresh_attackers.json, AbReTAPE_FSHA/results_fsha_b7.json (final ep 30)"
     }
     records.append(b7_512_row)
 
@@ -172,7 +190,8 @@ def build_master_records():
     b8_s_fsha_gs5 = next((x for x in b8_s_fsha if "gs5.0" in x.get("scenario_id", "")), None) if b8_s_fsha else None
     b8_s_fsha_ssim = b8_s_fsha_gs5["ssim_final"] if b8_s_fsha_gs5 and "ssim_final" in b8_s_fsha_gs5 else (b8_s_fsha_gs5["ssim"] if b8_s_fsha_gs5 else None)
     b8_s_fsha_acc = b8_s_fsha_gs5["test_acc"] * 100 if b8_s_fsha_gs5 else None
-    b8_s_dcor = b8_s_fsha_gs5["dcor_after"] if b8_s_fsha_gs5 else None
+    # dCor đo tại Epoch 100 trong huấn luyện thông thường (đồng nhất với các hàng khác)
+    b8_s_dcor = b8_stab_sweep["b8_conv_lam0.1_s42"]["history"][-1].get("dcor") if (b8_stab_sweep and "history" in b8_stab_sweep["b8_conv_lam0.1_s42"]) else None
 
     b8_st_row = {
         "method": "B8 Stabilized",
@@ -229,51 +248,101 @@ def build_master_records():
     records.append(v1_lam0_row)
 
     # --------------------------------------------------------------------------
-    # 8. AR-TAPE v1 Utility Sweep (lam=0.1, s42)
+    # 8. AR-TAPE v1 Utility Sweep (lam=0.1, Multi-Seed / s42)
     # --------------------------------------------------------------------------
-    sl_l01 = load_json("AR_TAPE_v1_Utility_Sweep/lam0.1_s42/results_artape_v0.json")
-    f_l01 = load_json("AR_TAPE_v1_Utility_Sweep/fresh_lam0.1_s42/results_artape_v0_fresh_attackers.json")
-    if sl_l01 and f_l01:
-        k01 = list(sl_l01.keys())[0]
-        mlp01 = next((x["fresh_ssim_10k"] for x in f_l01 if x["attacker_type"] == "mlp"), None)
-        conv01 = next((x["fresh_ssim_10k"] for x in f_l01 if x["attacker_type"] == "conv"), None)
-        dcor01 = sl_l01[k01].get("history", [{}])[-1].get("dcor")
+    lam01_accs_10k, lam01_accs_2k = [], []
+    lam01_mlps, lam01_convs = [], []
+    lam01_dcors = []
+    found_seeds_01 = []
+
+    for s in [42, 7, 2024]:
+        sl_data = load_json(f"AR_TAPE_v1_Utility_Sweep/lam0.1_s{s}/results_artape_v0.json")
+        f_data = load_json(f"AR_TAPE_v1_Utility_Sweep/fresh_lam0.1_s{s}/results_artape_v0_fresh_attackers.json")
+        if sl_data:
+            key = list(sl_data.keys())[0]
+            lam01_accs_10k.append(sl_data[key]["final_full_test_acc"])
+            lam01_accs_2k.append(sl_data[key]["mean_task_acc_last10_2k"])
+            dc = sl_data[key].get("final_dcor", sl_data[key].get("history", [{}])[-1].get("dcor"))
+            if dc is not None:
+                lam01_dcors.append(dc)
+            found_seeds_01.append(s)
+        if f_data:
+            mlp_v = next((x["fresh_ssim_10k"] for x in f_data if x["attacker_type"] == "mlp"), None)
+            conv_v = next((x["fresh_ssim_10k"] for x in f_data if x["attacker_type"] == "conv"), None)
+            if mlp_v is not None:
+                lam01_mlps.append(mlp_v)
+            if conv_v is not None:
+                lam01_convs.append(conv_v)
+
+    fsha_l01 = load_json("AR_TAPE_v1_Utility_Sweep/fsha_lam0.1_s42/results_artape_v0_fsha.json")
+    if not fsha_l01:
+        fsha_l01 = load_json("AR_TAPE_v1_FSHA/fsha_lam0.1/results_artape_v0_fsha.json")
+    fsha_l01_gs5 = next((x for x in fsha_l01 if x.get("grad_scale") == 5.0), None) if fsha_l01 else None
+
+    if lam01_accs_10k:
+        is_multi = len(lam01_accs_10k) > 1
+        m_label = f"AR-TAPE v1 (Cosine lam=0.1, {len(found_seeds_01)} seeds)" if is_multi else f"AR-TAPE v1 (Cosine lam=0.1, s{found_seeds_01[0]})"
         records.append({
-            "method": "AR-TAPE v1 (Cosine lam=0.1, s42)",
+            "method": m_label,
             "bottleneck": "k=2048",
             "lambda": "0.1",
-            "acc_10k": f"{sl_l01[k01]['final_full_test_acc']:.2f}%",
-            "acc_2k": f"{sl_l01[k01]['mean_task_acc_last10_2k']:.2f}%",
-            "mlp_ssim_10k": f"{mlp01:.4f}" if mlp01 is not None else "N/A",
-            "conv_ssim_10k": f"{conv01:.4f}" if conv01 is not None else "N/A",
-            "fsha_ssim": "N/A (Chưa chạy)",
-            "fsha_acc": "N/A (Chưa chạy)",
-            "dcor": f"{dcor01:.4f}" if dcor01 is not None else "N/A",
-            "json_source": "AR_TAPE_v1_Utility_Sweep/{lam0.1_s42, fresh_lam0.1_s42}/*.json"
+            "acc_10k": f"{np.mean(lam01_accs_10k):.2f} ± {np.std(lam01_accs_10k, ddof=1):.2f}%" if is_multi else f"{lam01_accs_10k[0]:.2f}%",
+            "acc_2k": f"{np.mean(lam01_accs_2k):.2f} ± {np.std(lam01_accs_2k, ddof=1):.2f}%" if is_multi else f"{lam01_accs_2k[0]:.2f}%",
+            "mlp_ssim_10k": f"{np.mean(lam01_mlps):.4f} ± {np.std(lam01_mlps, ddof=1):.4f}" if (is_multi and lam01_mlps) else (f"{lam01_mlps[0]:.4f}" if lam01_mlps else "N/A"),
+            "conv_ssim_10k": f"{np.mean(lam01_convs):.4f} ± {np.std(lam01_convs, ddof=1):.4f}" if (is_multi and lam01_convs) else (f"{lam01_convs[0]:.4f}" if lam01_convs else "N/A"),
+            "fsha_ssim": f"{fsha_l01_gs5['final_ssim']:.4f}" if fsha_l01_gs5 else "N/A (Chưa chạy)",
+            "fsha_acc": f"{fsha_l01_gs5['converged_task_acc_full']:.2f}%" if fsha_l01_gs5 else "N/A (Chưa chạy)",
+            "dcor": f"{np.mean(lam01_dcors):.4f} ± {np.std(lam01_dcors, ddof=1):.4f}" if (is_multi and lam01_dcors) else (f"{lam01_dcors[0]:.4f}" if lam01_dcors else "N/A"),
+            "json_source": f"AR_TAPE_v1_Utility_Sweep/{{lam0.1_s*, fresh_lam0.1_s*}}/*.json"
         })
 
     # --------------------------------------------------------------------------
-    # 9. AR-TAPE v1 Utility Sweep (lam=0.25, s42) - Sweet Spot
+    # 9. AR-TAPE v1 Utility Sweep (lam=0.25, Multi-Seed / s42) - Sweet Spot
     # --------------------------------------------------------------------------
-    sl_l025 = load_json("AR_TAPE_v1_Utility_Sweep/lam0.25_s42/results_artape_v0.json")
-    f_l025 = load_json("AR_TAPE_v1_Utility_Sweep/fresh_lam0.25_s42/results_artape_v0_fresh_attackers.json")
-    if sl_l025 and f_l025:
-        k025 = list(sl_l025.keys())[0]
-        mlp025 = next((x["fresh_ssim_10k"] for x in f_l025 if x["attacker_type"] == "mlp"), None)
-        conv025 = next((x["fresh_ssim_10k"] for x in f_l025 if x["attacker_type"] == "conv"), None)
-        dcor025 = sl_l025[k025].get("history", [{}])[-1].get("dcor")
+    lam025_accs_10k, lam025_accs_2k = [], []
+    lam025_mlps, lam025_convs = [], []
+    lam025_dcors = []
+    found_seeds_025 = []
+
+    for s in [42, 7, 2024]:
+        sl_data = load_json(f"AR_TAPE_v1_Utility_Sweep/lam0.25_s{s}/results_artape_v0.json")
+        f_data = load_json(f"AR_TAPE_v1_Utility_Sweep/fresh_lam0.25_s{s}/results_artape_v0_fresh_attackers.json")
+        if sl_data:
+            key = list(sl_data.keys())[0]
+            lam025_accs_10k.append(sl_data[key]["final_full_test_acc"])
+            lam025_accs_2k.append(sl_data[key]["mean_task_acc_last10_2k"])
+            dc = sl_data[key].get("final_dcor", sl_data[key].get("history", [{}])[-1].get("dcor"))
+            if dc is not None:
+                lam025_dcors.append(dc)
+            found_seeds_025.append(s)
+        if f_data:
+            mlp_v = next((x["fresh_ssim_10k"] for x in f_data if x["attacker_type"] == "mlp"), None)
+            conv_v = next((x["fresh_ssim_10k"] for x in f_data if x["attacker_type"] == "conv"), None)
+            if mlp_v is not None:
+                lam025_mlps.append(mlp_v)
+            if conv_v is not None:
+                lam025_convs.append(conv_v)
+
+    fsha_l025 = load_json("AR_TAPE_v1_Utility_Sweep/fsha_lam0.25_s42/results_artape_v0_fsha.json")
+    if not fsha_l025:
+        fsha_l025 = load_json("AR_TAPE_v1_FSHA/fsha_lam0.25/results_artape_v0_fsha.json")
+    fsha_l025_gs5 = next((x for x in fsha_l025 if x.get("grad_scale") == 5.0), None) if fsha_l025 else None
+
+    if lam025_accs_10k:
+        is_multi = len(lam025_accs_10k) > 1
+        m_label = f"AR-TAPE v1 (Cosine lam=0.25, {len(found_seeds_025)} seeds)" if is_multi else f"AR-TAPE v1 (Cosine lam=0.25, s{found_seeds_025[0]})"
         records.append({
-            "method": "AR-TAPE v1 (Cosine lam=0.25, s42)",
+            "method": m_label,
             "bottleneck": "k=2048",
             "lambda": "0.25",
-            "acc_10k": f"{sl_l025[k025]['final_full_test_acc']:.2f}%",
-            "acc_2k": f"{sl_l025[k025]['mean_task_acc_last10_2k']:.2f}%",
-            "mlp_ssim_10k": f"{mlp025:.4f}" if mlp025 is not None else "N/A",
-            "conv_ssim_10k": f"{conv025:.4f}" if conv025 is not None else "N/A",
-            "fsha_ssim": "N/A (Chưa chạy)",
-            "fsha_acc": "N/A (Chưa chạy)",
-            "dcor": f"{dcor025:.4f}" if dcor025 is not None else "N/A",
-            "json_source": "AR_TAPE_v1_Utility_Sweep/{lam0.25_s42, fresh_lam0.25_s42}/*.json"
+            "acc_10k": f"{np.mean(lam025_accs_10k):.2f} ± {np.std(lam025_accs_10k, ddof=1):.2f}%" if is_multi else f"{lam025_accs_10k[0]:.2f}%",
+            "acc_2k": f"{np.mean(lam025_accs_2k):.2f} ± {np.std(lam025_accs_2k, ddof=1):.2f}%" if is_multi else f"{lam025_accs_2k[0]:.2f}%",
+            "mlp_ssim_10k": f"{np.mean(lam025_mlps):.4f} ± {np.std(lam025_mlps, ddof=1):.4f}" if (is_multi and lam025_mlps) else (f"{lam025_mlps[0]:.4f}" if lam025_mlps else "N/A"),
+            "conv_ssim_10k": f"{np.mean(lam025_convs):.4f} ± {np.std(lam025_convs, ddof=1):.4f}" if (is_multi and lam025_convs) else (f"{lam025_convs[0]:.4f}" if lam025_convs else "N/A"),
+            "fsha_ssim": f"{fsha_l025_gs5['final_ssim']:.4f}" if fsha_l025_gs5 else "N/A (Chưa chạy)",
+            "fsha_acc": f"{fsha_l025_gs5['converged_task_acc_full']:.2f}%" if fsha_l025_gs5 else "N/A (Chưa chạy)",
+            "dcor": f"{np.mean(lam025_dcors):.4f} ± {np.std(lam025_dcors, ddof=1):.4f}" if (is_multi and lam025_dcors) else (f"{lam025_dcors[0]:.4f}" if lam025_dcors else "N/A"),
+            "json_source": f"AR_TAPE_v1_Utility_Sweep/{{lam0.25_s*, fresh_lam0.25_s*}}/*.json"
         })
 
     # --------------------------------------------------------------------------
@@ -334,15 +403,42 @@ def print_table(records):
     sep_line = "| " + " | ".join([":---" if i == 0 else ":---:" for i in range(len(headers))]) + " |"
     print(header_line)
     print(sep_line)
+    lines = [header_line, sep_line]
     for r in records:
         vals = [r[k] for k in col_keys]
-        print("| " + " | ".join(vals) + " |")
+        row_str = "| " + " | ".join(vals) + " |"
+        print(row_str)
+        lines.append(row_str)
 
     print("\n" + "=" * 90)
     print("NGUỒN GỐC DỮ LIỆU JSON TỪNG DÒNG:")
     print("=" * 90)
     for r in records:
         print(f"[{r['method']}]: {r['json_source']}")
+
+    # Ghi file master_benchmark_table.md
+    md_path = os.path.join(PROJECT_ROOT, "master_benchmark_table.md")
+    with open(md_path, "w", encoding="utf-8") as f:
+        f.write("# MASTER BENCHMARK TABLE: SPLIT LEARNING CIFAR-10 RESNET-18 (CUT-1)\n\n")
+        f.write("> **Ghi chú chuẩn hóa số liệu:**\n")
+        f.write("> 1. **Acc (10k)**: Đánh giá trên toàn bộ 10,000 ảnh test CIFAR-10 tại epoch cuối cùng (Epoch 100).\n")
+        f.write("> 2. **Fresh MLP / Conv**: Huấn luyện 30 epochs từ scratch trên client đóng băng, lấy số liệu tại epoch 30 cuối cùng (không cherry-pick theo test peak).\n")
+        f.write("> 3. **FSHA SSIM & Task Acc**: Đánh giá tại epoch 30 cuối cùng (mức grad_scale=5.0) để đồng nhất trên toàn bộ các phương pháp.\n")
+        f.write("> 4. **dCor**: Đo khoảng cách tương quan Distance Correlation giữa biểu diễn cut-layer và ảnh gốc tại epoch 100 trong huấn luyện thông thường.\n")
+        f.write("> 5. **Sai số**: Dùng độ lệch chuẩn mẫu hiệu chỉnh (sample std, ddof=1) cho các cấu hình đa seed (n=3: seed 42, 7, 2024).\n\n")
+        f.write("\n".join(lines) + "\n\n")
+        f.write("## NGUỒN GỐC DỮ LIỆU RAW JSON\n\n")
+        for r in records:
+            f.write(f"- **{r['method']}**: `{r['json_source']}`\n")
+
+    # Ghi file master_benchmark_table.csv
+    csv_path = os.path.join(PROJECT_ROOT, "master_benchmark_table.csv")
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=col_keys, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(records)
+
+    print(f"\nĐã lưu bảng đối chuẩn tại: {md_path} và {csv_path}\n")
 
 
 if __name__ == "__main__":
