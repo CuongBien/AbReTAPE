@@ -1,0 +1,37 @@
+# Configuration: AR-TAPE on HAM10000 (Dermatology Multi-class)
+experiment:
+  name: "artape_medical_ham10000"
+  description: "AR-TAPE Task-Aware Subspace Projection on HAM10000 7-class lesion classification"
+
+dataset:
+  name: "ham10000"
+  data_dir: "./data/ham10000"
+  batch_size: 64
+  num_classes: 7
+  in_channels: 3
+  img_size: [32, 32]
+  num_workers: 2
+
+defense:
+  type: "ar_tape"
+  k: 2048
+  m: 512
+  D: 65536
+  unprojector_mode: "linear_fixed"
+  fixed_bottleneck: true
+  lambda_val: 0.25
+  cap: 1.5586
+  warmup_epochs: 10
+
+training:
+  epochs: 100
+  lr: 0.05
+  adv_lr: 0.001
+  momentum: 0.9
+  weight_decay: 0.0005
+  scheduler: "cosine"
+  seeds: [42, 7, 2024]
+
+clinical_evaluation:
+  metrics: ["auc_roc", "macro_f1", "sens_at_90_spec", "grad_cam_alignment"]
+  grad_cam_target_layer: "layer4"

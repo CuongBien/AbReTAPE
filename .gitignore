@@ -57,3 +57,5 @@ scratch/
 # *history.json
 # *.csv
 cifar-10-python.tar.1.gz
+.chart-data-*/
+test_dummy_plot.png

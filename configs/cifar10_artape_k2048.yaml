@@ -1,0 +1,36 @@
+# Configuration: AR-TAPE v1 Primary Operating Point (CIFAR-10)
+experiment:
+  name: "artape_v1_cifar10_k2048"
+  description: "AR-TAPE v1 Mode F (k=2048, linear_fixed, fixed_bottleneck, cosine scheduler, lambda=0.25)"
+
+dataset:
+  name: "cifar10"
+  data_dir: "./data"
+  batch_size: 128
+  num_workers: 2
+
+defense:
+  type: "ar_tape"
+  k: 2048
+  m: 512
+  D: 65536
+  unprojector_mode: "linear_fixed"
+  fixed_bottleneck: true
+  lambda_val: 0.25
+  cap: 1.5586
+  warmup_epochs: 10
+
+training:
+  epochs: 100
+  lr: 0.1
+  adv_lr: 0.001
+  momentum: 0.9
+  weight_decay: 0.0005
+  scheduler: "cosine"
+  seeds: [42, 7, 2024]
+
+attacks:
+  fresh_epochs: 30
+  attackers: ["fresh_mlp", "fresh_conv", "fsha"]
+  fsha_grad_scales: [1.0, 5.0]
+  fsha_epochs: 30

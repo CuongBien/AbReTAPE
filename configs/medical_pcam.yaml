@@ -1,0 +1,36 @@
+# Configuration: AR-TAPE on PatchCamelyon (Histopathology Binary)
+experiment:
+  name: "artape_medical_pcam"
+  description: "AR-TAPE Task-Aware Subspace Projection on PCAM binary lymph node metastasis classification"
+
+dataset:
+  name: "pcam"
+  data_dir: "./data/pcam"
+  batch_size: 128
+  num_classes: 2
+  in_channels: 3
+  img_size: [32, 32]
+  num_workers: 2
+
+defense:
+  type: "ar_tape"
+  k: 2048
+  m: 512
+  D: 65536
+  unprojector_mode: "linear_fixed"
+  fixed_bottleneck: true
+  lambda_val: 0.25
+  cap: 1.5586
+  warmup_epochs: 10
+
+training:
+  epochs: 80
+  lr: 0.1
+  adv_lr: 0.001
+  momentum: 0.9
+  weight_decay: 0.0005
+  scheduler: "cosine"
+  seeds: [42, 7, 2024]
+
+clinical_evaluation:
+  metrics: ["auc_roc", "sensitivity_0.5", "specificity_0.5", "youden_threshold", "sens_at_90_spec"]
