@@ -48,11 +48,14 @@ b7_mlp = [0.4394, 0.5461, 0.6865]
 b7_conv = [0.2632, 0.3597, 0.5138]
 b7_labels = ["B7 (k=512)", "B7 (k=1024)", "B7 (k=2048)"]
 
-# AR-TAPE v1 (Cosine Mode F, seed 42): lam=0.0, 0.1, 0.25, 0.5
+# AR-TAPE v1 (Cosine Mode F): lam=0.0 (3 seeds), 0.1 (s42), 0.25 (3 seeds), 0.5 (3 seeds)
 artape_lam = [0.0, 0.1, 0.25, 0.5]
-artape_acc = [90.72, 90.37, 90.60, 89.81]
-artape_mlp = [0.7027, 0.2261, 0.2140, 0.2471]
-artape_conv = [0.5630, 0.1938, 0.2055, 0.2249]
+artape_acc = [91.05, 90.37, 90.35, 89.41]
+artape_acc_err = [0.36, 0.0, 0.24, 0.50]
+artape_mlp = [0.7077, 0.2261, 0.2159, 0.2425]
+artape_mlp_err = [0.0059, 0.0, 0.0029, 0.0144]
+artape_conv = [0.5627, 0.1938, 0.2014, 0.2315]
+artape_conv_err = [0.0065, 0.0, 0.0036, 0.0048]
 
 # B8 Stabilized (lam=0.1, cap 1.5586, warmup 10, clip 1.0, s42)
 b8_acc = [88.98]
@@ -81,26 +84,32 @@ for i, txt in enumerate(b7_labels):
 
 # AR-TAPE Points & Curve
 # Đường nối min-max lam=0.1 -> 0.25 -> 0.5
-sorted_idx = np.argsort([0.1, 0.25, 0.5])
 artape_minmax_mlp = [artape_mlp[1], artape_mlp[2], artape_mlp[3]]
 artape_minmax_acc = [artape_acc[1], artape_acc[2], artape_acc[3]]
 
-ax1.plot(artape_mlp[0], artape_acc[0], 'X', color='gray', markersize=10, label="AR-TAPE (λ=0, Không đối kháng)", zorder=4)
+ax1.errorbar([artape_mlp[0]], [artape_acc[0]], xerr=[artape_mlp_err[0]], yerr=[artape_acc_err[0]],
+             fmt='X', color='gray', markersize=10, capsize=4, label="AR-TAPE (λ=0, Không đối kháng)", zorder=4)
 ax1.annotate("AR-TAPE λ=0.0\n(Rò rỉ lớn)", (artape_mlp[0], artape_acc[0]), textcoords="offset points", xytext=(-85, -20),
              color='gray', fontweight='bold', fontsize=9)
 
 ax1.plot(artape_minmax_mlp, artape_minmax_acc, 'o-', color='#1b9e77', linewidth=2.5, label="AR-TAPE Min-Max Frontier", zorder=4)
 
+# Error bar cho các điểm min-max
+for j, idx in enumerate([1, 2, 3]):
+    if artape_mlp_err[idx] > 0 or artape_acc_err[idx] > 0:
+        ax1.errorbar([artape_mlp[idx]], [artape_acc[idx]], xerr=[artape_mlp_err[idx]], yerr=[artape_acc_err[idx]],
+                     fmt='none', color='#1b9e77', capsize=3, zorder=4)
+
 # Highlight Sweet Spot λ=0.25
 ax1.scatter([artape_mlp[2]], [artape_acc[2]], color='#e7298a', s=160, zorder=5, edgecolors='black', linewidth=1.5)
-ax1.annotate("★ ĐIỂM VẬN HÀNH CHÍNH (λ=0.25)\n(Acc: 90.60%, MLP SSIM: 0.214)",
+ax1.annotate("★ ĐIỂM VẬN HÀNH CHÍNH (λ=0.25, 3 seeds)\n(Acc: 90.35 ± 0.24%, MLP SSIM: 0.216)",
              (artape_mlp[2], artape_acc[2]), textcoords="offset points", xytext=(15, 10),
              fontweight='bold', color='#e7298a', fontsize=9.5,
              arrowprops=dict(arrowstyle="->", color='#e7298a', lw=1.5))
 
 ax1.annotate("λ=0.10 (Acc 90.37%, 0.226)", (artape_mlp[1], artape_acc[1]), textcoords="offset points", xytext=(-105, -20),
              fontweight='bold', color='#1b9e77', fontsize=9)
-ax1.annotate("λ=0.50 (Acc 89.81%, 0.247)", (artape_mlp[3], artape_acc[3]), textcoords="offset points", xytext=(15, -15),
+ax1.annotate("λ=0.50 (Acc 89.41%, 0.243)", (artape_mlp[3], artape_acc[3]), textcoords="offset points", xytext=(15, -15),
              fontweight='bold', color='#1b9e77', fontsize=9)
 
 # B8 Stabilized
@@ -134,15 +143,22 @@ for i, txt in enumerate(b7_labels):
 
 # AR-TAPE Points & Curve
 artape_minmax_conv = [artape_conv[1], artape_conv[2], artape_conv[3]]
-ax2.plot(artape_conv[0], artape_acc[0], 'X', color='gray', markersize=10, label="AR-TAPE (λ=0, Không đối kháng)", zorder=4)
+ax2.errorbar([artape_conv[0]], [artape_acc[0]], xerr=[artape_conv_err[0]], yerr=[artape_acc_err[0]],
+             fmt='X', color='gray', markersize=10, capsize=4, label="AR-TAPE (λ=0, Không đối kháng)", zorder=4)
 ax2.annotate("AR-TAPE λ=0.0\n(Rò rỉ lớn)", (artape_conv[0], artape_acc[0]), textcoords="offset points", xytext=(-85, -20),
              color='gray', fontweight='bold', fontsize=9)
 
 ax2.plot(artape_minmax_conv, artape_minmax_acc, 'o-', color='#1b9e77', linewidth=2.5, label="AR-TAPE Min-Max Frontier", zorder=4)
 
+# Error bar cho các điểm min-max
+for j, idx in enumerate([1, 2, 3]):
+    if artape_conv_err[idx] > 0 or artape_acc_err[idx] > 0:
+        ax2.errorbar([artape_conv[idx]], [artape_acc[idx]], xerr=[artape_conv_err[idx]], yerr=[artape_acc_err[idx]],
+                     fmt='none', color='#1b9e77', capsize=3, zorder=4)
+
 # Highlight Sweet Spot λ=0.25
 ax2.scatter([artape_conv[2]], [artape_acc[2]], color='#e7298a', s=160, zorder=5, edgecolors='black', linewidth=1.5)
-ax2.annotate("★ ĐIỂM VẬN HÀNH CHÍNH (λ=0.25)\n(Acc: 90.60%, Conv SSIM: 0.206)",
+ax2.annotate("★ ĐIỂM VẬN HÀNH CHÍNH (λ=0.25, 3 seeds)\n(Acc: 90.35 ± 0.24%, Conv SSIM: 0.201)",
              (artape_conv[2], artape_acc[2]), textcoords="offset points", xytext=(15, 10),
              fontweight='bold', color='#e7298a', fontsize=9.5,
              arrowprops=dict(arrowstyle="->", color='#e7298a', lw=1.5))

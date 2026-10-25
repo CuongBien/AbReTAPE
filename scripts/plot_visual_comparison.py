@@ -57,7 +57,7 @@ rows_config = [
     },
     {
         "label": "★ AR-TAPE v1 (λ=0.25, Điểm Vận Hành Chính)",
-        "sublabel": "Task Acc: 90.60% | Fresh MLP: 0.2140 | Conv: 0.2055 (Triệt tiêu hoàn toàn rò rỉ)",
+        "sublabel": "Task Acc: 90.35 ± 0.24% | Fresh MLP: 0.2159 | Conv: 0.2014 (Triệt tiêu rò rỉ)",
         "path": "output/AR_TAPE_v1_Utility_Sweep/fresh_lam0.25_s42/rec_artape_v0_fresh_mlp_lam0.25_s42.png",
         "crop_top": False,
         "color": "#8e44ad"

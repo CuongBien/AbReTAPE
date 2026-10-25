@@ -17,7 +17,7 @@
 | B8 Stabilized | Full (D=65536) | 0.1 | 88.98% | 93.53% | 0.2621 | 0.6431 | 0.0856 | 44.34% | 0.2244 |
 | AR-TAPE v1 (Cosine lam=0.0) | k=2048 | 0.0 | 91.05 ± 0.36% | 92.78 ± 0.13% | 0.7077 ± 0.0059 | 0.5627 ± 0.0065 | 0.0402 | 84.20% | 0.7219 |
 | AR-TAPE v1 (Cosine lam=0.1, s42) | k=2048 | 0.1 | 90.37% | 92.69% | 0.2261 | 0.1938 | N/A (Chưa chạy) | N/A (Chưa chạy) | 0.3020 |
-| AR-TAPE v1 (Cosine lam=0.25, s42) | k=2048 | 0.25 | 90.60% | 91.80% | 0.2140 | 0.2055 | N/A (Chưa chạy) | N/A (Chưa chạy) | 0.2914 |
+| AR-TAPE v1 (Cosine lam=0.25, 3 seeds) | k=2048 | 0.25 | 90.35 ± 0.24% | 91.65 ± 0.56% | 0.2159 ± 0.0029 | 0.2014 ± 0.0036 | 0.0384 | 84.25% | 0.2876 ± 0.0077 |
 | AR-TAPE v1 (Cosine lam=0.5) | k=2048 | 0.5 | 89.41 ± 0.50% | 90.95 ± 0.77% | 0.2425 ± 0.0144 | 0.2315 ± 0.0048 | 0.0377 | 83.44% | 0.4348 |
 
 ## NGUỒN GỐC DỮ LIỆU RAW JSON
@@ -30,5 +30,5 @@
 - **B8 Stabilized**: `B8_Stabilized_Attackers_Real/{fresh_mlp, fresh_conv, fsha}/*.json, AbReTAPE_Step3_B8_Stabilized/*.json`
 - **AR-TAPE v1 (Cosine lam=0.0)**: `AR_TAPE_v1_Cosine_lam0, AR_TAPE_v1_Cosine_Fresh_lam0, AR_TAPE_v1_FSHA/fsha_lam0.0`
 - **AR-TAPE v1 (Cosine lam=0.1, s42)**: `AR_TAPE_v1_Utility_Sweep/{lam0.1_s*, fresh_lam0.1_s*}/*.json`
-- **AR-TAPE v1 (Cosine lam=0.25, s42)**: `AR_TAPE_v1_Utility_Sweep/{lam0.25_s*, fresh_lam0.25_s*}/*.json`
+- **AR-TAPE v1 (Cosine lam=0.25, 3 seeds)**: `AR_TAPE_v1_Utility_Sweep/{lam0.25_s*, fresh_lam0.25_s*}/*.json`
 - **AR-TAPE v1 (Cosine lam=0.5)**: `AR_TAPE_v1_Cosine, AR_TAPE_v1_Cosine_Fresh, AR_TAPE_v1_FSHA/fsha_lam0.5`
