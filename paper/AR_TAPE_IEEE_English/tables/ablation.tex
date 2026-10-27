@@ -1,0 +1,18 @@
+\begin{table*}[t]
+\centering
+\caption{Coefficient ablation with the same fixed $k=2{,}048$ bottleneck. Values are mean $\pm$ sample SD.}
+\label{tab:ablation}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}cccccc@{}}
+\toprule
+$\lambda$ & Seeds & Accuracy 10k (\%) $\uparrow$ & MLP SSIM 10k $\downarrow$ & Conv SSIM 10k $\downarrow$ & dCor \\
+\midrule
+0.00 & 3 & $91.05\pm 0.36$ & $0.7077\pm 0.0059$ & $0.5627\pm 0.0065$ & $0.5717\pm 0.0091$ \\
+0.10 & 1 & $90.37$ & $0.2261$ & $0.1938$ & $0.3020$ \\
+0.25 & 3 & $90.35\pm 0.24$ & $0.2159\pm 0.0029$ & $0.2014\pm 0.0036$ & $0.2876\pm 0.0077$ \\
+0.50 & 3 & $89.41\pm 0.50$ & $0.2425\pm 0.0144$ & $0.2315\pm 0.0048$ & $0.2404\pm 0.0224$ \\
+\bottomrule
+\end{tabular}
+\par\vspace{2pt}\begin{minipage}{\linewidth}\footnotesize dCor is taken only from ordinary-training diagnostics on fast 2k, not post-FSHA records. The $0.1$ group has one seed; its variability is unknown.\end{minipage}
+\end{table*}

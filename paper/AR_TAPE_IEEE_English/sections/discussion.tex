@@ -1,0 +1,27 @@
+\section{Discussion and Limitations}
+\label{sec:limitations}
+\subsection{What the Evidence Supports}
+The same-architecture ablation supports combining a restricted transmission subspace with adversarial reconstruction training to reduce the fidelity of two tested fresh decoders. The B8 counterexample demonstrates why a single in-training adversary is an insufficient evaluation. Neither observation establishes a formal privacy guarantee or identifies server absorption as the unique causal mechanism. The ``absorption-resistant'' component of the project name remains a research objective.
+
+\subsection{Evaluation-State Contamination}
+A significant validity limitation is present in the historical training scripts. Diagnostic accuracy and reconstruction evaluations call the client in training mode on test images without fully restoring BatchNorm running means and variances. Disabling gradients does not prevent these buffers from updating. Such diagnostics are repeated during training, and a final full-test training-mode pass occurs before checkpoint saving. Consequently, the saved checkpoint can contain test-influenced normalization statistics, and the checkpoint used by fresh attackers need not share the BatchNorm state used in the preceding evaluation-mode accuracy measurement.
+
+We report the stored observations without claiming that they constitute an independent, untouched test evaluation. Three seeds characterize variability within this procedure but do not remove its systematic bias. Confirmation requires preserving/restoring the complete model state for diagnostics or using cloned models, selecting hyperparameters on validation data, and evaluating one fixed checkpoint in evaluation mode. No such corrected rerun is available in the audited results. This issue is a priority before external publication.
+
+\subsection{Computational Cost and Scope}
+The transmitted float32 feature payload decreases from 256~KiB to 8~KiB per example, a $32{:}1$ reduction in value count. This is not a measured end-to-end network or latency speedup. The dense $65{,}536\times2{,}048$ projection contains $134{,}217{,}728$ elements, requiring 512~MiB per float32 copy; the server stores another lift copy. The 35.1M-parameter adversary and optimizer state add substantial training cost. No matched runtime or memory profiling supports an edge-efficiency claim.
+
+The evidence is limited to one dataset, one cut layer, and a small attacker family. Most historical baselines use one seed. No matched ResSFL reproduction, formal differential privacy analysis, membership inference, attribute inference, or label-privacy evaluation is available. A comprehensive co-adapted v1 evaluation is also absent from the evidence summarized here. Similarity metrics cannot substitute for these tests.
+
+\subsection{Transfer to Medical Images}
+The codebase now contains medical dataset loaders, PCAM/HAM10000 configurations, and clinical metrics, but no medical experiment outputs were found. PCAM~\cite{veeling2018pcam} and HAM10000~\cite{tschandl2018ham} are planned transfer datasets, not validated applications in this paper. Their evaluation should use suitable official partitions and lesion-/patient-grouped splitting where available, with sensitivity/specificity thresholds selected only on validation data. The current optional Youden-threshold fallback on the evaluated set must not be used for final test reporting. Resizing all images to $32\times32$ also requires a resolution ablation because clinically relevant detail may be lost.
+
+\subsection{Reproducibility}
+We audited 85 stored JSON files at repository snapshot \texttt{be737ce33b21} on October~25,~2026; models were not retrained for this manuscript. Tables and plots are recalculated from primary records rather than copied from annotated summary figures. Missing values remain missing. The source package includes a machine-readable results snapshot and figure provenance.
+
+Historical filenames still contain ``v0''; architecture is identified from fixed-bottleneck and lifting metadata. The source snapshot lists the utility-sweep and scheduler/cosine record paths. Newly unified entrypoints have not reproduced the complete archived protocol, including FSHA, and are not the source of these numbers.
+
+\section{Conclusion}
+AR-TAPE v1 combines a fixed $k=2{,}048$ orthogonal bottleneck with capped adversarial reconstruction training. On three CIFAR-10 seeds, $\lambda=0.25$ achieves accuracy $90.35\pm0.24\%$ and fresh SSIM $0.2159\pm0.0029$ (MLP) and $0.2014\pm0.0036$ (Conv). Relative to the same bottleneck without adversarial training, reconstruction fidelity decreases substantially at a mean accuracy cost of about $0.70$ percentage points. This is evidence for an empirical trade-off against the tested decoders, not a general privacy result.
+
+Utility remains below the original PoC target. Test-time BatchNorm contamination, FSHA provenance and pilot compatibility, validation-based model selection, and stronger adaptive attacks must be addressed before stronger claims are justified. Medical-image validation remains future work.

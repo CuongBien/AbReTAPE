@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # Kiểm thử đơn vị tự động toàn diện (Comprehensive Smoke Tests) cho toàn bộ hệ thống AR-TAPE
 import os
 import sys
 import numpy as np
 import torch
 import torch.nn as nn
+from PIL import Image
 
 if sys.platform == "win32":
     try:
@@ -56,10 +58,11 @@ from src.metrics import (
 )
 from src.training import train_sl_epoch, evaluate_sl, EarlyStopping
 from src.utils import plot_training_curves
+from src.data.medical import RandomRotate90, PCAMNumpyDataset
 
 
 def test_models_and_sl(device):
-    print("\n[TEST 1/9] KIỂM THỬ MÔ HÌNH VÀ SPLIT LEARNING FORWARD/BACKWARD...")
+    print("\n[TEST 1/10] KIỂM THỬ MÔ HÌNH VÀ SPLIT LEARNING FORWARD/BACKWARD...")
     client = ClientModel().to(device)
     server = ServerModel().to(device)
 
@@ -84,7 +87,7 @@ def test_models_and_sl(device):
 
 
 def test_attacks_and_metrics(device):
-    print("\n[TEST 2/9] KIỂM THỬ DECODER TẤN CÔNG VÀ BỘ ĐỘ ĐO (PSNR, SSIM, LPIPS)...")
+    print("\n[TEST 2/10] KIỂM THỬ DECODER TẤN CÔNG VÀ BỘ ĐỘ ĐO (PSNR, SSIM, LPIPS)...")
     decoder = Decoder(in_channels=64, out_channels=3).to(device)
     z_dummy = torch.randn(2, 64, 32, 32, device=device)
     x_rec = decoder(z_dummy)
@@ -107,7 +110,7 @@ def test_attacks_and_metrics(device):
 
 
 def test_defenses_step2(device):
-    print("\n[TEST 3/9] KIỂM THỬ HOÁN VỊ KÊNH, ADAPTER VÀ KHÔI PHỤC HẤP THỤ...")
+    print("\n[TEST 3/10] KIỂM THỬ HOÁN VỊ KÊNH, ADAPTER VÀ KHÔI PHỤC HẤP THỤ...")
     perm = random_perm(64, seed=42).to(device)
     permute = ChannelPermute(perm).to(device)
     z = torch.randn(4, 64, 16, 16, device=device)
@@ -133,7 +136,7 @@ def test_defenses_step2(device):
 
 
 def test_defenses_step3(device):
-    print("\n[TEST 4/9] KIỂM THỬ BASELINES B1 (GAUSSIAN NOISE) VÀ B2 (DP-SGD)...")
+    print("\n[TEST 4/10] KIỂM THỬ BASELINES B1 (GAUSSIAN NOISE) VÀ B2 (DP-SGD)...")
     noise = GaussianNoise(sigma=0.5).to(device)
     z = torch.zeros(1000, 64, 4, 4, device=device)
     z_noisy = noise(z)
@@ -170,7 +173,7 @@ def test_defenses_step3(device):
 
 
 def test_early_stopping():
-    print("\n[TEST 5/9] KIỂM THỬ MODULE EARLY STOPPING...")
+    print("\n[TEST 5/10] KIỂM THỬ MODULE EARLY STOPPING...")
     es = EarlyStopping(patience=3, min_delta=1e-3, mode="max")
     assert not es.step(0.80, epoch=1)
     assert not es.step(0.85, epoch=2)  # improved
@@ -183,7 +186,7 @@ def test_early_stopping():
 
 
 def test_plotting():
-    print("\n[TEST 6/9] KIỂM THỬ CÔNG CỤ VẼ ĐỒ THỊ...")
+    print("\n[TEST 6/10] KIỂM THỬ CÔNG CỤ VẼ ĐỒ THỊ...")
     dummy_history = [
         {"epoch": 1, "train_loss": 1.5, "train_acc": 0.5, "test_loss": 1.2, "test_acc": 0.6, "lr": 0.1, "epoch_time": 1.0},
         {"epoch": 2, "train_loss": 0.8, "train_acc": 0.7, "test_loss": 0.7, "test_acc": 0.8, "lr": 0.05, "epoch_time": 1.0},
@@ -196,7 +199,7 @@ def test_plotting():
 
 
 def test_harness_defenses_and_ar_tape(device):
-    print("\n[TEST 7/9] KIỂM THỬ CÁC BASELINES MỚI (B4, B5, B6) VÀ AR-TAPE (NOVELTY N2)...")
+    print("\n[TEST 7/10] KIỂM THỬ CÁC BASELINES MỚI (B4, B5, B6) VÀ AR-TAPE (NOVELTY N2)...")
     z = torch.randn(2, 64, 32, 32, device=device)
 
     # 1. B4: Block Scramble
@@ -242,7 +245,7 @@ def test_harness_defenses_and_ar_tape(device):
 
 
 def test_clinical_and_gradcam_metrics(device):
-    print("\n[TEST 8/9] KIỂM THỬ BỘ ĐỘ ĐO LÂM SÀNG (AUC, SENS@90%SPEC) VÀ GRAD-CAM ALIGNMENT...")
+    print("\n[TEST 8/10] KIỂM THỬ BỘ ĐỘ ĐO LÂM SÀNG (AUC, SENS@90%SPEC) VÀ GRAD-CAM ALIGNMENT...")
     # 1. Binary Clinical Metrics (PCAM)
     y_true_bin = np.array([0, 1, 0, 1, 1, 0, 1, 0, 1, 1])
     y_probs_bin = np.array([0.1, 0.9, 0.2, 0.8, 0.7, 0.3, 0.85, 0.4, 0.95, 0.6])
@@ -273,7 +276,7 @@ def test_clinical_and_gradcam_metrics(device):
 
 
 def test_fsha_and_leakage(device):
-    print("\n[TEST 9/9] KIỂM THỬ TẤN CÔNG CHỦ ĐỘNG FSHA VÀ INFORMATION LEAKAGE (MI / DCOR)...")
+    print("\n[TEST 9/10] KIỂM THỬ TẤN CÔNG CHỦ ĐỘNG FSHA VÀ INFORMATION LEAKAGE (MI / DCOR)...")
     # 1. Mutual Information Estimator
     mi_est = MutualInformationEstimator().to(device)
     x_dummy = torch.randn(4, 3, 32, 32, device=device)
@@ -295,10 +298,58 @@ def test_fsha_and_leakage(device):
     print(f"  -> FSHA Step (Loss AE: {fsha_res['loss_ae']:.4f}, Loss D: {fsha_res['loss_d']:.4f}): ĐẠT!")
 
 
+def test_pcam_pipeline(device):
+    print("\n[TEST 10/10] KIỂM THỬ PIPELINE Y TẾ PCAM (64x64, STEM STRIDE 2, CHỐT CHẶN KIẾN TRÚC)...")
+    # 1. Kiểm thử kiến trúc ResNet PCAM 64x64
+    client_pcam = ClientModel(in_channels=3, stem_stride=2).to(device)
+    server_pcam = ServerModel(num_classes=2).to(device)
+    x_pcam = torch.randn(4, 3, 64, 64, device=device)
+
+    z_pcam = client_pcam(x_pcam)
+    assert z_pcam.shape == (4, 64, 32, 32), f"PCAM z shape sai: {z_pcam.shape}, kỳ vọng (4, 64, 32, 32)"
+    z_flat = z_pcam.view(4, -1)
+    assert z_flat.shape[1] == 65536, f"PCAM D sai: {z_flat.shape[1]}, kỳ vọng 65,536"
+
+    out_pcam = server_pcam(z_pcam)
+    assert out_pcam.shape == (4, 2), f"PCAM logits shape sai: {out_pcam.shape}, kỳ vọng (4, 2)"
+    print("  -> Chốt chặn kiến trúc PCAM: Client input (64x64) -> z (64, 32, 32) -> D=65,536 -> Logits (2): ĐẠT!")
+
+    # 2. Kiểm thử Transform RandomRotate90
+    rot = RandomRotate90()
+    pil_img = Image.fromarray(np.random.randint(0, 255, (64, 64, 3), dtype=np.uint8))
+    rot_pil = rot(pil_img)
+    assert rot_pil.size == (64, 64), f"Rotate PIL sai size: {rot_pil.size}"
+
+    t_img = torch.randn(3, 64, 64)
+    rot_t = rot(t_img)
+    assert rot_t.shape == (3, 64, 64), f"Rotate Tensor sai shape: {rot_t.shape}"
+    print("  -> RandomRotate90 (0, 90, 180, 270) trên PIL và Tensor: ĐẠT!")
+
+    # 3. Kiểm thử Dataset loader PCAMNumpyDataset
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        dummy_imgs = np.random.randint(0, 255, (20, 64, 64, 3), dtype=np.uint8)
+        dummy_lbls = np.random.randint(0, 2, (20,), dtype=np.int64)
+        np.save(os.path.join(tmp_dir, "imgs.npy"), dummy_imgs)
+        np.save(os.path.join(tmp_dir, "lbls.npy"), dummy_lbls)
+
+        ds = PCAMNumpyDataset(
+            images_path=os.path.join(tmp_dir, "imgs.npy"),
+            labels_path=os.path.join(tmp_dir, "lbls.npy"),
+            mmap=False
+        )
+        assert len(ds) == 20
+        item_x, item_y = ds[0]
+        assert item_x.shape == (3, 64, 64)
+        assert item_y in [0, 1]
+        ds.close()
+    print("  -> PCAMNumpyDataset nạp mảng uint8 (.npy) mmap và transform: ĐẠT!")
+
+
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("=" * 70)
-    print(f"BẮT ĐẦU CHẠY KIỂM THỬ ĐƠN VỊ TOÀN BỘ HỆ THỐNG AR-TAPE (9/9 TESTS)")
+    print(f"BẮT ĐẦU CHẠY KIỂM THỬ ĐƠN VỊ TOÀN BỘ HỆ THỐNG AR-TAPE (10/10 TESTS)")
     print(f"Thiết bị kiểm thử: {device} ({torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'})")
     print("=" * 70)
 
@@ -311,9 +362,10 @@ def main():
     test_harness_defenses_and_ar_tape(device)
     test_clinical_and_gradcam_metrics(device)
     test_fsha_and_leakage(device)
+    test_pcam_pipeline(device)
 
     print("\n" + "=" * 70)
-    print(">>> TẤT CẢ 9/9 MODULE VÀ THỬ NGHIỆM ĐỀU VƯỢT QUA KIỂM THỬ 100%! <<<")
+    print(">>> TẤT CẢ 10/10 MODULE VÀ THỬ NGHIỆM ĐỀU VƯỢT QUA KIỂM THỬ 100%! <<<")
     print("=" * 70)
 
 

@@ -65,6 +65,13 @@ scratch/
 .idea/
 .vscode/
 
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.out
+*.synctex.gz
+
 # Lockfiles and temporary files
 uv.lock
 .chart-data-*/

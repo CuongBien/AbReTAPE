@@ -1,19 +1,31 @@
-# Configuration: AR-TAPE on PatchCamelyon (Histopathology Binary)
+# Configuration: Split Learning on PatchCamelyon (Histopathology Binary Classification)
 experiment:
-  name: "artape_medical_pcam"
-  description: "AR-TAPE Task-Aware Subspace Projection on PCAM binary lymph node metastasis classification"
+  name: "pcam_split_learning"
+  description: "Split Learning ResNet-18 on PCAM 64x64 center-cropped lymph node metastasis detection"
 
 dataset:
   name: "pcam"
-  data_dir: "./data/pcam"
+  data_dir: "./data/pcam_processed"
+  raw_dir: "./data/pcam_raw"
   batch_size: 128
   num_classes: 2
   in_channels: 3
-  img_size: [32, 32]
+  raw_img_size: [96, 96]
+  img_size: [64, 64]
+  crop_box: [16, 16, 80, 80]
+  num_train: 50000
+  num_val: 5000
+  num_test: 32768
   num_workers: 2
 
+architecture:
+  model: "resnet18"
+  stem_stride: 2
+  smashed_shape: [64, 32, 32]
+  D: 65536
+
 defense:
-  type: "ar_tape"
+  type: "none"  # "none" for B0 Baseline, "b7_lightsplit", "ar_tape"
   k: 2048
   m: 512
   D: 65536
@@ -24,13 +36,20 @@ defense:
   warmup_epochs: 10
 
 training:
-  epochs: 80
+  epochs: 100
   lr: 0.1
-  adv_lr: 0.001
   momentum: 0.9
   weight_decay: 0.0005
-  scheduler: "cosine"
-  seeds: [42, 7, 2024]
+  scheduler: "multistep"
+  milestones: [50, 75]
+  gamma: 0.1
+  seed: 42
+
+augmentation:
+  horizontal_flip: true
+  vertical_flip: true
+  random_rotate_90: true
+  random_crop_padding: false  # Bỏ RandomCrop có padding vì mô học không có hướng cố định
 
 clinical_evaluation:
   metrics: ["auc_roc", "sensitivity_0.5", "specificity_0.5", "youden_threshold", "sens_at_90_spec"]

@@ -1,0 +1,36 @@
+\section{Method}
+\subsection{Split Architecture and Threat Model}
+We use ResNet-18~\cite{he2016resnet} adapted to $32\times32$ RGB images: a $3\times3$ stride-one stem replaces the original stem and max-pooling is removed. The client comprises the stem and Layer~1; the server comprises Layers~2--4, global average pooling, and a ten-class classifier. The cut activation contains $64\times32\times32=65{,}536$ values. Figure~\ref{fig:system} illustrates the transmitted representation and the reconstruction branch.
+
+The passive server observes transmitted representations and knows the architecture, projection, and hyperparameters. Our fresh evaluation provides training image--feature pairs after freezing the client. It is thus a data-rich inversion test, not a simulation of every auxiliary-data constraint in deployment. Labels are available to the classification loss at the server; label privacy is outside this study. Active FSHA is evaluated separately because gradient manipulation exceeds the honest-but-curious threat model.
+
+\input{figures/system}
+
+\subsection{Fixed Orthogonal Bottleneck}
+Let $z=\operatorname{vec}(f_{\theta_c}(X))\in\mathbb{R}^{D}$ with $D=65{,}536$. A Gaussian matrix is orthonormalized by QR to obtain a fixed matrix $R\in\mathbb{R}^{D\times k}$, where $k=2{,}048$. Using column-vector notation,
+\begin{equation}
+ t=R^\top z,\qquad \widetilde z=Rt=RR^\top z,\qquad R^\top R=I_k.
+ \label{eq:projection}
+\end{equation}
+The server reshapes $\widetilde z$ before classification. Since $\operatorname{rank}(RR^\top)=k<D$, the mapping discards components outside the column space of $R$. This algebraic fact does not show that $X$ is unrecoverable: the learned client can preserve image information within the transmitted subspace. The $\lambda=0$ ablation tests this limitation directly.
+
+The evaluated implementation uses a global flattened projection stored as a fixed buffer. It is distinct from the channel-wise module elsewhere in the repository. Neither a learned projection basis nor an explicitly estimated pathology-specific task subspace is used in the reported v1 experiments.
+
+\subsection{Capped Adversarial Optimization}
+The adversary $A_\phi$ contains a learned lift $2{,}048\!\rightarrow\!512\!\rightarrow\!65{,}536$, BatchNorm, and four convolutional layers with channels $64\!\rightarrow\!128\!\rightarrow\!128\!\rightarrow\!64\!\rightarrow\!3$. It has approximately $35.1$ million trainable parameters. With normalized input $X_n$, its loss is
+\begin{equation}
+ \mathcal L_{\mathrm{rec}}=\operatorname{MSE}(A_\phi(t),X_n).
+\end{equation}
+Each minibatch uses one primary client forward pass. The adversary first minimizes $\mathcal L_{\mathrm{rec}}$ with $t$ detached. Its parameters are then frozen while the client and server minimize
+\begin{align}
+ \mathcal L_{\mathrm{cs}}&=\operatorname{CE}(\widehat y,y)-\lambda_e\min(\mathcal L_{\mathrm{rec}},c),\label{eq:objective}\\
+ \lambda_e&=\lambda\min(1,e/10).
+\end{align}
+Here $e$ is the epoch and $c=1.5586$ is the measured mean squared energy of normalized CIFAR-10 images, corresponding to an all-zero reconstruction in normalized space. The adversarial term saturates at the cap. The classification gradient affects both model partitions; the reconstruction gradient affects the client through $t$. Freezing adversary parameters does not automatically put its BatchNorm layers in evaluation mode. Figure~\ref{fig:optimization} separates the two updates.
+
+\input{figures/optimization}
+
+\subsection{Evaluation Attackers}
+\textit{Fresh MLP} learns a $2{,}048\!\rightarrow\!512\!\rightarrow\!65{,}536$ lift followed by the four-layer convolutional decoder. \textit{Fresh Conv} uses the fixed transpose lift of the bottleneck and learns the convolutional decoder. The client is frozen in evaluation mode during these attack fits. Both attackers train for 30 epochs using Adam with initial learning rate $10^{-3}$ and cosine decay. For the main $\lambda=0.25$ group, all three stored best epochs equal the final epoch, 30. These two architectures do not represent every possible attacker.
+
+The direct FSHA experiment uses 25,000 training images to fit a pilot and another 25,000 for hijacking. It starts from trained client/server checkpoints and updates the client with classification plus a scaled hijacking objective for 30 epochs, using gradient scales $g_s\in\{1,5\}$. The pilot is not constrained to the defended projection subspace. This protocol differs from historical baseline attacks in initialization and task-gradient mixing, limiting causal comparisons across methods.

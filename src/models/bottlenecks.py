@@ -20,9 +20,9 @@ class ClientWithBottleneck(nn.Module):
         * fixed_bottleneck=True: Phép chiếu trực giao cố định R in R^{D x k} (B7 mode F style, QR orthonormal)
         * fixed_bottleneck=False: Linear(D, k, bias=False) học được, khởi tạo trực chuẩn bằng QR.
     """
-    def __init__(self, k=1024, D=65536, init_ortho=True, seed=42, fixed_bottleneck=False, in_channels=3):
+    def __init__(self, k=1024, D=65536, init_ortho=True, seed=42, fixed_bottleneck=False, in_channels=3, stem_stride=1):
         super().__init__()
-        self.base_client = ClientModel(in_channels=in_channels) if hasattr(ClientModel, "__init__") and "in_channels" in ClientModel.__init__.__code__.co_varnames else ClientModel()
+        self.base_client = ClientModel(in_channels=in_channels, stem_stride=stem_stride)
         self.k = k
         self.D = D
         self.fixed_bottleneck = fixed_bottleneck

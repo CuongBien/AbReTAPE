@@ -1,0 +1,12 @@
+\begin{figure*}[t]
+\centering
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{@{}l*{6}{c}@{}}
+Original $X$ & \recon{x0}&\recon{x1}&\recon{x2}&\recon{x3}&\recon{x4}&\recon{x5}\\\noalign{\vskip 3pt}
+$\lambda=0$, MLP & \recon{lam00}&\recon{lam01}&\recon{lam02}&\recon{lam03}&\recon{lam04}&\recon{lam05}\\\noalign{\vskip 3pt}
+$\lambda=0.25$, MLP & \recon{mlp0}&\recon{mlp1}&\recon{mlp2}&\recon{mlp3}&\recon{mlp4}&\recon{mlp5}\\\noalign{\vskip 3pt}
+$\lambda=0.25$, Conv & \recon{conv0}&\recon{conv1}&\recon{conv2}&\recon{conv3}&\recon{conv4}&\recon{conv5}
+\end{tabular}
+\caption{Paired examples from the first six columns of saved seed-42 grids. Original-image rows were verified to be pixel-identical before combining the panels. The $\lambda=0.25$ MLP and Conv checkpoints both have best epoch equal to final epoch 30. Reconstructions are actual saved outputs, without generated or enhanced image content. Visible residual structure cautions against interpreting low similarity as the absence of all semantic leakage.}
+\label{fig:reconstructions}
+\end{figure*}

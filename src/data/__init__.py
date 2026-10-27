@@ -9,7 +9,18 @@ from .cifar import (
     CIFAR100_STD,
 )
 from .downloader import download_cifar10
-from .medical import get_pcam, get_ham10000, HAM10000Dataset, PCAM_MEAN, PCAM_STD, HAM10000_MEAN, HAM10000_STD
+from .medical import (
+    get_pcam,
+    get_pcam_dataloaders,
+    PCAMNumpyDataset,
+    RandomRotate90,
+    get_ham10000,
+    HAM10000Dataset,
+    PCAM_MEAN,
+    PCAM_STD,
+    HAM10000_MEAN,
+    HAM10000_STD
+)
 from .factory import get_dataloaders, get_fsha_dataloaders, DATASET_METADATA
 
 __all__ = [
@@ -26,6 +37,9 @@ __all__ = [
     "CIFAR100_MEAN",
     "CIFAR100_STD",
     "get_pcam",
+    "get_pcam_dataloaders",
+    "PCAMNumpyDataset",
+    "RandomRotate90",
     "get_ham10000",
     "HAM10000Dataset",
     "PCAM_MEAN",

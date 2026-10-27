@@ -1,0 +1,10 @@
+{
+  "sources": {
+    "lam0": "figures/sample_recon/rec_artape_v1_lam0.0.png",
+    "mlp": "output/AR_TAPE_v1_Utility_Sweep/fresh_lam0.25_s42/rec_artape_v0_fresh_mlp_lam0.25_s42.png",
+    "conv": "output/AR_TAPE_v1_Utility_Sweep/fresh_lam0.25_s42/rec_artape_v0_fresh_conv_lam0.25_s42.png"
+  },
+  "paired_originals_pixel_equal": true,
+  "indices": "First six columns from saved seed-42 grids",
+  "note": "The chosen lambda-0.25 saved MLP and Conv best epochs equal final epoch 30 in JSON. No generated reconstruction images are used."
+}

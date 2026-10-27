@@ -110,18 +110,41 @@ def main():
     # 2. Khởi tạo Client và Server
     is_bottleneck = args.defense in ["b7_lightsplit", "ar_tape"]
     use_fixed = args.fixed_bottleneck or (args.defense == "b7_lightsplit")
+    stem_stride = 2 if args.dataset == "pcam" else 1
 
     if is_bottleneck:
         client = ClientWithBottleneck(
-            k=args.k, D=args.D, init_ortho=True, seed=args.seed, fixed_bottleneck=use_fixed, in_channels=in_channels
+            k=args.k, D=args.D, init_ortho=True, seed=args.seed, fixed_bottleneck=use_fixed, in_channels=in_channels, stem_stride=stem_stride
         ).to(device)
         ortho_q = client.R if client.fixed_bottleneck else client.bottleneck.weight.t().detach()
         server = ServerWithBottleneck(
             k=args.k, m=args.m, D=args.D, num_classes=num_classes, unprojector_mode=args.unprojector_mode, ortho_matrix=ortho_q, seed=args.seed
         ).to(device)
     else:
-        client = ClientModel().to(device)
+        client = ClientModel(in_channels=in_channels, stem_stride=stem_stride).to(device)
         server = ServerModel(num_classes=num_classes).to(device)
+
+    # Chốt chặn kiến trúc: kiểm tra shape đầu ra client và D = 65,536
+    with torch.no_grad():
+        img_h, img_w = meta.get("img_size", (32, 32))
+        dummy_in = torch.zeros(2, in_channels, img_h, img_w, device=device)
+        dummy_z = client(dummy_in)
+        if not is_bottleneck:
+            assert dummy_z.shape == (2, 64, 32, 32), (
+                f"[CHỐT CHẶN THẤT BẠI] Đầu ra client có shape {dummy_z.shape}, kỳ vọng (2, 64, 32, 32)!"
+            )
+            assert dummy_z.view(2, -1).shape[1] == 65536, (
+                f"[CHỐT CHẶN THẤT BẠI] Smashed data D = {dummy_z.view(2, -1).shape[1]}, kỳ vọng 65536!"
+            )
+        else:
+            assert dummy_z.shape == (2, args.k), (
+                f"[CHỐT CHẶN THẤT BẠI] Đầu ra bottleneck có shape {dummy_z.shape}, kỳ vọng (2, {args.k})!"
+            )
+        dummy_logits = server(dummy_z)
+        assert dummy_logits.shape == (2, num_classes), (
+            f"[CHỐT CHẶN THẤT BẠI] Đầu ra logits có shape {dummy_logits.shape}, kỳ vọng (2, {num_classes})!"
+        )
+    print(f"[CHỐT CHẶN KIẾN TRÚC ĐẠT] Input ({in_channels}, {img_h}, {img_w}) -> Client -> Smashed data D={args.k if is_bottleneck else 65536} -> Server -> {num_classes} classes.")
 
     # 3. Khởi tạo In-training Adversary nếu dùng cơ chế đối kháng
     use_adversary = args.defense in ["b8_adversarial", "ar_tape"] and args.lambda_val > 0

@@ -1,0 +1,41 @@
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+ name=accuracy,width=.47\textwidth,height=5.0cm,
+ font=\footnotesize,label style={font=\footnotesize},
+ xmin=-.025,xmax=.525,ymin=88,ymax=93.2,
+ xlabel={Adversarial coefficient $\lambda$},ylabel={Accuracy on 10k (\%)},
+ xtick={0,.1,.25,.5},xticklabels={0,0.1,0.25,0.5},
+ ytick={88,89,90,91,92,93},grid=major,grid style={gray!18},
+ axis lines=left,legend style={draw=none,font=\scriptsize,at={(.98,.97)},anchor=north east}]
+\addplot[only marks,mark=*,mark size=1.2pt,gray!75] table[x=lambda,y=acc]{data/seeds.dat};
+\addlegendentry{Individual seeds}
+\addplot[paperblue,thick,mark=*,mark size=2.1pt,error bars/.cd,y dir=both,y explicit]
+ table[x=lambda,y=acc,y error=accsd]{data/sweep.dat};
+\addlegendentry{Mean $\pm$ SD}
+\addplot[paperorange,dashed,domain=-.025:.525] {92.7};
+\addlegendentry{Original target: 92.7\%}
+\end{axis}
+\begin{axis}[
+ at={(accuracy.east)},anchor=west,xshift=1.35cm,
+ width=.47\textwidth,height=5.0cm,
+ font=\footnotesize,label style={font=\footnotesize},
+ xmin=-.025,xmax=.525,ymin=0,ymax=.8,
+ xlabel={Adversarial coefficient $\lambda$},ylabel={Fresh SSIM on 10k},
+ xtick={0,.1,.25,.5},xticklabels={0,0.1,0.25,0.5},
+ ytick={0,.2,.4,.6,.8},grid=major,grid style={gray!18},
+ axis lines=left,legend style={draw=none,font=\scriptsize,at={(.98,.97)},anchor=north east}]
+\addplot[forget plot,only marks,mark=*,mark size=1.2pt,paperblue!45] table[x=lambda,y=mlp]{data/seeds.dat};
+\addplot[paperblue,thick,mark=*] table[x=lambda,y=mlp]{data/sweep.dat};
+\addlegendentry{Fresh MLP}
+\addplot[forget plot,only marks,mark=square*,mark size=1.2pt,paperorange!45] table[x=lambda,y=conv]{data/seeds.dat};
+\addplot[paperorange,thick,mark=square*] table[x=lambda,y=conv]{data/sweep.dat};
+\addlegendentry{Fresh Conv}
+\addplot[gray,dashed,domain=-.025:.525] {.3};
+\addlegendentry{Project SSIM target: 0.3}
+\end{axis}
+\end{tikzpicture}
+\caption{Coefficient sweep computed from source records. Small markers show individual seeds; large markers show group means. Accuracy error bars are sample standard deviations. The $\lambda=0.1$ group contains one seed. Lines guide the eye; dashed references are project criteria, not formal privacy boundaries. Larger $\lambda$ does not monotonically improve fresh reconstruction resistance.}
+\label{fig:sweep}
+\end{figure*}

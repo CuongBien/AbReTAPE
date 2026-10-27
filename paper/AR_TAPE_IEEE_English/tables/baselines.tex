@@ -1,0 +1,21 @@
+\begin{table*}[t]
+\centering
+\caption{Available internal baseline comparisons. Accuracy and fresh SSIM use the full 10k test set.}
+\label{tab:baselines}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Method & Seeds & Accuracy (\%) $\uparrow$ & Fresh MLP SSIM $\downarrow$ & Fresh Conv SSIM $\downarrow$ \\
+\midrule
+B0: Vanilla SL & 1 & 94.71 & --- & 0.9955 \\
+B7: Fixed projection, $k=512$ & 1 & 88.54 & 0.4394 & 0.2632 \\
+B7: Fixed projection, $k=1{,}024$ & 1 & 91.53 & 0.5461 & 0.3597 \\
+B7: Fixed projection, $k=2{,}048$ & 1 & 92.73 & --- & --- \\
+B8: Original min--max & 1 & 92.38 & 0.4580 & 0.7652 \\
+B8: Stabilized min--max & 1 & 88.98 & 0.2621 & 0.6431 \\
+\textbf{AR-TAPE v1}, $k=2{,}048$, $\lambda=0.25$ & 3 & $90.35\pm 0.24$ & $0.2159\pm 0.0029$ & $0.2014\pm 0.0036$ \\
+\bottomrule
+\end{tabular}
+\par\vspace{2pt}\begin{minipage}{\linewidth}\footnotesize Historical methods differ in schedules and attacker checkpoint selection. B7 is a partial LightSplit-style implementation. Dashes indicate missing standardized fresh measurements, not privacy protection. Lower SSIM is the defense objective, not a general privacy certificate.\end{minipage}
+\end{table*}

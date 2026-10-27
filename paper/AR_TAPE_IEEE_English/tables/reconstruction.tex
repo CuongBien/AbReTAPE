@@ -1,0 +1,16 @@
+\begin{table}[t]
+\centering
+\caption{Fresh reconstruction at $\lambda=0.25$ (three seeds).}
+\label{tab:reconstruction}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Attacker & SSIM 10k $\downarrow$ & PSNR 10k (dB) $\downarrow$ & LPIPS 2k $\uparrow$ \\
+\midrule
+MLP & $0.2159\pm 0.0029$ & $13.39\pm 0.13$ & $0.2678\pm 0.0078$ \\
+Conv & $0.2014\pm 0.0036$ & $12.48\pm 0.01$ & $0.1881\pm 0.0012$ \\
+\bottomrule
+\end{tabular}
+\par\vspace{2pt}\begin{minipage}{\linewidth}\footnotesize Arrows indicate the defense objective. LPIPS uses fast 2k only. The Conv value does not reach the additional $>0.2$ perceptual target.\end{minipage}
+\end{table}

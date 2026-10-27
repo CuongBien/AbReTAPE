@@ -1,0 +1,23 @@
+\section{Introduction}
+Hospitals may wish to train a shared image classifier while retaining patient images within their own institutions. Split Learning (SL) partitions a neural network between a client and a server: the client transmits an intermediate representation instead of the original image and receives gradients to update its local model~\cite{vepakomma2018split}. This workflow motivates the medical application considered here. However, keeping raw images local does not establish that the transmitted representation conceals their visual content. A decoder can learn to invert features, while an active server can manipulate training to make reconstruction easier~\cite{pasquini2021fsha}.
+
+An empirical defense must therefore balance classification performance against reconstruction by attackers trained for the defended representation. A low reconstruction score for the adversary used during training is insufficient: another architecture or a newly optimized decoder may recover substantially more information. Dimensionality reduction introduces a related ambiguity. Although a projection is non-invertible over the complete feature space, the client may concentrate image information in the subspace that remains observable.
+
+This paper studies AR-TAPE v1, an implementation combining a fixed global orthogonal bottleneck with capped adversarial reconstruction training. The name AR-TAPE denotes the broader research objective of absorption-resistant, task-aware perceptual encoding. In the evaluated version, task awareness arises from joint classification and adversarial optimization; the projection basis is random and fixed. Absorption resistance remains a hypothesis rather than an established property.
+
+Our investigation addresses three questions. (1) Does adversarial training add value beyond the same bottleneck alone? (2) How do the trade-off and its variability change with the adversarial coefficient and decoder architecture? (3) What conclusions are supported by the available active-attack experiments? We make the following contributions within this project:
+\begin{itemize}
+\item An explicit formulation of the evaluated global-projection implementation, distinguishing it from a separate channel-projection module in the codebase.
+\item A three-seed ablation at $\lambda\in\{0,0.25,0.5\}$ using fresh MLP and convolutional decoders, accompanied by source-derived tables and paired reconstruction examples.
+\item An analysis of active-attack results and evaluation validity, including incompatible metric scopes, ambiguous run labels, and test-time BatchNorm updates.
+\end{itemize}
+The experiments are a CIFAR-10 proof of concept. They do not demonstrate clinical effectiveness, formal privacy, or superiority over the original LightSplit and ResSFL methods. The medical application is a motivation and a planned transfer setting.
+
+\section{Related Work}
+\subsection{Reconstruction and Active Attacks}
+Feature inversion learns a decoder from representations to images. A fresh attacker is initialized after the client is fixed, testing whether the defense generalizes beyond its training-time adversary. A passive co-adapted decoder instead follows client updates without injecting attack gradients. Feature-Space Hijacking Attack (FSHA) changes this interaction: a malicious server uses a pilot representation, a decoder, and an alignment objective to influence the client's training~\cite{pasquini2021fsha}. These protocols reveal different failure modes and their scores should not be pooled into a single privacy claim.
+
+\subsection{Representation Defenses}
+ResSFL uses adversarial feature learning and resistance transfer in Split Federated Learning~\cite{li2022ressfl}. AR-TAPE shares the use of reconstruction adversaries but evaluates online alternating optimization on a separate testbed; no matched ResSFL reproduction is available. LightSplit uses orthogonal projections and lift-back operations~\cite{cihangiroglu2026lightsplit}. Our B7 baseline reproduces the fixed-projection component, not the full original method, which also considers U-shaped SL and Within-Class Compaction. Consequently, B7 is described as a LightSplit-style baseline.
+
+NoPeek penalizes distance correlation between images and their representations~\cite{vepakomma2020nopeek}. Other internal baselines perturb features, gradients, spatial structure, or residual signals. These mechanisms act at different points in training. In particular, a batch-level gradient clipping implementation labeled ``DP-SGD'' does not by itself establish a differential privacy guarantee. Throughout this paper, image similarity and distance correlation are empirical proxies under specified tests, not privacy certificates.

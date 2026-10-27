@@ -1,0 +1,47 @@
+\section{Experimental Setup}
+\subsection{Data and Training}
+CIFAR-10~\cite{krizhevsky2009cifar} contains 50,000 training images and 10,000 test images across ten classes. Training uses random cropping with padding four, horizontal flipping, and channel normalization with mean $(0.4914,0.4822,0.4465)$ and standard deviation $(0.2023,0.1994,0.2010)$. Test images are only normalized. A seed-fixed 2,000-image subset of the test set, denoted \emph{fast 2k}, is used for diagnostic evaluations; it must be distinguished from the full 10k test set.
+
+The main models train for 100 epochs with batch size 128, SGD, initial learning rate $0.1$, momentum $0.9$, weight decay $5\times10^{-4}$, and a cosine schedule. The adversarial coefficient is warmed up for ten epochs. We evaluate $\lambda=0,0.25,0.5$ using seeds 42, 7, and 2024; $\lambda=0.1$ has only seed 42. The same-architecture $\lambda=0$ model is the most direct control for the adversarial term. Historical baselines generally have one seed and differ in training schedules or attack checkpoint selection.
+
+\subsection{Metrics and Aggregation}
+Classification utility is measured by top-1 accuracy. Reconstruction is measured by PSNR, SSIM~\cite{wang2004ssim}, and LPIPS~\cite{zhang2018lpips}. Higher PSNR/SSIM and lower LPIPS indicate greater similarity to the original. PSNR and SSIM are evaluated after denormalization and clamping to $[0,1]$. For the v1 fresh attacks, they use the full 10k test set; available LPIPS uses fast 2k only. Direct FSHA reports full-test accuracy but fast-2k reconstruction metrics.
+
+Distance correlation (dCor)~\cite{szekely2007dcor} is taken from the final ordinary-training diagnostic, averaged over the first ten batches of the fast subset. It is neither mutual information nor a formal privacy guarantee. Multi-seed results are means and sample standard deviations ($n-1$ denominator). They describe variation between runs on one test set, not a confidence interval for clinical generalization.
+
+We retain the original project criteria: accuracy $\geq92.7\%$, PSNR $<15$~dB, and SSIM $<0.3$ against the required attackers. LPIPS $>0.2$ is an additional perceptual target. These are engineering goals, not universal safety thresholds. We do not lower the utility target after inspecting results. Hyperparameter exploration on the test set and BatchNorm-state contamination further limit the interpretation, as discussed in Section~\ref{sec:limitations}.
+
+\section{Results}
+\subsection{Comparison with Internal Baselines}
+\input{tables/baselines}
+Table~\ref{tab:baselines} compares available standardized fresh evaluations. A missing entry indicates an unavailable measurement, not an unsuccessful attacker. B7 with $k=2{,}048$ has an older decoder result (SSIM $0.5138$), but no matched standardized fresh MLP/Conv pair; we do not insert that value into the Conv column. B8 attack scripts selected checkpoints using test reconstruction, although the records used here have their best epoch at the final epoch, 30. These protocol differences preclude a controlled ranking of all baselines.
+
+The stabilized B8 model illustrates attacker dependence: fresh MLP reaches SSIM $0.2621$, whereas fresh Conv reaches $0.6431$. On the common fast-2k scope, the Conv score exceeds that of the training-time adversary by $G=0.2948$. This gap shows incomplete coverage by the internal adversary; it does not uniquely establish that the server absorbed an inverse mapping. Decoder architecture and optimization remain alternative explanations.
+
+Other stored controls reinforce the need for adaptive evaluation. NoPeek at $\alpha=1$ attains dCor near $0.0479$ while reconstruction SSIM remains $0.9038$. A residual-autoencoder defense increases from SSIM $0.7129$ with an old decoder to $0.9976$ after system/decoder retraining. Block scrambling is inverted by a learned MLP at SSIM $0.9252$. These are contextual observations from historical protocols rather than matched causal comparisons with v1.
+
+\subsection{Does Adversarial Training Add Value?}
+\input{tables/ablation}
+\input{figures/sweep}
+With no adversarial term, the same bottleneck yields accuracy $91.05\pm0.36\%$, but fresh MLP and Conv still recover SSIM $0.7077\pm0.0059$ and $0.5627\pm0.0065$, respectively (Table~\ref{tab:ablation}). Thus, reducing feature dimensionality alone is insufficient against these decoders.
+
+At $\lambda=0.25$, the corresponding scores decrease to $0.2159\pm0.0029$ and $0.2014\pm0.0036$, while accuracy decreases by approximately $0.70$ percentage points to $90.35\pm0.24\%$. The absolute SSIM reductions are $0.4918$ and $0.3613$. This ablation provides the clearest evidence in the current experiments for the contribution of the adversarial term.
+
+Increasing $\lambda$ from $0.25$ to $0.5$ reduces accuracy further while increasing both fresh SSIM scores. The observed relationship is therefore not monotonic (Fig.~\ref{fig:sweep}). The single-seed $\lambda=0.1$ result also remains competitive, so the present sweep does not establish $0.25$ as a generally optimal coefficient. A separate validation set is required for operating-point selection.
+
+Recomputing dCor from ordinary training gives $0.5717\pm0.0091$ for $\lambda=0$ and $0.2404\pm0.0224$ for $\lambda=0.5$. Earlier aggregate values $0.7219$ and $0.4348$ belonged to post-FSHA states and are excluded. Moreover, $\lambda=0.5$ has lower dCor than $0.25$ but higher fresh SSIM. dCor does not rank reconstruction difficulty in the same way as the two evaluated decoders.
+
+\subsection{Main Operating Point and Visual Evidence}
+\input{tables/reconstruction}
+\input{figures/reconstructions}
+At $\lambda=0.25$, both fresh attackers satisfy the project's PSNR and SSIM goals (Table~\ref{tab:reconstruction}). However, Conv LPIPS is $0.1881\pm0.0012$, below the additional target $0.2$. The paired examples in Fig.~\ref{fig:reconstructions} show reduced fidelity relative to the $\lambda=0$ model, but residual colors and coarse structure remain visible. Low average similarity therefore does not demonstrate the absence of sensitive semantic information.
+
+The mean accuracy is $4.36$ percentage points below the historical vanilla result, $94.71\%$, and $2.35$ points below the retained utility target. The complete PoC criteria are not met. Relative to the previous v0 result of $87.34\%$ on one seed, v1 improves observed utility and adds multi-seed evidence. That comparison also changes bottleneck width, projection type, lifting, and scheduling; it cannot isolate the contribution of any one change.
+
+\subsection{Direct FSHA and Its Interpretation}
+\input{tables/fsha}
+Table~\ref{tab:fsha} reports epoch-30 direct-FSHA observations. The group marked $0.25^{*}$ is identified by its output directory. All three stored JSON files instead label their coefficient as $0.1$. Inspection of the runner shows that checkpoint paths are constructed from the current coefficient but the child process is not passed the coefficient-label argument, leaving its default at $0.1$. This is consistent with a metadata error, but the files do not retain checkpoint hashes that would establish run provenance conclusively. We retain the directory-defined group conditionally and do not treat it as definitive evidence of FSHA resistance at $\lambda=0.25$.
+
+Crucially, $\lambda=0$ also yields very low FSHA SSIM ($0.0402$ at $g_s=5$), despite fresh MLP SSIM around $0.7077$. A weak reconstruction result for this active attack does not imply that the representation lacks recoverable information. The unconstrained pilot and the lifted defended representation may be mismatched; insufficient attack optimization is another possibility. These are hypotheses requiring targeted tests. A pilot fitted directly to the defended bottleneck, as well as additional adaptive inversion attacks, is needed before drawing a broad robustness conclusion.
+
+The directory-defined three-seed group attains post-hijacking accuracy $84.94\pm1.07\%$ at $g_s=5$. This is the model state after attack training. It must not be combined with the pre-attack accuracy $90.35\%$ as if both measured the same model. Matching gradient scale and attack epochs alone also does not remove differences in initialization, data usage, and task-gradient mixing across historical baseline protocols.

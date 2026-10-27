@@ -1,0 +1,13 @@
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[>=Latex,font=\footnotesize,node distance=.55cm,
+ b/.style={draw=black!60,fill=gray!3,rounded corners=1pt,align=center,minimum width=7.7cm,minimum height=.65cm}]
+\node[b] (forward) {One client forward: $X\rightarrow z\rightarrow t$};
+\node[b,below=of forward,draw=orange!70!black,fill=orange!3] (adv) {1. Update decoder $\phi$\\Minimize $\mathcal L_{\rm rec}$ using $\operatorname{stopgrad}(t)$};
+\node[b,below=of adv,draw=blue!55!black,fill=blue!3] (model) {2. Update client $\theta_c$ and server $\theta_s$\\Minimize $\mathcal L_{\rm cls}-\lambda_e\min(\mathcal L_{\rm rec},c)$; fix $\phi$};
+\draw[->,thick] (forward)--(adv);
+\draw[->,thick] (adv)--(model);
+\end{tikzpicture}
+\caption{Alternating minibatch updates. The reconstruction term changes the client representation; the server receives the task gradient. Freezing decoder parameters alone does not freeze its BatchNorm buffers.}
+\label{fig:optimization}
+\end{figure}

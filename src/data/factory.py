@@ -19,6 +19,7 @@ from .cifar import (
 )
 from .medical import (
     get_pcam,
+    get_pcam_dataloaders,
     get_ham10000,
     PCAM_MEAN,
     PCAM_STD,
@@ -45,7 +46,7 @@ DATASET_METADATA = {
     "pcam": {
         "num_classes": 2,
         "in_channels": 3,
-        "img_size": (32, 32),
+        "img_size": (64, 64),
         "mean": PCAM_MEAN,
         "std": PCAM_STD
     },
@@ -77,8 +78,27 @@ def get_dataloaders(dataset_name="cifar10", data_dir="./data", batch_size=128, n
     elif dataset_name == "cifar100":
         train_loader, test_loader = get_cifar100(data_dir=data_dir, batch_size=batch_size, num_workers=num_workers)
     elif dataset_name == "pcam":
-        p_dir = os.path.join(data_dir, "pcam")
-        train_loader, test_loader = get_pcam(data_dir=p_dir, batch_size=batch_size, num_workers=num_workers)
+        # Ưu tiên nạp mảng NumPy đã tiền xử lý 64x64 nếu có
+        candidates = [
+            os.path.join(data_dir, "pcam_processed"),
+            os.path.join(data_dir, "pcam"),
+            data_dir
+        ]
+        processed_dir = None
+        for c in candidates:
+            if os.path.isfile(os.path.join(c, "train_images.npy")):
+                processed_dir = c
+                break
+
+        if processed_dir is not None:
+            train_loader, val_loader, test_loader, pcam_meta = get_pcam_dataloaders(
+                data_dir=processed_dir, batch_size=batch_size, num_workers=num_workers
+            )
+            meta.update(pcam_meta)
+            meta["val_loader"] = val_loader
+        else:
+            p_dir = os.path.join(data_dir, "pcam")
+            train_loader, test_loader = get_pcam(data_dir=p_dir, batch_size=batch_size, num_workers=num_workers)
     elif dataset_name == "ham10000":
         h_dir = os.path.join(data_dir, "ham10000")
         train_loader, test_loader = get_ham10000(data_dir=h_dir, batch_size=batch_size, num_workers=num_workers)

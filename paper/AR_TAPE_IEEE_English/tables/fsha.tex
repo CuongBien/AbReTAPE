@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering
+\caption{Direct FSHA at epoch 30. Reconstruction uses fast 2k.}
+\label{tab:fsha}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}cccccc@{}}
+\toprule
+$\lambda$ & $g_s$ & $n$ & Acc. 10k (\%) & SSIM 2k & PSNR (dB) \\
+\midrule
+0.0 & 1 & 1 & $87.27$ & $0.0251$ & $10.63$ \\
+0.0 & 5 & 1 & $84.20$ & $0.0402$ & $11.86$ \\
+$0.25^{*}$ & 1 & 3 & $87.61\pm 0.29$ & $0.0236\pm 0.0108$ & $10.55\pm 0.19$ \\
+$0.25^{*}$ & 5 & 3 & $84.94\pm 1.07$ & $0.0394\pm 0.0102$ & $11.55\pm 0.22$ \\
+0.5 & 1 & 1 & $86.98$ & $0.0241$ & $10.51$ \\
+0.5 & 5 & 1 & $83.44$ & $0.0377$ & $11.66$ \\
+\bottomrule
+\end{tabular}
+\par\vspace{2pt}\begin{minipage}{\linewidth}\footnotesize $^{*}$Directory-defined group: stored run labels say $\lambda=0.1$. Checkpoint provenance is not conclusively established. These observations do not prove active-attack resistance.\end{minipage}
+\end{table}

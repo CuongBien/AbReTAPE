@@ -1,0 +1,38 @@
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,>=Latex,font=\footnotesize,
+ module/.style={draw=blue!55!black,fill=blue!3,rounded corners=1pt,minimum height=1.0cm,align=center},
+ flow/.style={->,thick,draw=blue!55!black},
+ attack/.style={->,thick,draw=orange!75!black}]
+\draw[fill=blue!2,draw=blue!20,rounded corners=3pt] (-.65,-.9) rectangle (5.85,1.43);
+\draw[fill=gray!4,draw=gray!35,rounded corners=3pt] (6.05,-.9) rectangle (16.85,1.43);
+\node[anchor=west,text=blue!55!black,font=\footnotesize\bfseries] at (-.4,1.17) {CLIENT / LOCAL IMAGES};
+\node[anchor=west,text=gray!70!black,font=\footnotesize\bfseries] at (6.25,1.17) {SERVER / OBSERVED REPRESENTATION};
+\node[inner sep=0] (x) at (0,0.15) {\includegraphics[width=.85cm]{images/x0.png}};
+\node[below=.07cm of x] {$X\in\mathbb R^{3\times32\times32}$};
+\node[module,minimum width=1.8cm] (client) at (1.9,.15) {ResNet-18 client\\Stem + Layer 1};
+\node[module,minimum width=1.55cm] (project) at (4.72,.15) {Fixed projection\\$t=R^\top z$};
+\node[module,minimum width=1.45cm] (lift) at (7.68,.15) {Fixed lift\\$\widetilde z=Rt$};
+\node[module,minimum width=2.2cm] (server) at (10.4,.15) {ResNet-18 server\\Layers 2--4 + head};
+\node[module,minimum width=1.5cm] (pred) at (13.4,.15) {Prediction\\$\widehat y$};
+\node[align=center] at (15.6,.15) {Task loss\\$\mathcal L_{\rm cls}$};
+\draw[flow] (x)--(client);
+\draw[flow] (client)--(project);
+\node at (3.35,.86) {$z$};
+\node[font=\scriptsize] at (3.35,-.64) {$64\times32\times32$};
+\draw[flow] (project)--(lift);
+\node at (6.26,.86) {$t\in\mathbb R^{2048}$};
+\draw[flow] (lift)--(server);
+\draw[flow] (server)--(pred);
+\draw[flow] (pred)--(15.05,.15);
+\node[draw=orange!70!black,fill=orange!4,rounded corners=1pt,minimum height=.85cm,minimum width=3cm,align=center] (decoder) at (9,-1.8) {Reconstruction decoder $A_\phi$\\Training adversary or fresh attacker};
+\draw[attack] (6.25,.15) |- (decoder.west);
+\node[inner sep=0] (xh) at (12.2,-1.8) {\includegraphics[width=.85cm]{images/mlp0.png}};
+\draw[attack] (decoder)--(xh);
+\node[below=.03cm of xh] {$\widehat X$};
+\node[align=left,text=gray!80!black,anchor=west] at (-.4,-1.75) {Global bottleneck: $65{,}536\rightarrow2{,}048$\\$32{:}1$ fewer transmitted float values};
+\node[align=left,text=orange!75!black,anchor=west] at (13.1,-1.8) {Reconstruction loss\\or post-hoc evaluation};
+\end{tikzpicture}
+\caption{Evaluated AR-TAPE v1. Only the projected representation $t$ crosses the cut. The client learns under task and adversarial losses, whereas $R$ is fixed. The pictured input and reconstruction are a real saved CIFAR-10 pair (fresh MLP, $\lambda=0.25$, seed 42); tensor labels describe architecture, not visualized activation values.}
+\label{fig:system}
+\end{figure*}

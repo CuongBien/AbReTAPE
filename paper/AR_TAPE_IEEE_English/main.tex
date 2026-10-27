@@ -1,0 +1,38 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,graphicx,booktabs,cite}
+\usepackage{tikz,pgfplots}
+\usetikzlibrary{arrows.meta,positioning,calc}
+\pgfplotsset{compat=1.18}
+\usepackage[hidelinks]{hyperref}
+\urlstyle{same}
+\definecolor{paperblue}{RGB}{36,75,101}
+\definecolor{paperorange}{RGB}{173,98,58}
+\newcommand{\recon}[1]{\raisebox{-.45\height}{\includegraphics[width=.67in]{images/#1.png}}}
+\hyphenation{re-con-struc-tion bot-tle-neck Batch-Norm}
+
+\begin{document}
+\title{AR-TAPE for Split Learning in Medical Image Analysis}
+\author{\IEEEauthorblockN{Bien Cao Cuong and Hoang Nguyen Tai Danh}
+\IEEEauthorblockA{Faculty of Information Technology\\
+University of Science and Technology, The University of Danang\\
+Da Nang, Vietnam}}
+\maketitle
+
+\begin{abstract}
+Split Learning transmits intermediate representations instead of raw images, but those representations can still support image reconstruction. We study AR-TAPE v1, which combines a fixed orthogonal bottleneck with capped adversarial reconstruction training at a ResNet-18 cut layer. On CIFAR-10, the transmitted representation is reduced from 65,536 to 2,048 values. Across three seeds, an adversarial coefficient of 0.25 yields full-test accuracy of $90.35\pm0.24\%$ and fresh-decoder SSIM of $0.2159\pm0.0029$ for an MLP-based attacker and $0.2014\pm0.0036$ for a convolutional attacker. Compared with the same bottleneck without adversarial training, SSIM decreases by 0.4918 and 0.3613 at a mean accuracy cost of approximately 0.70 percentage points. The original utility target of 92.7\% is not reached. Direct feature-space hijacking observations are also analyzed, but pilot compatibility and ambiguous run labels limit active-attack conclusions. Historical diagnostics update BatchNorm statistics on test images, so the stored results require confirmation with an isolated evaluation protocol. This study provides preliminary evidence of a reconstruction--utility trade-off against two tested decoders; it establishes neither formal privacy nor medical-image effectiveness. PCAM and HAM10000 experiments remain future work.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Split Learning, feature inversion, orthogonal projection, adversarial representation learning, reconstruction evaluation.
+\end{IEEEkeywords}
+
+\input{sections/introduction}
+\input{sections/method}
+\input{sections/experiments}
+\input{sections/discussion}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+\end{document}
