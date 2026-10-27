@@ -40,6 +40,7 @@ import json
 import shutil
 import argparse
 import hashlib
+import subprocess
 import urllib.request
 import numpy as np
 import h5py
@@ -84,26 +85,89 @@ PCAM_FILES = {
 }
 
 
+def is_valid_h5(filepath: str) -> bool:
+    """Kiểm tra file .h5 có tồn tại, kích thước hợp lệ (> 10KB) và mở được không."""
+    if not os.path.isfile(filepath):
+        return False
+    if os.path.getsize(filepath) < 10240:
+        return False
+    try:
+        with h5py.File(filepath, "r") as f:
+            return len(f.keys()) > 0
+    except Exception:
+        return False
+
+
+def find_pcam_path(raw_dir: str, filename: str) -> str:
+    """Tìm đường dẫn thực tế của file trong raw_dir hoặc các thư mục con (vd: raw_dir/pcam)."""
+    direct_p = os.path.join(raw_dir, filename)
+    if is_valid_h5(direct_p):
+        return direct_p
+    sub_p = os.path.join(raw_dir, "pcam", filename)
+    if is_valid_h5(sub_p):
+        return sub_p
+    for root, dirs, files in os.walk(raw_dir):
+        if filename in files:
+            p = os.path.join(root, filename)
+            if is_valid_h5(p):
+                return p
+    return direct_p
+
+
+def sync_pcam_subfolders(raw_dir: str):
+    """Di chuyển các file .h5 từ subfolder (ví dụ: raw_dir/pcam do torchvision tạo) lên raw_dir."""
+    pcam_sub = os.path.join(raw_dir, "pcam")
+    if os.path.isdir(pcam_sub):
+        for fn in os.listdir(pcam_sub):
+            src = os.path.join(pcam_sub, fn)
+            dst = os.path.join(raw_dir, fn)
+            if os.path.isfile(src) and (not os.path.isfile(dst) or os.path.getsize(dst) < 10240):
+                print(f"[PCAM RAW] Di chuyển file từ subfolder: {fn} -> {raw_dir}")
+                shutil.move(src, dst)
+
+
 def download_url_with_progress(url: str, dest_path: str):
-    """Tải file từ URL có thanh tiến trình tqdm và tự động resume nếu ngắt kết nối."""
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-    with urllib.request.urlopen(req, timeout=30) as response:
-        total_size = int(response.headers.get("Content-Length", 0))
-        desc = os.path.basename(dest_path)
-        with tqdm(total=total_size, unit="B", unit_scale=True, unit_divisor=1024, desc=desc) as pbar:
-            with open(dest_path, "wb") as f:
-                while True:
-                    chunk = response.read(1024 * 1024)  # 1MB chunks
-                    if not chunk:
-                        break
-                    f.write(chunk)
-                    pbar.update(len(chunk))
+    """
+    Tải file từ Zenodo với hỗ trợ stream tqdm.
+    Sử dụng User-Agent chuẩn tránh lỗi 403 Forbidden của Zenodo,
+    kèm fallback gọi curl hệ thống nếu urllib gặp sự cố.
+    """
+    os.makedirs(os.path.dirname(os.path.abspath(dest_path)), exist_ok=True)
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "curl/7.88.1",
+                "Accept": "*/*"
+            }
+        )
+        with urllib.request.urlopen(req, timeout=60) as response:
+            total_size = int(response.headers.get("Content-Length", 0))
+            desc = os.path.basename(dest_path)
+            with tqdm(total=total_size, unit="B", unit_scale=True, unit_divisor=1024, desc=desc) as pbar:
+                with open(dest_path, "wb") as f:
+                    while True:
+                        chunk = response.read(1024 * 1024)  # 1MB buffer
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        pbar.update(len(chunk))
+        return
+    except Exception as e:
+        print(f"[DOWNLOAD WARNING] urllib gặp sự cố ({e}), thử fallback bằng curl...")
+
+    # Fallback bằng curl nếu hệ thống có curl
+    try:
+        cmd = ["curl", "-L", "--retry", "3", "-o", dest_path, url]
+        print(f"[DOWNLOAD CURL] Thực thi: {' '.join(cmd)}")
+        subprocess.run(cmd, check=True)
+    except Exception as e_curl:
+        raise RuntimeError(f"Không thể tải file từ {url}: {e_curl}")
 
 
 def decompress_gz(gz_path: str, dest_path: str):
     """Giải nén file .gz sang file .h5 với thanh tiến trình."""
     print(f"[DECOMPRESS] Giải nén {os.path.basename(gz_path)} -> {os.path.basename(dest_path)}...")
-    total_size = os.path.getsize(gz_path)
     with gzip.open(gz_path, "rb") as f_in:
         with open(dest_path, "wb") as f_out:
             shutil.copyfileobj(f_in, f_out, length=1024 * 1024 * 4)  # 4MB buffer
@@ -113,56 +177,73 @@ def decompress_gz(gz_path: str, dest_path: str):
 def ensure_pcam_raw_files(raw_dir: str):
     """
     Đảm bảo đầy đủ 6 file .h5 của PCAM trong thư mục raw_dir.
-    Thử tải qua torchvision trước; nếu lỗi quota GDrive thì chuyển sang Zenodo.
+    1. Kiểm tra subfolder (như raw_dir/pcam do torchvision tạo).
+    2. Nếu thiếu, thử torchvision.datasets.PCAM.
+    3. Nếu torchvision bị lỗi quota hoặc thiếu bất kỳ file nào, tự động tải trực tiếp từ Zenodo.
     """
     os.makedirs(raw_dir, exist_ok=True)
-    all_exist = True
-    for split, files in PCAM_FILES.items():
-        x_h5 = os.path.join(raw_dir, files["x"])
-        y_h5 = os.path.join(raw_dir, files["y"])
-        if not (os.path.isfile(x_h5) and os.path.isfile(y_h5)):
-            all_exist = False
-            break
+    sync_pcam_subfolders(raw_dir)
 
-    if all_exist:
-        print(f"[PCAM RAW] Đã tìm thấy đầy đủ 6 file .h5 trong {raw_dir}.")
+    def check_all_files():
+        missing = []
+        for split, files in PCAM_FILES.items():
+            for k in ["x", "y"]:
+                fn = files[k]
+                fp = find_pcam_path(raw_dir, fn)
+                if not is_valid_h5(fp):
+                    missing.append((split, k, fn, files[f"{k}_gz"]))
+        return missing
+
+    missing_files = check_all_files()
+    if not missing_files:
+        print(f"[PCAM RAW] Đã tìm thấy đầy đủ 6 file .h5 hợp lệ trong {raw_dir}.")
         return
 
-    print(f"[PCAM RAW] Chưa đủ 6 file .h5. Tiến hành tải về {raw_dir}...")
+    print(f"[PCAM RAW] Có {len(missing_files)}/6 file .h5 còn thiếu hoặc chưa hợp lệ. Tiến hành tải về...")
 
-    # Bước A: Thử torchvision.datasets.PCAM
+    # Bước A: Thử torchvision.datasets.PCAM nếu còn thiếu
     try:
-        print("[PCAM RAW] Thử tải qua torchvision.datasets.PCAM...")
+        print("[PCAM RAW] Thử nạp qua torchvision.datasets.PCAM...")
         import torchvision.datasets as d
         for sp in ["train", "val", "test"]:
             d.PCAM(root=raw_dir, split=sp, download=True)
-        print("[PCAM RAW] Tải torchvision.datasets.PCAM thành công!")
-        return
+        sync_pcam_subfolders(raw_dir)
+        print("[PCAM RAW] torchvision download hoàn tất.")
     except Exception as e:
-        print(f"[PCAM RAW] torchvision download không khả dụng (có thể do Quota GDrive): {e}")
-        print("[PCAM RAW] Chuyển hướng tải trực tiếp từ Zenodo (Record 2546921)...")
+        print(f"[PCAM RAW] torchvision download không trọn vẹn (có thể do Quota GDrive): {e}")
 
-    # Bước B: Tải trực tiếp từ Zenodo
-    for split, files in PCAM_FILES.items():
-        for key in ["y", "x"]:
-            h5_file = os.path.join(raw_dir, files[key])
-            gz_file = os.path.join(raw_dir, files[f"{key}_gz"])
-            if os.path.isfile(h5_file):
-                print(f"[PCAM RAW] Đã có file: {files[key]}")
-                continue
+    sync_pcam_subfolders(raw_dir)
+    missing_files = check_all_files()
+    if not missing_files:
+        print(f"[PCAM RAW] Đã có đầy đủ 6 file .h5 sau khi nạp torchvision!")
+        return
 
-            if not os.path.isfile(gz_file):
-                url = f"{ZENODO_BASE_URL}/{files[f'{key}_gz']}"
+    # Bước B: Tải trực tiếp các file còn thiếu từ Zenodo (Record 2546921)
+    print(f"[PCAM RAW] Tiếp tục tải {len(missing_files)} file còn thiếu từ Zenodo...")
+    for split, k, h5_name, gz_name in missing_files:
+        h5_path = os.path.join(raw_dir, h5_name)
+        gz_path = os.path.join(raw_dir, gz_name)
+
+        if not is_valid_h5(h5_path):
+            if not os.path.isfile(gz_path) or os.path.getsize(gz_path) < 10240:
+                url = f"{ZENODO_BASE_URL}/{gz_name}"
                 print(f"\n[DOWNLOAD] Tải từ Zenodo: {url}")
-                download_url_with_progress(url, gz_file)
+                download_url_with_progress(url, gz_path)
 
-            decompress_gz(gz_file, h5_file)
-            # Sau khi giải nén, xoá file .gz tạm để tiết kiệm dung lượng đĩa
+            decompress_gz(gz_path, h5_path)
             try:
-                os.remove(gz_file)
-                print(f"[CLEANUP] Đã xoá file nén tạm {os.path.basename(gz_file)}.")
+                os.remove(gz_path)
+                print(f"[CLEANUP] Đã xoá file nén tạm: {gz_name}")
             except Exception:
                 pass
+
+    # Đồng bộ lần cuối và kiểm tra
+    sync_pcam_subfolders(raw_dir)
+    final_missing = check_all_files()
+    if final_missing:
+        missing_names = [item[2] for item in final_missing]
+        raise RuntimeError(f"[LỖI] Vẫn còn thiếu các file PCAM: {missing_names}. Vui lòng kiểm tra kết nối mạng!")
+    print(f"\n>>> [PCAM RAW] TOÀN BỘ 6 FILE .H5 ĐÃ SẴN SÀNG VÀ HỢP LỆ TRONG {raw_dir}! <<<\n")
 
 
 def create_mock_pcam_files(raw_dir: str):
@@ -370,8 +451,8 @@ def main():
         ensure_pcam_raw_files(args.raw_dir)
 
     # 2. Xử lý tập Train
-    train_x_p = os.path.join(args.raw_dir, PCAM_FILES["train"]["x"])
-    train_y_p = os.path.join(args.raw_dir, PCAM_FILES["train"]["y"])
+    train_x_p = find_pcam_path(args.raw_dir, PCAM_FILES["train"]["x"])
+    train_y_p = find_pcam_path(args.raw_dir, PCAM_FILES["train"]["y"])
     train_imgs, train_lbls, train_indices = process_pcam_split(
         raw_x_path=train_x_p,
         raw_y_path=train_y_p,
@@ -381,8 +462,8 @@ def main():
     )
 
     # 3. Xử lý tập Val
-    val_x_p = os.path.join(args.raw_dir, PCAM_FILES["val"]["x"])
-    val_y_p = os.path.join(args.raw_dir, PCAM_FILES["val"]["y"])
+    val_x_p = find_pcam_path(args.raw_dir, PCAM_FILES["val"]["x"])
+    val_y_p = find_pcam_path(args.raw_dir, PCAM_FILES["val"]["y"])
     val_imgs, val_lbls, val_indices = process_pcam_split(
         raw_x_path=val_x_p,
         raw_y_path=val_y_p,
@@ -392,8 +473,8 @@ def main():
     )
 
     # 4. Xử lý tập Test (toàn bộ 32,768 ảnh)
-    test_x_p = os.path.join(args.raw_dir, PCAM_FILES["test"]["x"])
-    test_y_p = os.path.join(args.raw_dir, PCAM_FILES["test"]["y"])
+    test_x_p = find_pcam_path(args.raw_dir, PCAM_FILES["test"]["x"])
+    test_y_p = find_pcam_path(args.raw_dir, PCAM_FILES["test"]["y"])
     test_imgs, test_lbls, test_indices = process_pcam_split(
         raw_x_path=test_x_p,
         raw_y_path=test_y_p,
