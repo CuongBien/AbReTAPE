@@ -1,0 +1,84 @@
+{
+  "dataset": "pcam",
+  "method": "B7_LightSplit",
+  "k": 2048,
+  "mode": "F",
+  "n_seeds": 3,
+  "seeds_included": [
+    7,
+    42,
+    2024
+  ],
+  "metrics_summary": {
+    "val_auc_mean": 0.9452,
+    "val_auc_std": 0.0024,
+    "test_auc_mean": 0.8813,
+    "test_auc_std": 0.0051,
+    "test_accuracy_mean": 81.8,
+    "test_accuracy_std": 0.51,
+    "test_sens_at_90_spec_pct_mean": 73.82,
+    "test_sens_at_90_spec_pct_std": 0.26,
+    "fresh_conv_ssim_mean": 0.3621,
+    "fresh_conv_ssim_std": 0.0143,
+    "fresh_conv_psnr_mean": 16.77,
+    "fresh_conv_psnr_std": 0.1,
+    "fresh_mlp_ssim_mean": 0.3614,
+    "fresh_mlp_ssim_std": 0.0141,
+    "fresh_mlp_psnr_mean": 17.07,
+    "fresh_mlp_psnr_std": 0.06,
+    "best_epoch_mean": 68.7,
+    "best_epoch_std": 7.8
+  },
+  "formatted_text": {
+    "val_auc": "0.9452 \u00b1 0.0024",
+    "test_auc": "0.8813 \u00b1 0.0051",
+    "test_accuracy": "81.80 \u00b1 0.51%",
+    "test_sens_at_90_spec": "73.82 \u00b1 0.26%",
+    "fresh_conv_ssim": "0.3621 \u00b1 0.0143",
+    "fresh_mlp_ssim": "0.3614 \u00b1 0.0141"
+  },
+  "individual_runs": [
+    {
+      "file": "/content/drive/MyDrive/pcam_b7_lightsplit/seed_7/results_pcam_b7_seed_7.json",
+      "seed": 7,
+      "best_epoch": 75,
+      "best_val_auc": 0.9468,
+      "test_auc": 0.8871,
+      "test_accuracy": 81.86,
+      "test_sens_at_90_spec": 0.737,
+      "fresh_conv_ssim": 0.3784,
+      "fresh_conv_psnr": 16.89,
+      "fresh_mlp_ssim": 0.377,
+      "fresh_mlp_psnr": 17.14,
+      "git_commit": "2623a38"
+    },
+    {
+      "file": "/content/drive/MyDrive/pcam_b7_lightsplit/seed_42/results_pcam_b7_seed_42.json",
+      "seed": 42,
+      "best_epoch": 60,
+      "best_val_auc": 0.9424,
+      "test_auc": 0.8791,
+      "test_accuracy": 81.27,
+      "test_sens_at_90_spec": 0.7412,
+      "fresh_conv_ssim": 0.3558,
+      "fresh_conv_psnr": 16.71,
+      "fresh_mlp_ssim": 0.3576,
+      "fresh_mlp_psnr": 17.03,
+      "git_commit": "2623a38"
+    },
+    {
+      "file": "/content/drive/MyDrive/pcam_b7_lightsplit/seed_2024/results_pcam_b7_seed_2024.json",
+      "seed": 2024,
+      "best_epoch": 71,
+      "best_val_auc": 0.9464,
+      "test_auc": 0.8776,
+      "test_accuracy": 82.28,
+      "test_sens_at_90_spec": 0.7365,
+      "fresh_conv_ssim": 0.352,
+      "fresh_conv_psnr": 16.72,
+      "fresh_mlp_ssim": 0.3496,
+      "fresh_mlp_psnr": 17.03,
+      "git_commit": "2623a38"
+    }
+  ]
+}
