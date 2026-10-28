@@ -107,6 +107,7 @@ def parse_args():
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate Adam (mặc định: 1e-3)")
     parser.add_argument("--hidden-dim", type=int, default=512, help="Số chiều ẩn MLP unprojector (mặc định: 512)")
     parser.add_argument("--attackers", nargs="+", default=["conv", "mlp"], choices=["conv", "mlp"], help="Danh sách attacker cần đánh giá")
+    parser.add_argument("--resume", action="store_true", help="Nạp checkpoint attacker đã lưu nếu có, bỏ qua huấn luyện lại")
     parser.add_argument("--dry-run", action="store_true", help="Chạy thử nghiệm nhanh (1 epoch)")
     return parser.parse_args()
 
@@ -141,8 +142,12 @@ def evaluate_attacker(client, attacker, data_loader, device, mean, std, lpips_fn
         total_ssim += s * b
 
         if lpips_fn is not None:
-            lp = calculate_lpips(lpips_fn, x, x_rec, mean, std)
-            total_lpips += lp * b
+            try:
+                lp = calculate_lpips(x, x_rec, mean, std, lpips_fn)
+                if lp is not None:
+                    total_lpips += lp * b
+            except Exception:
+                pass
 
         total_samples += b
 
@@ -338,56 +343,67 @@ def main():
             continue
 
         print(f"Kiến trúc: {atk_desc}")
-        optimizer = torch.optim.Adam(attacker.parameters(), lr=args.lr)
-        scheduler = CosineAnnealingLR(optimizer, T_max=total_epochs)
-        criterion = nn.MSELoss()
-
+        atk_ckpt_p = os.path.join(args.output_dir, f"pcam_b0_{atk_type}_attacker_seed_{args.seed}.pt")
         history = []
-        t0 = time.time()
+        train_dur = 0.0
 
-        for ep in range(1, total_epochs + 1):
-            attacker.train()
-            train_mse_sum = 0.0
-            n_batches = 0
+        if args.resume and os.path.isfile(atk_ckpt_p):
+            print(f"\n[RESUME] Đã tìm thấy checkpoint attacker {atk_type.upper()} tại: {atk_ckpt_p}")
+            print("Nạp trọng số và tiến hành đánh giá ngay trên tập test, không cần huấn luyện lại...")
+            attacker.load_state_dict(torch.load(atk_ckpt_p, map_location=device, weights_only=False))
+        else:
+            optimizer = torch.optim.Adam(attacker.parameters(), lr=args.lr)
+            scheduler = CosineAnnealingLR(optimizer, T_max=total_epochs)
+            criterion = nn.MSELoss()
 
-            for b_idx, (x, _) in enumerate(train_loader):
-                if max_b is not None and b_idx >= max_b:
-                    break
-                x = x.to(device)
+            t0 = time.time()
 
-                with torch.no_grad():
-                    zt = client(x)
+            for ep in range(1, total_epochs + 1):
+                attacker.train()
+                train_mse_sum = 0.0
+                n_batches = 0
 
-                x_rec = attacker(zt)
-                loss = criterion(x_rec, x)
+                for b_idx, (x, _) in enumerate(train_loader):
+                    if max_b is not None and b_idx >= max_b:
+                        break
+                    x = x.to(device)
 
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+                    with torch.no_grad():
+                        zt = client(x)
 
-                train_mse_sum += loss.item() * x.size(0)
-                n_batches += x.size(0)
+                    x_rec = attacker(zt)
+                    loss = criterion(x_rec, x)
 
-            scheduler.step()
-            train_mse = train_mse_sum / max(1, n_batches)
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
 
-            # Đánh giá nhanh định kỳ hoặc epoch cuối
-            if ep == 1 or ep % 5 == 0 or ep == total_epochs:
-                val_eval = evaluate_attacker(client, attacker, test_loader, device, mean, std, lpips_fn=None, max_batches=max_b)
-                print(
-                    f"  [Ep {ep:2d}/{total_epochs:2d}] Train MSE: {train_mse:.4f} | "
-                    f"Test PSNR: {val_eval['psnr']:5.2f} dB | Test SSIM: {val_eval['ssim']:.4f}",
-                    flush=True
-                )
-                history.append({
-                    "epoch": ep,
-                    "train_mse": train_mse,
-                    "test_psnr": val_eval["psnr"],
-                    "test_ssim": val_eval["ssim"]
-                })
+                    train_mse_sum += loss.item() * x.size(0)
+                    n_batches += x.size(0)
 
-        train_dur = time.time() - t0
-        print(f"\nHuấn luyện {atk_type.upper()} hoàn tất trong {train_dur/60:.1f} phút ({train_dur:.1f}s).")
+                scheduler.step()
+                train_mse = train_mse_sum / max(1, n_batches)
+
+                # Đánh giá nhanh định kỳ hoặc epoch cuối
+                if ep == 1 or ep % 5 == 0 or ep == total_epochs:
+                    val_eval = evaluate_attacker(client, attacker, test_loader, device, mean, std, lpips_fn=None, max_batches=max_b)
+                    print(
+                        f"  [Ep {ep:2d}/{total_epochs:2d}] Train MSE: {train_mse:.4f} | "
+                        f"Test PSNR: {val_eval['psnr']:5.2f} dB | Test SSIM: {val_eval['ssim']:.4f}",
+                        flush=True
+                    )
+                    history.append({
+                        "epoch": ep,
+                        "train_mse": train_mse,
+                        "test_psnr": val_eval["psnr"],
+                        "test_ssim": val_eval["ssim"]
+                    })
+
+            train_dur = time.time() - t0
+            print(f"\nHuấn luyện {atk_type.upper()} hoàn tất trong {train_dur/60:.1f} phút ({train_dur:.1f}s).")
+            # Lưu checkpoint attacker để có thể resume hoặc tái sử dụng
+            torch.save(attacker.state_dict(), atk_ckpt_p)
+            print(f"Đã lưu checkpoint attacker {atk_type.upper()} tại: {atk_ckpt_p}")
 
         # Đánh giá toàn diện trên toàn bộ tập test tại epoch cuối
         print(f"Đánh giá chính thức {atk_type.upper()} tại Epoch cuối ({total_epochs})...")

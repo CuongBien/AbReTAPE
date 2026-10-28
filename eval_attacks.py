@@ -91,8 +91,12 @@ def evaluate_attacker_metrics(client, attacker, loader, device, mean, std, lpips
         ssim_sum += s * b
 
         if lpips_fn is not None:
-            lp = calculate_lpips(lpips_fn, x, x_rec, mean, std)
-            lpips_sum += lp * b
+            try:
+                lp = calculate_lpips(x, x_rec, mean, std, lpips_fn)
+                if lp is not None:
+                    lpips_sum += lp * b
+            except Exception:
+                pass
 
         total_samples += b
         if max_batches is not None and idx >= max_batches - 1:

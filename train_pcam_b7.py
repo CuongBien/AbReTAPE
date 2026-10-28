@@ -211,8 +211,12 @@ def evaluate_reconstruction_attacker(client, attacker, data_loader, device, mean
         total_ssim += s * b
 
         if lpips_fn is not None:
-            lp = calculate_lpips(lpips_fn, x, x_rec, mean, std)
-            total_lpips += lp * b
+            try:
+                lp = calculate_lpips(x, x_rec, mean, std, lpips_fn)
+                if lp is not None:
+                    total_lpips += lp * b
+            except Exception:
+                pass
 
         total_samples += b
 
@@ -563,55 +567,65 @@ def main():
             if torch.cuda.is_available():
                 torch.cuda.manual_seed_all(args.seed)
 
-            atk_opt = torch.optim.Adam(attacker.parameters(), lr=args.attacker_lr)
-            atk_sched = CosineAnnealingLR(atk_opt, T_max=total_atk_epochs)
-            atk_crit = nn.MSELoss()
-
-            t_atk0 = time.time()
+            atk_ckpt_p = os.path.join(args.output_dir, f"pcam_b7_{atk_name}_attacker_seed_{args.seed}.pt")
             atk_hist = []
+            atk_dur = 0.0
 
-            for a_ep in range(1, total_atk_epochs + 1):
-                attacker.train()
-                mse_accum = 0.0
-                samples_cnt = 0
+            if args.resume and os.path.isfile(atk_ckpt_p):
+                print(f"\n[RESUME] Đã tìm thấy checkpoint attacker {atk_name.upper()} tại: {atk_ckpt_p}")
+                print("Nạp trọng số và tiến hành đánh giá ngay trên tập test, không cần huấn luyện lại...")
+                attacker.load_state_dict(torch.load(atk_ckpt_p, map_location=device, weights_only=False))
+            else:
+                atk_opt = torch.optim.Adam(attacker.parameters(), lr=args.attacker_lr)
+                atk_sched = CosineAnnealingLR(atk_opt, T_max=total_atk_epochs)
+                atk_crit = nn.MSELoss()
 
-                for b_idx, (x, _) in enumerate(train_loader):
-                    if max_b is not None and b_idx >= max_b:
-                        break
-                    x = x.to(device)
+                t_atk0 = time.time()
 
-                    with torch.no_grad():
-                        zt = client(x)
+                for a_ep in range(1, total_atk_epochs + 1):
+                    attacker.train()
+                    mse_accum = 0.0
+                    samples_cnt = 0
 
-                    x_rec = attacker(zt)
-                    loss = atk_crit(x_rec, x)
+                    for b_idx, (x, _) in enumerate(train_loader):
+                        if max_b is not None and b_idx >= max_b:
+                            break
+                        x = x.to(device)
 
-                    atk_opt.zero_grad()
-                    loss.backward()
-                    atk_opt.step()
+                        with torch.no_grad():
+                            zt = client(x)
 
-                    mse_accum += loss.item() * x.size(0)
-                    samples_cnt += x.size(0)
+                        x_rec = attacker(zt)
+                        loss = atk_crit(x_rec, x)
 
-                atk_sched.step()
-                ep_train_mse = mse_accum / max(1, samples_cnt)
+                        atk_opt.zero_grad()
+                        loss.backward()
+                        atk_opt.step()
 
-                if a_ep == 1 or a_ep % 5 == 0 or a_ep == total_atk_epochs:
-                    eval_res = evaluate_reconstruction_attacker(client, attacker, test_loader, device, mean, std, lpips_fn=None, max_batches=max_b)
-                    print(
-                        f"  [Atk Ep {a_ep:2d}/{total_atk_epochs:2d}] Train MSE: {ep_train_mse:.4f} | "
-                        f"Test PSNR: {eval_res['psnr']:5.2f} dB | Test SSIM: {eval_res['ssim']:.4f}",
-                        flush=True
-                    )
-                    atk_hist.append({
-                        "epoch": a_ep,
-                        "train_mse": ep_train_mse,
-                        "test_psnr": eval_res["psnr"],
-                        "test_ssim": eval_res["ssim"]
-                    })
+                        mse_accum += loss.item() * x.size(0)
+                        samples_cnt += x.size(0)
 
-            atk_dur = time.time() - t_atk0
-            print(f"Huấn luyện {atk_name.upper()} hoàn tất trong {atk_dur/60:.1f} phút ({atk_dur:.1f}s).")
+                    atk_sched.step()
+                    ep_train_mse = mse_accum / max(1, samples_cnt)
+
+                    if a_ep == 1 or a_ep % 5 == 0 or a_ep == total_atk_epochs:
+                        eval_res = evaluate_reconstruction_attacker(client, attacker, test_loader, device, mean, std, lpips_fn=None, max_batches=max_b)
+                        print(
+                            f"  [Atk Ep {a_ep:2d}/{total_atk_epochs:2d}] Train MSE: {ep_train_mse:.4f} | "
+                            f"Test PSNR: {eval_res['psnr']:5.2f} dB | Test SSIM: {eval_res['ssim']:.4f}",
+                            flush=True
+                        )
+                        atk_hist.append({
+                            "epoch": a_ep,
+                            "train_mse": ep_train_mse,
+                            "test_psnr": eval_res["psnr"],
+                            "test_ssim": eval_res["ssim"]
+                        })
+
+                atk_dur = time.time() - t_atk0
+                print(f"Huấn luyện {atk_name.upper()} hoàn tất trong {atk_dur/60:.1f} phút ({atk_dur:.1f}s).")
+                torch.save(attacker.state_dict(), atk_ckpt_p)
+                print(f"Đã lưu checkpoint attacker {atk_name.upper()} tại: {atk_ckpt_p}")
 
             # Đánh giá chính thức tại epoch 30
             final_atk_eval = evaluate_reconstruction_attacker(client, attacker, test_loader, device, mean, std, lpips_fn=lpips_fn, max_batches=max_b)

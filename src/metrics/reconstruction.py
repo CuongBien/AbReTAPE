@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Module đánh giá độ an toàn và chất lượng tái tạo (PSNR, SSIM, LPIPS)
 import numpy as np
 import torch
@@ -61,20 +62,42 @@ def get_lpips_fn(device="cpu", net="alex"):
         return None
 
 
-def calculate_lpips(x, x_hat, mean, std, lpips_fn):
+def calculate_lpips(*args, **kwargs):
     """
     Tính khoảng cách cảm nhận LPIPS giữa x và x_hat.
+    Hỗ trợ linh hoạt cả hai thứ tự tham số:
+    1. calculate_lpips(x, x_hat, mean, std, lpips_fn)
+    2. calculate_lpips(lpips_fn, x, x_hat, mean, std)
     Đầu vào cho lpips là ảnh dải [-1, 1].
     """
+    if len(args) == 5:
+        # Nếu arg đầu tiên không phải Tensor (là lpips_fn hoặc None)
+        if not isinstance(args[0], torch.Tensor) and isinstance(args[1], torch.Tensor):
+            lpips_fn, x, x_hat, mean, std = args
+        else:
+            x, x_hat, mean, std, lpips_fn = args
+    elif "lpips_fn" in kwargs:
+        lpips_fn = kwargs["lpips_fn"]
+        x = kwargs["x"]
+        x_hat = kwargs["x_hat"]
+        mean = kwargs["mean"]
+        std = kwargs["std"]
+    else:
+        raise ValueError(f"Không nhận diện được đối số cho calculate_lpips: {args}")
+
     if lpips_fn is None:
         return None
 
-    x_01 = denormalize(x, mean, std)
-    x_hat_01 = denormalize(x_hat, mean, std)
+    try:
+        x_01 = denormalize(x, mean, std)
+        x_hat_01 = denormalize(x_hat, mean, std)
 
-    x_norm = x_01 * 2.0 - 1.0
-    x_hat_norm = x_hat_01 * 2.0 - 1.0
+        x_norm = x_01 * 2.0 - 1.0
+        x_hat_norm = x_hat_01 * 2.0 - 1.0
 
-    with torch.no_grad():
-        dist = lpips_fn(x_norm, x_hat_norm)
-        return float(dist.mean().item())
+        with torch.no_grad():
+            dist = lpips_fn(x_norm, x_hat_norm)
+            return float(dist.mean().item())
+    except Exception as e:
+        print(f"[WARN LPIPS] Bỏ qua lỗi tính LPIPS: {e}")
+        return None
