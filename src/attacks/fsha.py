@@ -61,17 +61,19 @@ class FSHAPilotAutoEncoder(nn.Module):
     - Pilot Decoder f_tilde^-1: Giải mã từ Z in R^(B x 64 x 32 x 32) -> X_hat in R^(B x 3 x 32 x 32)
       trực tiếp trong miền chuẩn hóa CIFAR-10 (không bị cắt cụt bởi Tanh).
     """
-    def __init__(self, in_channels=3, latent_channels=64, target_dim=None, hidden_dim=128):
+    def __init__(self, in_channels=3, latent_channels=64, target_dim=None, hidden_dim=128, stem_stride=1, upscale_factor=1):
         super().__init__()
         self.in_channels = in_channels
         self.latent_channels = latent_channels
         self.target_dim = target_dim
+        self.stem_stride = stem_stride
+        self.upscale_factor = upscale_factor
 
         if in_channels == 3 and latent_channels == 64:
-            self.encoder = ClientModel()
+            self.encoder = ClientModel(in_channels=in_channels, stem_stride=stem_stride)
         else:
             self.encoder = nn.Sequential(
-                nn.Conv2d(in_channels, 32, kernel_size=3, stride=1, padding=1),
+                nn.Conv2d(in_channels, 32, kernel_size=3, stride=stem_stride, padding=1),
                 nn.BatchNorm2d(32),
                 nn.ReLU(inplace=True),
                 nn.Conv2d(32, latent_channels, kernel_size=3, stride=1, padding=1),
@@ -86,15 +88,18 @@ class FSHAPilotAutoEncoder(nn.Module):
         else:
             self.v_target = None
 
-        self.decoder = nn.Sequential(
+        decoder_layers = [
             nn.Conv2d(latent_channels, hidden_dim, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(hidden_dim, hidden_dim, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(hidden_dim, 64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(64, in_channels, kernel_size=3, padding=1),
-        )
+        ]
+        if upscale_factor > 1:
+            decoder_layers.append(nn.Upsample(scale_factor=upscale_factor, mode="bilinear", align_corners=False))
+        decoder_layers.append(nn.Conv2d(64, in_channels, kernel_size=3, padding=1))
+        self.decoder = nn.Sequential(*decoder_layers)
 
     def project_target(self, z):
         if self.v_target is not None:
