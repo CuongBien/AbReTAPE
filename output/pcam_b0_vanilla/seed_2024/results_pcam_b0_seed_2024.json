@@ -1,0 +1,1849 @@
+{
+  "dataset": "pcam",
+  "method": "B0_Vanilla",
+  "seed": 2024,
+  "git_commit": "2e7acc1626115c507a6e5990e5664f70bf683537",
+  "train_time_seconds": 1186.7049610614777,
+  "train_time_formatted": "19m 46s",
+  "input_shape": [
+    64,
+    64,
+    3
+  ],
+  "smashed_shape": [
+    64,
+    32,
+    32
+  ],
+  "D": 65536,
+  "epochs": 100,
+  "best_epoch": 72,
+  "best_val_auc": 0.95232864,
+  "test_loss": 0.529203720157966,
+  "test_acc": 82.000732421875,
+  "test_auc_roc": 0.8892721909073642,
+  "test_sens_at_90_spec": 0.7432374671795812,
+  "summary_for_poc": {
+    "seed": 2024,
+    "best_epoch": 72,
+    "best_val_auc": 0.9523,
+    "test_auc": 0.8893,
+    "test_accuracy": 82.0,
+    "test_sens_at_90_spec": 0.7432,
+    "train_time_seconds": 1186.7,
+    "train_time_formatted": "19m 46s",
+    "git_commit": "2e7acc1",
+    "git_commit_full": "2e7acc1626115c507a6e5990e5664f70bf683537"
+  },
+  "clinical_metrics": {
+    "auc_roc": 0.8892721909073642,
+    "sensitivity_0.5": 0.7323075044269403,
+    "specificity_0.5": 0.9076322372033433,
+    "youden_threshold": 0.32651159167289734,
+    "sensitivity_youden": 0.7822556023691762,
+    "specificity_youden": 0.869623573912513,
+    "sensitivity_at_90_specificity": 0.7432374671795812
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "lr": 0.1,
+      "train_loss": 0.5900123731422424,
+      "train_acc": 76.75999999999999,
+      "val_loss": 0.4565536954879761,
+      "val_acc": 78.03999999999999,
+      "val_auc": 0.869956,
+      "val_clinical": {
+        "auc_roc": 0.869956,
+        "sensitivity_0.5": 0.7964,
+        "specificity_0.5": 0.7644,
+        "youden_threshold": 0.4837765395641327,
+        "sensitivity_youden": 0.8184,
+        "specificity_youden": 0.752,
+        "sensitivity_at_90_specificity": 0.6052
+      }
+    },
+    {
+      "epoch": 2,
+      "lr": 0.1,
+      "train_loss": 0.4149758183193207,
+      "train_acc": 81.638,
+      "val_loss": 0.5077614410400391,
+      "val_acc": 74.18,
+      "val_auc": 0.8720088000000001,
+      "val_clinical": {
+        "auc_roc": 0.8720088000000001,
+        "sensitivity_0.5": 0.5976,
+        "specificity_0.5": 0.886,
+        "youden_threshold": 0.19451642036437988,
+        "sensitivity_youden": 0.8684,
+        "specificity_youden": 0.7088,
+        "sensitivity_at_90_specificity": 0.5608
+      }
+    },
+    {
+      "epoch": 3,
+      "lr": 0.1,
+      "train_loss": 0.38835563673973084,
+      "train_acc": 82.916,
+      "val_loss": 0.4847475031852722,
+      "val_acc": 78.53999999999999,
+      "val_auc": 0.86766496,
+      "val_clinical": {
+        "auc_roc": 0.86766496,
+        "sensitivity_0.5": 0.728,
+        "specificity_0.5": 0.8428,
+        "youden_threshold": 0.4406674802303314,
+        "sensitivity_youden": 0.7624,
+        "specificity_youden": 0.8196,
+        "sensitivity_at_90_specificity": 0.5856
+      }
+    },
+    {
+      "epoch": 4,
+      "lr": 0.1,
+      "train_loss": 0.3758016831302643,
+      "train_acc": 83.39800000000001,
+      "val_loss": 0.5366236499786377,
+      "val_acc": 75.02,
+      "val_auc": 0.85380928,
+      "val_clinical": {
+        "auc_roc": 0.85380928,
+        "sensitivity_0.5": 0.6236,
+        "specificity_0.5": 0.8768,
+        "youden_threshold": 0.28805628418922424,
+        "sensitivity_youden": 0.7904,
+        "specificity_youden": 0.7644,
+        "sensitivity_at_90_specificity": 0.5792
+      }
+    },
+    {
+      "epoch": 5,
+      "lr": 0.1,
+      "train_loss": 0.36116277032852173,
+      "train_acc": 84.134,
+      "val_loss": 0.46816428451538084,
+      "val_acc": 77.88000000000001,
+      "val_auc": 0.8771499199999999,
+      "val_clinical": {
+        "auc_roc": 0.8771499199999999,
+        "sensitivity_0.5": 0.7172,
+        "specificity_0.5": 0.8404,
+        "youden_threshold": 0.3748972713947296,
+        "sensitivity_youden": 0.7948,
+        "specificity_youden": 0.7844,
+        "sensitivity_at_90_specificity": 0.6328
+      }
+    },
+    {
+      "epoch": 6,
+      "lr": 0.1,
+      "train_loss": 0.3478973119926453,
+      "train_acc": 84.98400000000001,
+      "val_loss": 0.423438117313385,
+      "val_acc": 79.60000000000001,
+      "val_auc": 0.8907998400000001,
+      "val_clinical": {
+        "auc_roc": 0.8907998400000001,
+        "sensitivity_0.5": 0.7748,
+        "specificity_0.5": 0.8172,
+        "youden_threshold": 0.389431357383728,
+        "sensitivity_youden": 0.8548,
+        "specificity_youden": 0.7616,
+        "sensitivity_at_90_specificity": 0.6164
+      }
+    },
+    {
+      "epoch": 7,
+      "lr": 0.1,
+      "train_loss": 0.33879948670387267,
+      "train_acc": 85.33800000000001,
+      "val_loss": 0.392553181552887,
+      "val_acc": 82.3,
+      "val_auc": 0.9045810399999998,
+      "val_clinical": {
+        "auc_roc": 0.9045810399999998,
+        "sensitivity_0.5": 0.9016,
+        "specificity_0.5": 0.7444,
+        "youden_threshold": 0.5206460356712341,
+        "sensitivity_youden": 0.8856,
+        "specificity_youden": 0.7688,
+        "sensitivity_at_90_specificity": 0.6648
+      }
+    },
+    {
+      "epoch": 8,
+      "lr": 0.1,
+      "train_loss": 0.34060614079475404,
+      "train_acc": 85.324,
+      "val_loss": 0.44108773107528687,
+      "val_acc": 80.74,
+      "val_auc": 0.8936963200000001,
+      "val_clinical": {
+        "auc_roc": 0.8936963200000001,
+        "sensitivity_0.5": 0.75,
+        "specificity_0.5": 0.8648,
+        "youden_threshold": 0.4193246364593506,
+        "sensitivity_youden": 0.8032,
+        "specificity_youden": 0.8248,
+        "sensitivity_at_90_specificity": 0.6884
+      }
+    },
+    {
+      "epoch": 9,
+      "lr": 0.1,
+      "train_loss": 0.3274005959415436,
+      "train_acc": 86.162,
+      "val_loss": 0.3763879793167114,
+      "val_acc": 83.98,
+      "val_auc": 0.91879392,
+      "val_clinical": {
+        "auc_roc": 0.91879392,
+        "sensitivity_0.5": 0.8948,
+        "specificity_0.5": 0.7848,
+        "youden_threshold": 0.6075433492660522,
+        "sensitivity_youden": 0.856,
+        "specificity_youden": 0.8404,
+        "sensitivity_at_90_specificity": 0.7336
+      }
+    },
+    {
+      "epoch": 10,
+      "lr": 0.1,
+      "train_loss": 0.3169113222312927,
+      "train_acc": 86.49799999999999,
+      "val_loss": 0.41650926837921143,
+      "val_acc": 81.26,
+      "val_auc": 0.90072272,
+      "val_clinical": {
+        "auc_roc": 0.90072272,
+        "sensitivity_0.5": 0.8188,
+        "specificity_0.5": 0.8064,
+        "youden_threshold": 0.4107074737548828,
+        "sensitivity_youden": 0.8664,
+        "specificity_youden": 0.7672,
+        "sensitivity_at_90_specificity": 0.6516
+      }
+    },
+    {
+      "epoch": 11,
+      "lr": 0.1,
+      "train_loss": 0.30940304604530333,
+      "train_acc": 86.792,
+      "val_loss": 0.5145861053466797,
+      "val_acc": 79.22,
+      "val_auc": 0.8813219200000001,
+      "val_clinical": {
+        "auc_roc": 0.8813219200000001,
+        "sensitivity_0.5": 0.658,
+        "specificity_0.5": 0.9264,
+        "youden_threshold": 0.32104820013046265,
+        "sensitivity_youden": 0.7628,
+        "specificity_youden": 0.8564,
+        "sensitivity_at_90_specificity": 0.7028
+      }
+    },
+    {
+      "epoch": 12,
+      "lr": 0.1,
+      "train_loss": 0.3025961954307556,
+      "train_acc": 87.198,
+      "val_loss": 0.5858649001121521,
+      "val_acc": 76.5,
+      "val_auc": 0.8980632799999999,
+      "val_clinical": {
+        "auc_roc": 0.8980632799999999,
+        "sensitivity_0.5": 0.9592,
+        "specificity_0.5": 0.5708,
+        "youden_threshold": 0.795795202255249,
+        "sensitivity_youden": 0.8616,
+        "specificity_youden": 0.7644,
+        "sensitivity_at_90_specificity": 0.674
+      }
+    },
+    {
+      "epoch": 13,
+      "lr": 0.1,
+      "train_loss": 0.2982871568584442,
+      "train_acc": 87.544,
+      "val_loss": 0.4123901342391968,
+      "val_acc": 81.62,
+      "val_auc": 0.9007078399999998,
+      "val_clinical": {
+        "auc_roc": 0.9007078399999998,
+        "sensitivity_0.5": 0.8524,
+        "specificity_0.5": 0.78,
+        "youden_threshold": 0.46412453055381775,
+        "sensitivity_youden": 0.8716,
+        "specificity_youden": 0.7672,
+        "sensitivity_at_90_specificity": 0.6908
+      }
+    },
+    {
+      "epoch": 14,
+      "lr": 0.1,
+      "train_loss": 0.29730782218933105,
+      "train_acc": 87.508,
+      "val_loss": 0.39651748666763303,
+      "val_acc": 82.34,
+      "val_auc": 0.9075692799999999,
+      "val_clinical": {
+        "auc_roc": 0.9075692799999999,
+        "sensitivity_0.5": 0.8164,
+        "specificity_0.5": 0.8304,
+        "youden_threshold": 0.40133658051490784,
+        "sensitivity_youden": 0.8608,
+        "specificity_youden": 0.7904,
+        "sensitivity_at_90_specificity": 0.7236
+      }
+    },
+    {
+      "epoch": 15,
+      "lr": 0.1,
+      "train_loss": 0.2903168751525879,
+      "train_acc": 87.834,
+      "val_loss": 0.41704667749404906,
+      "val_acc": 81.04,
+      "val_auc": 0.9056576000000001,
+      "val_clinical": {
+        "auc_roc": 0.9056576000000001,
+        "sensitivity_0.5": 0.7628,
+        "specificity_0.5": 0.858,
+        "youden_threshold": 0.34109529852867126,
+        "sensitivity_youden": 0.8364,
+        "specificity_youden": 0.8012,
+        "sensitivity_at_90_specificity": 0.6968
+      }
+    },
+    {
+      "epoch": 16,
+      "lr": 0.1,
+      "train_loss": 0.2856395791053772,
+      "train_acc": 88.126,
+      "val_loss": 0.38362628536224364,
+      "val_acc": 83.06,
+      "val_auc": 0.91468592,
+      "val_clinical": {
+        "auc_roc": 0.91468592,
+        "sensitivity_0.5": 0.8448,
+        "specificity_0.5": 0.8164,
+        "youden_threshold": 0.5678934454917908,
+        "sensitivity_youden": 0.8244,
+        "specificity_youden": 0.8464,
+        "sensitivity_at_90_specificity": 0.7376
+      }
+    },
+    {
+      "epoch": 17,
+      "lr": 0.1,
+      "train_loss": 0.283120296754837,
+      "train_acc": 88.212,
+      "val_loss": 0.5072838763713836,
+      "val_acc": 80.36,
+      "val_auc": 0.9065236,
+      "val_clinical": {
+        "auc_roc": 0.9065236,
+        "sensitivity_0.5": 0.9204,
+        "specificity_0.5": 0.6868,
+        "youden_threshold": 0.7961872816085815,
+        "sensitivity_youden": 0.8184,
+        "specificity_youden": 0.814,
+        "sensitivity_at_90_specificity": 0.7088
+      }
+    },
+    {
+      "epoch": 18,
+      "lr": 0.1,
+      "train_loss": 0.2842076969051361,
+      "train_acc": 88.31,
+      "val_loss": 0.4918387041091919,
+      "val_acc": 80.96,
+      "val_auc": 0.9084180799999999,
+      "val_clinical": {
+        "auc_roc": 0.9084180799999999,
+        "sensitivity_0.5": 0.6796,
+        "specificity_0.5": 0.9396,
+        "youden_threshold": 0.14763614535331726,
+        "sensitivity_youden": 0.8332,
+        "specificity_youden": 0.834,
+        "sensitivity_at_90_specificity": 0.756
+      }
+    },
+    {
+      "epoch": 19,
+      "lr": 0.1,
+      "train_loss": 0.27639721751213076,
+      "train_acc": 88.588,
+      "val_loss": 0.3603211974143982,
+      "val_acc": 83.7,
+      "val_auc": 0.9237219199999999,
+      "val_clinical": {
+        "auc_roc": 0.9237219199999999,
+        "sensitivity_0.5": 0.8864,
+        "specificity_0.5": 0.7876,
+        "youden_threshold": 0.6099299192428589,
+        "sensitivity_youden": 0.8372,
+        "specificity_youden": 0.8512,
+        "sensitivity_at_90_specificity": 0.7672
+      }
+    },
+    {
+      "epoch": 20,
+      "lr": 0.1,
+      "train_loss": 0.2702323098087311,
+      "train_acc": 88.954,
+      "val_loss": 0.36840466442108155,
+      "val_acc": 82.96,
+      "val_auc": 0.9201976000000001,
+      "val_clinical": {
+        "auc_roc": 0.9201976000000001,
+        "sensitivity_0.5": 0.8612,
+        "specificity_0.5": 0.798,
+        "youden_threshold": 0.40598103404045105,
+        "sensitivity_youden": 0.9016,
+        "specificity_youden": 0.7628,
+        "sensitivity_at_90_specificity": 0.742
+      }
+    },
+    {
+      "epoch": 21,
+      "lr": 0.1,
+      "train_loss": 0.27372710463523864,
+      "train_acc": 88.622,
+      "val_loss": 0.367921918964386,
+      "val_acc": 83.8,
+      "val_auc": 0.92190896,
+      "val_clinical": {
+        "auc_roc": 0.92190896,
+        "sensitivity_0.5": 0.7764,
+        "specificity_0.5": 0.8996,
+        "youden_threshold": 0.37435317039489746,
+        "sensitivity_youden": 0.85,
+        "specificity_youden": 0.8488,
+        "sensitivity_at_90_specificity": 0.7728
+      }
+    },
+    {
+      "epoch": 22,
+      "lr": 0.1,
+      "train_loss": 0.2715199780368805,
+      "train_acc": 88.736,
+      "val_loss": 0.4773876093864441,
+      "val_acc": 81.26,
+      "val_auc": 0.90537352,
+      "val_clinical": {
+        "auc_roc": 0.90537352,
+        "sensitivity_0.5": 0.7196,
+        "specificity_0.5": 0.9056,
+        "youden_threshold": 0.18836700916290283,
+        "sensitivity_youden": 0.8328,
+        "specificity_youden": 0.8212,
+        "sensitivity_at_90_specificity": 0.7284
+      }
+    },
+    {
+      "epoch": 23,
+      "lr": 0.1,
+      "train_loss": 0.2704703256797791,
+      "train_acc": 88.712,
+      "val_loss": 0.6154621526718139,
+      "val_acc": 75.1,
+      "val_auc": 0.89326288,
+      "val_clinical": {
+        "auc_roc": 0.89326288,
+        "sensitivity_0.5": 0.538,
+        "specificity_0.5": 0.964,
+        "youden_threshold": 0.1186041310429573,
+        "sensitivity_youden": 0.7788,
+        "specificity_youden": 0.8728,
+        "sensitivity_at_90_specificity": 0.7416
+      }
+    },
+    {
+      "epoch": 24,
+      "lr": 0.1,
+      "train_loss": 0.26602423283576965,
+      "train_acc": 89.044,
+      "val_loss": 0.36390305471420287,
+      "val_acc": 84.36,
+      "val_auc": 0.9240961599999999,
+      "val_clinical": {
+        "auc_roc": 0.9240961599999999,
+        "sensitivity_0.5": 0.8088,
+        "specificity_0.5": 0.8784,
+        "youden_threshold": 0.45422330498695374,
+        "sensitivity_youden": 0.8256,
+        "specificity_youden": 0.864,
+        "sensitivity_at_90_specificity": 0.7644
+      }
+    },
+    {
+      "epoch": 25,
+      "lr": 0.1,
+      "train_loss": 0.26947139563560485,
+      "train_acc": 88.986,
+      "val_loss": 0.40229219379425046,
+      "val_acc": 83.34,
+      "val_auc": 0.91526416,
+      "val_clinical": {
+        "auc_roc": 0.91526416,
+        "sensitivity_0.5": 0.7924,
+        "specificity_0.5": 0.8744,
+        "youden_threshold": 0.40306583046913147,
+        "sensitivity_youden": 0.8232,
+        "specificity_youden": 0.8484,
+        "sensitivity_at_90_specificity": 0.7556
+      }
+    },
+    {
+      "epoch": 26,
+      "lr": 0.1,
+      "train_loss": 0.2662783198261261,
+      "train_acc": 88.966,
+      "val_loss": 0.798550756263733,
+      "val_acc": 66.78,
+      "val_auc": 0.87465456,
+      "val_clinical": {
+        "auc_roc": 0.87465456,
+        "sensitivity_0.5": 0.3504,
+        "specificity_0.5": 0.9852,
+        "youden_threshold": 0.07430663704872131,
+        "sensitivity_youden": 0.7736,
+        "specificity_youden": 0.8324,
+        "sensitivity_at_90_specificity": 0.6676
+      }
+    },
+    {
+      "epoch": 27,
+      "lr": 0.1,
+      "train_loss": 0.2609140802192688,
+      "train_acc": 89.18,
+      "val_loss": 0.38644419975280764,
+      "val_acc": 82.22,
+      "val_auc": 0.9208696799999999,
+      "val_clinical": {
+        "auc_roc": 0.9208696799999999,
+        "sensitivity_0.5": 0.7332,
+        "specificity_0.5": 0.9112,
+        "youden_threshold": 0.32932811975479126,
+        "sensitivity_youden": 0.8396,
+        "specificity_youden": 0.8524,
+        "sensitivity_at_90_specificity": 0.7572
+      }
+    },
+    {
+      "epoch": 28,
+      "lr": 0.1,
+      "train_loss": 0.25615687022209166,
+      "train_acc": 89.632,
+      "val_loss": 0.41984543285369874,
+      "val_acc": 84.22,
+      "val_auc": 0.92626864,
+      "val_clinical": {
+        "auc_roc": 0.92626864,
+        "sensitivity_0.5": 0.746,
+        "specificity_0.5": 0.9384,
+        "youden_threshold": 0.2607887387275696,
+        "sensitivity_youden": 0.8344,
+        "specificity_youden": 0.8688,
+        "sensitivity_at_90_specificity": 0.7976
+      }
+    },
+    {
+      "epoch": 29,
+      "lr": 0.1,
+      "train_loss": 0.2628380957698822,
+      "train_acc": 89.34,
+      "val_loss": 0.4048811773300171,
+      "val_acc": 82.62,
+      "val_auc": 0.92508832,
+      "val_clinical": {
+        "auc_roc": 0.92508832,
+        "sensitivity_0.5": 0.9144,
+        "specificity_0.5": 0.738,
+        "youden_threshold": 0.7122077345848083,
+        "sensitivity_youden": 0.8648,
+        "specificity_youden": 0.8288,
+        "sensitivity_at_90_specificity": 0.7672
+      }
+    },
+    {
+      "epoch": 30,
+      "lr": 0.1,
+      "train_loss": 0.2587631458568573,
+      "train_acc": 89.37,
+      "val_loss": 0.3485143488883972,
+      "val_acc": 85.92,
+      "val_auc": 0.9358607999999999,
+      "val_clinical": {
+        "auc_roc": 0.9358607999999999,
+        "sensitivity_0.5": 0.8528,
+        "specificity_0.5": 0.8656,
+        "youden_threshold": 0.5151559114456177,
+        "sensitivity_youden": 0.8508,
+        "specificity_youden": 0.8724,
+        "sensitivity_at_90_specificity": 0.8164
+      }
+    },
+    {
+      "epoch": 31,
+      "lr": 0.1,
+      "train_loss": 0.260702867937088,
+      "train_acc": 89.212,
+      "val_loss": 0.393791036605835,
+      "val_acc": 81.72,
+      "val_auc": 0.90433608,
+      "val_clinical": {
+        "auc_roc": 0.90433608,
+        "sensitivity_0.5": 0.8164,
+        "specificity_0.5": 0.818,
+        "youden_threshold": 0.5756998658180237,
+        "sensitivity_youden": 0.776,
+        "specificity_youden": 0.8612,
+        "sensitivity_at_90_specificity": 0.7104
+      }
+    },
+    {
+      "epoch": 32,
+      "lr": 0.1,
+      "train_loss": 0.25677540398597715,
+      "train_acc": 89.468,
+      "val_loss": 0.30474514293670657,
+      "val_acc": 87.44,
+      "val_auc": 0.9438190400000002,
+      "val_clinical": {
+        "auc_roc": 0.9438190400000002,
+        "sensitivity_0.5": 0.8836,
+        "specificity_0.5": 0.8652,
+        "youden_threshold": 0.5148587226867676,
+        "sensitivity_youden": 0.8796,
+        "specificity_youden": 0.8712,
+        "sensitivity_at_90_specificity": 0.84
+      }
+    },
+    {
+      "epoch": 33,
+      "lr": 0.1,
+      "train_loss": 0.25658641180992126,
+      "train_acc": 89.474,
+      "val_loss": 0.7646981601715088,
+      "val_acc": 70.39999999999999,
+      "val_auc": 0.80381408,
+      "val_clinical": {
+        "auc_roc": 0.80381408,
+        "sensitivity_0.5": 0.4676,
+        "specificity_0.5": 0.9404,
+        "youden_threshold": 0.1206585168838501,
+        "sensitivity_youden": 0.6932,
+        "specificity_youden": 0.7744,
+        "sensitivity_at_90_specificity": 0.5236
+      }
+    },
+    {
+      "epoch": 34,
+      "lr": 0.1,
+      "train_loss": 0.25512125685691833,
+      "train_acc": 89.63799999999999,
+      "val_loss": 0.37135433101654053,
+      "val_acc": 83.5,
+      "val_auc": 0.9274347199999999,
+      "val_clinical": {
+        "auc_roc": 0.9274347199999999,
+        "sensitivity_0.5": 0.9184,
+        "specificity_0.5": 0.7516,
+        "youden_threshold": 0.7034408450126648,
+        "sensitivity_youden": 0.834,
+        "specificity_youden": 0.8516,
+        "sensitivity_at_90_specificity": 0.7552
+      }
+    },
+    {
+      "epoch": 35,
+      "lr": 0.1,
+      "train_loss": 0.2535347156047821,
+      "train_acc": 89.55199999999999,
+      "val_loss": 0.6141144696235656,
+      "val_acc": 79.2,
+      "val_auc": 0.84938896,
+      "val_clinical": {
+        "auc_roc": 0.84938896,
+        "sensitivity_0.5": 0.6684,
+        "specificity_0.5": 0.9156,
+        "youden_threshold": 0.2822706401348114,
+        "sensitivity_youden": 0.73,
+        "specificity_youden": 0.8644,
+        "sensitivity_at_90_specificity": 0.6904
+      }
+    },
+    {
+      "epoch": 36,
+      "lr": 0.1,
+      "train_loss": 0.2538688248538971,
+      "train_acc": 89.658,
+      "val_loss": 0.3309648712158203,
+      "val_acc": 85.94000000000001,
+      "val_auc": 0.93461344,
+      "val_clinical": {
+        "auc_roc": 0.93461344,
+        "sensitivity_0.5": 0.8616,
+        "specificity_0.5": 0.8572,
+        "youden_threshold": 0.5472437143325806,
+        "sensitivity_youden": 0.8492,
+        "specificity_youden": 0.872,
+        "sensitivity_at_90_specificity": 0.8076
+      }
+    },
+    {
+      "epoch": 37,
+      "lr": 0.1,
+      "train_loss": 0.25423857494831087,
+      "train_acc": 89.646,
+      "val_loss": 0.4178720925331116,
+      "val_acc": 81.64,
+      "val_auc": 0.9278046400000002,
+      "val_clinical": {
+        "auc_roc": 0.9278046400000002,
+        "sensitivity_0.5": 0.6708,
+        "specificity_0.5": 0.962,
+        "youden_threshold": 0.2638300359249115,
+        "sensitivity_youden": 0.8068,
+        "specificity_youden": 0.892,
+        "sensitivity_at_90_specificity": 0.7912
+      }
+    },
+    {
+      "epoch": 38,
+      "lr": 0.1,
+      "train_loss": 0.25467527702331544,
+      "train_acc": 89.652,
+      "val_loss": 0.4669098016738892,
+      "val_acc": 80.96,
+      "val_auc": 0.9234384,
+      "val_clinical": {
+        "auc_roc": 0.9234384,
+        "sensitivity_0.5": 0.9452,
+        "specificity_0.5": 0.674,
+        "youden_threshold": 0.8018078804016113,
+        "sensitivity_youden": 0.8572,
+        "specificity_youden": 0.8296,
+        "sensitivity_at_90_specificity": 0.7544
+      }
+    },
+    {
+      "epoch": 39,
+      "lr": 0.1,
+      "train_loss": 0.2522372836399078,
+      "train_acc": 89.73400000000001,
+      "val_loss": 0.6217381546020507,
+      "val_acc": 77.62,
+      "val_auc": 0.8601396800000001,
+      "val_clinical": {
+        "auc_roc": 0.8601396800000001,
+        "sensitivity_0.5": 0.6176,
+        "specificity_0.5": 0.9348,
+        "youden_threshold": 0.13990266621112823,
+        "sensitivity_youden": 0.7728,
+        "specificity_youden": 0.8476,
+        "sensitivity_at_90_specificity": 0.7028
+      }
+    },
+    {
+      "epoch": 40,
+      "lr": 0.1,
+      "train_loss": 0.25174811339378356,
+      "train_acc": 89.75999999999999,
+      "val_loss": 0.383563415145874,
+      "val_acc": 82.78,
+      "val_auc": 0.9223406399999999,
+      "val_clinical": {
+        "auc_roc": 0.9223406399999999,
+        "sensitivity_0.5": 0.7584,
+        "specificity_0.5": 0.8972,
+        "youden_threshold": 0.24349260330200195,
+        "sensitivity_youden": 0.8804,
+        "specificity_youden": 0.7988,
+        "sensitivity_at_90_specificity": 0.7536
+      }
+    },
+    {
+      "epoch": 41,
+      "lr": 0.1,
+      "train_loss": 0.25409227808952334,
+      "train_acc": 89.72200000000001,
+      "val_loss": 0.43379842700958254,
+      "val_acc": 83.34,
+      "val_auc": 0.90900888,
+      "val_clinical": {
+        "auc_roc": 0.90900888,
+        "sensitivity_0.5": 0.812,
+        "specificity_0.5": 0.8548,
+        "youden_threshold": 0.6170433163642883,
+        "sensitivity_youden": 0.7884,
+        "specificity_youden": 0.882,
+        "sensitivity_at_90_specificity": 0.768
+      }
+    },
+    {
+      "epoch": 42,
+      "lr": 0.1,
+      "train_loss": 0.24971895575523376,
+      "train_acc": 89.7,
+      "val_loss": 0.4377170636177063,
+      "val_acc": 82.34,
+      "val_auc": 0.91923648,
+      "val_clinical": {
+        "auc_roc": 0.91923648,
+        "sensitivity_0.5": 0.7284,
+        "specificity_0.5": 0.9184,
+        "youden_threshold": 0.20120464265346527,
+        "sensitivity_youden": 0.8456,
+        "specificity_youden": 0.846,
+        "sensitivity_at_90_specificity": 0.7732
+      }
+    },
+    {
+      "epoch": 43,
+      "lr": 0.1,
+      "train_loss": 0.24623539691925048,
+      "train_acc": 90.046,
+      "val_loss": 0.41955204887390135,
+      "val_acc": 83.28,
+      "val_auc": 0.91423768,
+      "val_clinical": {
+        "auc_roc": 0.91423768,
+        "sensitivity_0.5": 0.7728,
+        "specificity_0.5": 0.8928,
+        "youden_threshold": 0.3560519814491272,
+        "sensitivity_youden": 0.8144,
+        "specificity_youden": 0.8584,
+        "sensitivity_at_90_specificity": 0.7652
+      }
+    },
+    {
+      "epoch": 44,
+      "lr": 0.1,
+      "train_loss": 0.24673361948013306,
+      "train_acc": 89.996,
+      "val_loss": 0.4654144042015076,
+      "val_acc": 78.78,
+      "val_auc": 0.8811646399999999,
+      "val_clinical": {
+        "auc_roc": 0.8811646399999999,
+        "sensitivity_0.5": 0.8604,
+        "specificity_0.5": 0.7152,
+        "youden_threshold": 0.7282565236091614,
+        "sensitivity_youden": 0.7368,
+        "specificity_youden": 0.8628,
+        "sensitivity_at_90_specificity": 0.6756
+      }
+    },
+    {
+      "epoch": 45,
+      "lr": 0.1,
+      "train_loss": 0.24720420573234558,
+      "train_acc": 90.02,
+      "val_loss": 0.306215488576889,
+      "val_acc": 87.18,
+      "val_auc": 0.9436523200000002,
+      "val_clinical": {
+        "auc_roc": 0.9436523200000002,
+        "sensitivity_0.5": 0.8832,
+        "specificity_0.5": 0.8604,
+        "youden_threshold": 0.5031808614730835,
+        "sensitivity_youden": 0.8828,
+        "specificity_youden": 0.8612,
+        "sensitivity_at_90_specificity": 0.8348
+      }
+    },
+    {
+      "epoch": 46,
+      "lr": 0.1,
+      "train_loss": 0.24379229533672334,
+      "train_acc": 90.216,
+      "val_loss": 0.45434720878601076,
+      "val_acc": 80.5,
+      "val_auc": 0.89966048,
+      "val_clinical": {
+        "auc_roc": 0.89966048,
+        "sensitivity_0.5": 0.7,
+        "specificity_0.5": 0.91,
+        "youden_threshold": 0.2110266238451004,
+        "sensitivity_youden": 0.8472,
+        "specificity_youden": 0.8024,
+        "sensitivity_at_90_specificity": 0.714
+      }
+    },
+    {
+      "epoch": 47,
+      "lr": 0.1,
+      "train_loss": 0.24689868389606476,
+      "train_acc": 90.12,
+      "val_loss": 0.44615984392166136,
+      "val_acc": 81.78,
+      "val_auc": 0.9259966399999999,
+      "val_clinical": {
+        "auc_roc": 0.9259966399999999,
+        "sensitivity_0.5": 0.942,
+        "specificity_0.5": 0.6936,
+        "youden_threshold": 0.7731075882911682,
+        "sensitivity_youden": 0.878,
+        "specificity_youden": 0.8212,
+        "sensitivity_at_90_specificity": 0.7516
+      }
+    },
+    {
+      "epoch": 48,
+      "lr": 0.1,
+      "train_loss": 0.24792324708938598,
+      "train_acc": 90.09,
+      "val_loss": 0.39252573308944705,
+      "val_acc": 83.72,
+      "val_auc": 0.92943736,
+      "val_clinical": {
+        "auc_roc": 0.92943736,
+        "sensitivity_0.5": 0.75,
+        "specificity_0.5": 0.9244,
+        "youden_threshold": 0.2239248901605606,
+        "sensitivity_youden": 0.8696,
+        "specificity_youden": 0.8444,
+        "sensitivity_at_90_specificity": 0.7864
+      }
+    },
+    {
+      "epoch": 49,
+      "lr": 0.1,
+      "train_loss": 0.24428364247322082,
+      "train_acc": 90.086,
+      "val_loss": 0.4556990691184998,
+      "val_acc": 80.80000000000001,
+      "val_auc": 0.9173384800000002,
+      "val_clinical": {
+        "auc_roc": 0.9173384800000002,
+        "sensitivity_0.5": 0.93,
+        "specificity_0.5": 0.686,
+        "youden_threshold": 0.7561660408973694,
+        "sensitivity_youden": 0.8416,
+        "specificity_youden": 0.832,
+        "sensitivity_at_90_specificity": 0.7512
+      }
+    },
+    {
+      "epoch": 50,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.25905450880050657,
+      "train_acc": 89.28,
+      "val_loss": 0.5015707260131836,
+      "val_acc": 80.17999999999999,
+      "val_auc": 0.89184496,
+      "val_clinical": {
+        "auc_roc": 0.89184496,
+        "sensitivity_0.5": 0.8572,
+        "specificity_0.5": 0.7464,
+        "youden_threshold": 0.8064859509468079,
+        "sensitivity_youden": 0.7484,
+        "specificity_youden": 0.8732,
+        "sensitivity_at_90_specificity": 0.718
+      }
+    },
+    {
+      "epoch": 51,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.20069158903598786,
+      "train_acc": 92.214,
+      "val_loss": 0.33046902656555177,
+      "val_acc": 85.94000000000001,
+      "val_auc": 0.94541776,
+      "val_clinical": {
+        "auc_roc": 0.94541776,
+        "sensitivity_0.5": 0.7832,
+        "specificity_0.5": 0.9356,
+        "youden_threshold": 0.28755638003349304,
+        "sensitivity_youden": 0.8604,
+        "specificity_youden": 0.882,
+        "sensitivity_at_90_specificity": 0.8396
+      }
+    },
+    {
+      "epoch": 52,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.18231275302886962,
+      "train_acc": 93.00399999999999,
+      "val_loss": 0.34225120658874514,
+      "val_acc": 85.86,
+      "val_auc": 0.9378875200000001,
+      "val_clinical": {
+        "auc_roc": 0.9378875200000001,
+        "sensitivity_0.5": 0.7976,
+        "specificity_0.5": 0.9196,
+        "youden_threshold": 0.31388387084007263,
+        "sensitivity_youden": 0.8592,
+        "specificity_youden": 0.8692,
+        "sensitivity_at_90_specificity": 0.8216
+      }
+    },
+    {
+      "epoch": 53,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.17529493498802184,
+      "train_acc": 93.19800000000001,
+      "val_loss": 0.3282296434402466,
+      "val_acc": 86.36,
+      "val_auc": 0.94447296,
+      "val_clinical": {
+        "auc_roc": 0.94447296,
+        "sensitivity_0.5": 0.8056,
+        "specificity_0.5": 0.9216,
+        "youden_threshold": 0.4050668478012085,
+        "sensitivity_youden": 0.8428,
+        "specificity_youden": 0.9056,
+        "sensitivity_at_90_specificity": 0.844
+      }
+    },
+    {
+      "epoch": 54,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.16887238713264466,
+      "train_acc": 93.53,
+      "val_loss": 0.3203616509437561,
+      "val_acc": 87.38,
+      "val_auc": 0.94672816,
+      "val_clinical": {
+        "auc_roc": 0.94672816,
+        "sensitivity_0.5": 0.8384,
+        "specificity_0.5": 0.9092,
+        "youden_threshold": 0.37139618396759033,
+        "sensitivity_youden": 0.8772,
+        "specificity_youden": 0.8796,
+        "sensitivity_at_90_specificity": 0.8512
+      }
+    },
+    {
+      "epoch": 55,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.16619738324165345,
+      "train_acc": 93.642,
+      "val_loss": 0.3272340021133423,
+      "val_acc": 86.74,
+      "val_auc": 0.94506032,
+      "val_clinical": {
+        "auc_roc": 0.94506032,
+        "sensitivity_0.5": 0.818,
+        "specificity_0.5": 0.9168,
+        "youden_threshold": 0.3845215141773224,
+        "sensitivity_youden": 0.8512,
+        "specificity_youden": 0.8908,
+        "sensitivity_at_90_specificity": 0.8404
+      }
+    },
+    {
+      "epoch": 56,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.16544600980758667,
+      "train_acc": 93.77600000000001,
+      "val_loss": 0.3988382417678833,
+      "val_acc": 84.06,
+      "val_auc": 0.9290204799999999,
+      "val_clinical": {
+        "auc_roc": 0.9290204799999999,
+        "sensitivity_0.5": 0.75,
+        "specificity_0.5": 0.9312,
+        "youden_threshold": 0.25025802850723267,
+        "sensitivity_youden": 0.8304,
+        "specificity_youden": 0.8776,
+        "sensitivity_at_90_specificity": 0.798
+      }
+    },
+    {
+      "epoch": 57,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.1596224035310745,
+      "train_acc": 93.852,
+      "val_loss": 0.312469154214859,
+      "val_acc": 87.14,
+      "val_auc": 0.94728944,
+      "val_clinical": {
+        "auc_roc": 0.94728944,
+        "sensitivity_0.5": 0.8308,
+        "specificity_0.5": 0.912,
+        "youden_threshold": 0.41589421033859253,
+        "sensitivity_youden": 0.8596,
+        "specificity_youden": 0.8984,
+        "sensitivity_at_90_specificity": 0.8516
+      }
+    },
+    {
+      "epoch": 58,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.15926938616752626,
+      "train_acc": 93.894,
+      "val_loss": 0.4275838593006134,
+      "val_acc": 82.6,
+      "val_auc": 0.9298553599999999,
+      "val_clinical": {
+        "auc_roc": 0.9298553599999999,
+        "sensitivity_0.5": 0.6964,
+        "specificity_0.5": 0.9556,
+        "youden_threshold": 0.22251106798648834,
+        "sensitivity_youden": 0.822,
+        "specificity_youden": 0.8884,
+        "sensitivity_at_90_specificity": 0.8072
+      }
+    },
+    {
+      "epoch": 59,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.1548489171361923,
+      "train_acc": 94.17999999999999,
+      "val_loss": 0.42658788833618166,
+      "val_acc": 82.92,
+      "val_auc": 0.93210272,
+      "val_clinical": {
+        "auc_roc": 0.93210272,
+        "sensitivity_0.5": 0.7116,
+        "specificity_0.5": 0.9468,
+        "youden_threshold": 0.19324944913387299,
+        "sensitivity_youden": 0.8384,
+        "specificity_youden": 0.8792,
+        "sensitivity_at_90_specificity": 0.814
+      }
+    },
+    {
+      "epoch": 60,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.1524371108341217,
+      "train_acc": 94.21000000000001,
+      "val_loss": 0.34038304677009584,
+      "val_acc": 86.22,
+      "val_auc": 0.9429929599999999,
+      "val_clinical": {
+        "auc_roc": 0.9429929599999999,
+        "sensitivity_0.5": 0.7896,
+        "specificity_0.5": 0.9348,
+        "youden_threshold": 0.2190374732017517,
+        "sensitivity_youden": 0.8908,
+        "specificity_youden": 0.856,
+        "sensitivity_at_90_specificity": 0.8344
+      }
+    },
+    {
+      "epoch": 61,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.151150751581192,
+      "train_acc": 94.256,
+      "val_loss": 0.3838196161746979,
+      "val_acc": 84.58,
+      "val_auc": 0.93333696,
+      "val_clinical": {
+        "auc_roc": 0.93333696,
+        "sensitivity_0.5": 0.7688,
+        "specificity_0.5": 0.9228,
+        "youden_threshold": 0.2642036974430084,
+        "sensitivity_youden": 0.8492,
+        "specificity_youden": 0.8756,
+        "sensitivity_at_90_specificity": 0.8152
+      }
+    },
+    {
+      "epoch": 62,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.1504353783750534,
+      "train_acc": 94.316,
+      "val_loss": 0.5083886783123016,
+      "val_acc": 81.96,
+      "val_auc": 0.9048006400000002,
+      "val_clinical": {
+        "auc_roc": 0.9048006400000002,
+        "sensitivity_0.5": 0.7032,
+        "specificity_0.5": 0.936,
+        "youden_threshold": 0.2663044035434723,
+        "sensitivity_youden": 0.7804,
+        "specificity_youden": 0.8888,
+        "sensitivity_at_90_specificity": 0.7656
+      }
+    },
+    {
+      "epoch": 63,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.15159806009292603,
+      "train_acc": 94.188,
+      "val_loss": 0.3756446301460266,
+      "val_acc": 85.0,
+      "val_auc": 0.9380515200000001,
+      "val_clinical": {
+        "auc_roc": 0.9380515200000001,
+        "sensitivity_0.5": 0.7624,
+        "specificity_0.5": 0.9376,
+        "youden_threshold": 0.2871600091457367,
+        "sensitivity_youden": 0.8312,
+        "specificity_youden": 0.8936,
+        "sensitivity_at_90_specificity": 0.8188
+      }
+    },
+    {
+      "epoch": 64,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.149403165974617,
+      "train_acc": 94.27600000000001,
+      "val_loss": 0.43737206621170044,
+      "val_acc": 84.11999999999999,
+      "val_auc": 0.92129792,
+      "val_clinical": {
+        "auc_roc": 0.92129792,
+        "sensitivity_0.5": 0.7464,
+        "specificity_0.5": 0.936,
+        "youden_threshold": 0.3184448778629303,
+        "sensitivity_youden": 0.7984,
+        "specificity_youden": 0.8988,
+        "sensitivity_at_90_specificity": 0.796
+      }
+    },
+    {
+      "epoch": 65,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.14532839615821838,
+      "train_acc": 94.57799999999999,
+      "val_loss": 0.3211087876796722,
+      "val_acc": 87.06,
+      "val_auc": 0.9481364800000001,
+      "val_clinical": {
+        "auc_roc": 0.9481364800000001,
+        "sensitivity_0.5": 0.8156,
+        "specificity_0.5": 0.9256,
+        "youden_threshold": 0.3870312571525574,
+        "sensitivity_youden": 0.8508,
+        "specificity_youden": 0.91,
+        "sensitivity_at_90_specificity": 0.8568
+      }
+    },
+    {
+      "epoch": 66,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.14513741159439086,
+      "train_acc": 94.53200000000001,
+      "val_loss": 0.39496427974700926,
+      "val_acc": 84.92,
+      "val_auc": 0.93255744,
+      "val_clinical": {
+        "auc_roc": 0.93255744,
+        "sensitivity_0.5": 0.776,
+        "specificity_0.5": 0.9224,
+        "youden_threshold": 0.182805597782135,
+        "sensitivity_youden": 0.8696,
+        "specificity_youden": 0.8392,
+        "sensitivity_at_90_specificity": 0.8028
+      }
+    },
+    {
+      "epoch": 67,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.1441968792152405,
+      "train_acc": 94.56599999999999,
+      "val_loss": 0.4404590357780456,
+      "val_acc": 83.34,
+      "val_auc": 0.9324104000000001,
+      "val_clinical": {
+        "auc_roc": 0.9324104000000001,
+        "sensitivity_0.5": 0.7012,
+        "specificity_0.5": 0.9656,
+        "youden_threshold": 0.12035814672708511,
+        "sensitivity_youden": 0.8648,
+        "specificity_youden": 0.854,
+        "sensitivity_at_90_specificity": 0.8116
+      }
+    },
+    {
+      "epoch": 68,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.14406129701137543,
+      "train_acc": 94.542,
+      "val_loss": 0.34573968381881715,
+      "val_acc": 86.61999999999999,
+      "val_auc": 0.9409454399999999,
+      "val_clinical": {
+        "auc_roc": 0.9409454399999999,
+        "sensitivity_0.5": 0.854,
+        "specificity_0.5": 0.8784,
+        "youden_threshold": 0.5522946119308472,
+        "sensitivity_youden": 0.8464,
+        "specificity_youden": 0.888,
+        "sensitivity_at_90_specificity": 0.8148
+      }
+    },
+    {
+      "epoch": 69,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.14283355017185212,
+      "train_acc": 94.58800000000001,
+      "val_loss": 0.3808111171245575,
+      "val_acc": 84.64,
+      "val_auc": 0.9479213599999999,
+      "val_clinical": {
+        "auc_roc": 0.9479213599999999,
+        "sensitivity_0.5": 0.7392,
+        "specificity_0.5": 0.9536,
+        "youden_threshold": 0.16683663427829742,
+        "sensitivity_youden": 0.8608,
+        "specificity_youden": 0.894,
+        "sensitivity_at_90_specificity": 0.8512
+      }
+    },
+    {
+      "epoch": 70,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.13900432773590088,
+      "train_acc": 94.74000000000001,
+      "val_loss": 0.41137453632354737,
+      "val_acc": 84.34,
+      "val_auc": 0.929152,
+      "val_clinical": {
+        "auc_roc": 0.929152,
+        "sensitivity_0.5": 0.7548,
+        "specificity_0.5": 0.932,
+        "youden_threshold": 0.31321603059768677,
+        "sensitivity_youden": 0.8136,
+        "specificity_youden": 0.8936,
+        "sensitivity_at_90_specificity": 0.804
+      }
+    },
+    {
+      "epoch": 71,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.14048969039201736,
+      "train_acc": 94.75200000000001,
+      "val_loss": 0.328181912612915,
+      "val_acc": 86.94,
+      "val_auc": 0.9417951999999998,
+      "val_clinical": {
+        "auc_roc": 0.9417951999999998,
+        "sensitivity_0.5": 0.846,
+        "specificity_0.5": 0.8928,
+        "youden_threshold": 0.4604479968547821,
+        "sensitivity_youden": 0.8568,
+        "specificity_youden": 0.886,
+        "sensitivity_at_90_specificity": 0.836
+      }
+    },
+    {
+      "epoch": 72,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.13837087110996246,
+      "train_acc": 94.76,
+      "val_loss": 0.2966029849052429,
+      "val_acc": 88.4,
+      "val_auc": 0.95232864,
+      "val_clinical": {
+        "auc_roc": 0.95232864,
+        "sensitivity_0.5": 0.8736,
+        "specificity_0.5": 0.8944,
+        "youden_threshold": 0.49939653277397156,
+        "sensitivity_youden": 0.874,
+        "specificity_youden": 0.8944,
+        "sensitivity_at_90_specificity": 0.8668
+      }
+    },
+    {
+      "epoch": 73,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.13713910177230834,
+      "train_acc": 94.834,
+      "val_loss": 0.40579500560760495,
+      "val_acc": 84.38,
+      "val_auc": 0.93421552,
+      "val_clinical": {
+        "auc_roc": 0.93421552,
+        "sensitivity_0.5": 0.7536,
+        "specificity_0.5": 0.934,
+        "youden_threshold": 0.24304047226905823,
+        "sensitivity_youden": 0.836,
+        "specificity_youden": 0.8796,
+        "sensitivity_at_90_specificity": 0.8032
+      }
+    },
+    {
+      "epoch": 74,
+      "lr": 0.010000000000000002,
+      "train_loss": 0.1357499036693573,
+      "train_acc": 94.904,
+      "val_loss": 0.37476188764572144,
+      "val_acc": 85.7,
+      "val_auc": 0.9377694400000001,
+      "val_clinical": {
+        "auc_roc": 0.9377694400000001,
+        "sensitivity_0.5": 0.79,
+        "specificity_0.5": 0.924,
+        "youden_threshold": 0.32628822326660156,
+        "sensitivity_youden": 0.8456,
+        "specificity_youden": 0.8932,
+        "sensitivity_at_90_specificity": 0.8296
+      }
+    },
+    {
+      "epoch": 75,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.13741959075927734,
+      "train_acc": 94.868,
+      "val_loss": 0.3572843271255493,
+      "val_acc": 85.42,
+      "val_auc": 0.93493168,
+      "val_clinical": {
+        "auc_roc": 0.93493168,
+        "sensitivity_0.5": 0.8192,
+        "specificity_0.5": 0.8892,
+        "youden_threshold": 0.3621082305908203,
+        "sensitivity_youden": 0.8612,
+        "specificity_youden": 0.8548,
+        "sensitivity_at_90_specificity": 0.7976
+      }
+    },
+    {
+      "epoch": 76,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.11126654854536057,
+      "train_acc": 95.98400000000001,
+      "val_loss": 0.43809874658584597,
+      "val_acc": 84.11999999999999,
+      "val_auc": 0.93129888,
+      "val_clinical": {
+        "auc_roc": 0.93129888,
+        "sensitivity_0.5": 0.736,
+        "specificity_0.5": 0.9464,
+        "youden_threshold": 0.18541276454925537,
+        "sensitivity_youden": 0.8264,
+        "specificity_youden": 0.8848,
+        "sensitivity_at_90_specificity": 0.8012
+      }
+    },
+    {
+      "epoch": 77,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.10234672428846359,
+      "train_acc": 96.344,
+      "val_loss": 0.38352170486450193,
+      "val_acc": 85.7,
+      "val_auc": 0.9384540799999999,
+      "val_clinical": {
+        "auc_roc": 0.9384540799999999,
+        "sensitivity_0.5": 0.7924,
+        "specificity_0.5": 0.9216,
+        "youden_threshold": 0.2195671796798706,
+        "sensitivity_youden": 0.868,
+        "specificity_youden": 0.872,
+        "sensitivity_at_90_specificity": 0.8164
+      }
+    },
+    {
+      "epoch": 78,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.0968314962029457,
+      "train_acc": 96.576,
+      "val_loss": 0.44921490535736086,
+      "val_acc": 84.44,
+      "val_auc": 0.93172752,
+      "val_clinical": {
+        "auc_roc": 0.93172752,
+        "sensitivity_0.5": 0.7468,
+        "specificity_0.5": 0.942,
+        "youden_threshold": 0.16249679028987885,
+        "sensitivity_youden": 0.8352,
+        "specificity_youden": 0.8776,
+        "sensitivity_at_90_specificity": 0.8076
+      }
+    },
+    {
+      "epoch": 79,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.09415390162229538,
+      "train_acc": 96.73,
+      "val_loss": 0.4261170149803162,
+      "val_acc": 85.02,
+      "val_auc": 0.9336260799999999,
+      "val_clinical": {
+        "auc_roc": 0.9336260799999999,
+        "sensitivity_0.5": 0.7724,
+        "specificity_0.5": 0.928,
+        "youden_threshold": 0.2845328748226166,
+        "sensitivity_youden": 0.8188,
+        "specificity_youden": 0.898,
+        "sensitivity_at_90_specificity": 0.8148
+      }
+    },
+    {
+      "epoch": 80,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.09143298782348633,
+      "train_acc": 96.734,
+      "val_loss": 0.45090330305099485,
+      "val_acc": 85.04,
+      "val_auc": 0.9345296799999999,
+      "val_clinical": {
+        "auc_roc": 0.9345296799999999,
+        "sensitivity_0.5": 0.756,
+        "specificity_0.5": 0.9448,
+        "youden_threshold": 0.15657544136047363,
+        "sensitivity_youden": 0.8372,
+        "specificity_youden": 0.8848,
+        "sensitivity_at_90_specificity": 0.8176
+      }
+    },
+    {
+      "epoch": 81,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.09089225215673447,
+      "train_acc": 96.734,
+      "val_loss": 0.4508162678718567,
+      "val_acc": 84.86,
+      "val_auc": 0.93212152,
+      "val_clinical": {
+        "auc_roc": 0.93212152,
+        "sensitivity_0.5": 0.76,
+        "specificity_0.5": 0.9372,
+        "youden_threshold": 0.1942763477563858,
+        "sensitivity_youden": 0.8312,
+        "specificity_youden": 0.8836,
+        "sensitivity_at_90_specificity": 0.81
+      }
+    },
+    {
+      "epoch": 82,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.08757007500290871,
+      "train_acc": 96.952,
+      "val_loss": 0.45563385734558104,
+      "val_acc": 84.44,
+      "val_auc": 0.9309070400000002,
+      "val_clinical": {
+        "auc_roc": 0.9309070400000002,
+        "sensitivity_0.5": 0.7564,
+        "specificity_0.5": 0.9324,
+        "youden_threshold": 0.36109495162963867,
+        "sensitivity_youden": 0.794,
+        "specificity_youden": 0.9176,
+        "sensitivity_at_90_specificity": 0.8072
+      }
+    },
+    {
+      "epoch": 83,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.08355014698982238,
+      "train_acc": 97.08,
+      "val_loss": 0.47841652765274045,
+      "val_acc": 84.0,
+      "val_auc": 0.92783856,
+      "val_clinical": {
+        "auc_roc": 0.92783856,
+        "sensitivity_0.5": 0.7468,
+        "specificity_0.5": 0.9332,
+        "youden_threshold": 0.17209328711032867,
+        "sensitivity_youden": 0.8332,
+        "specificity_youden": 0.8812,
+        "sensitivity_at_90_specificity": 0.806
+      }
+    },
+    {
+      "epoch": 84,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.08151453779697418,
+      "train_acc": 97.182,
+      "val_loss": 0.5071803635597228,
+      "val_acc": 83.94,
+      "val_auc": 0.9251430399999999,
+      "val_clinical": {
+        "auc_roc": 0.9251430399999999,
+        "sensitivity_0.5": 0.74,
+        "specificity_0.5": 0.9388,
+        "youden_threshold": 0.22540120780467987,
+        "sensitivity_youden": 0.806,
+        "specificity_youden": 0.902,
+        "sensitivity_at_90_specificity": 0.8064
+      }
+    },
+    {
+      "epoch": 85,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.08278822211503982,
+      "train_acc": 97.042,
+      "val_loss": 0.5053847330093384,
+      "val_acc": 84.28,
+      "val_auc": 0.9240668000000001,
+      "val_clinical": {
+        "auc_roc": 0.9240668000000001,
+        "sensitivity_0.5": 0.7464,
+        "specificity_0.5": 0.9392,
+        "youden_threshold": 0.177726611495018,
+        "sensitivity_youden": 0.8172,
+        "specificity_youden": 0.886,
+        "sensitivity_at_90_specificity": 0.8004
+      }
+    },
+    {
+      "epoch": 86,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.07779856012821197,
+      "train_acc": 97.334,
+      "val_loss": 0.4760217623233795,
+      "val_acc": 85.3,
+      "val_auc": 0.92746096,
+      "val_clinical": {
+        "auc_roc": 0.92746096,
+        "sensitivity_0.5": 0.7752,
+        "specificity_0.5": 0.9308,
+        "youden_threshold": 0.3084379732608795,
+        "sensitivity_youden": 0.8064,
+        "specificity_youden": 0.9056,
+        "sensitivity_at_90_specificity": 0.8084
+      }
+    },
+    {
+      "epoch": 87,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.0753825712621212,
+      "train_acc": 97.356,
+      "val_loss": 0.5167830959320069,
+      "val_acc": 84.56,
+      "val_auc": 0.92491808,
+      "val_clinical": {
+        "auc_roc": 0.92491808,
+        "sensitivity_0.5": 0.7488,
+        "specificity_0.5": 0.9424,
+        "youden_threshold": 0.15864717960357666,
+        "sensitivity_youden": 0.8248,
+        "specificity_youden": 0.8916,
+        "sensitivity_at_90_specificity": 0.8108
+      }
+    },
+    {
+      "epoch": 88,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.07455073975086213,
+      "train_acc": 97.386,
+      "val_loss": 0.5102161731719971,
+      "val_acc": 84.2,
+      "val_auc": 0.92170544,
+      "val_clinical": {
+        "auc_roc": 0.92170544,
+        "sensitivity_0.5": 0.7592,
+        "specificity_0.5": 0.9248,
+        "youden_threshold": 0.24552974104881287,
+        "sensitivity_youden": 0.81,
+        "specificity_youden": 0.8892,
+        "sensitivity_at_90_specificity": 0.7964
+      }
+    },
+    {
+      "epoch": 89,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.07307522872924804,
+      "train_acc": 97.548,
+      "val_loss": 0.48947062072753905,
+      "val_acc": 85.0,
+      "val_auc": 0.92550768,
+      "val_clinical": {
+        "auc_roc": 0.92550768,
+        "sensitivity_0.5": 0.7804,
+        "specificity_0.5": 0.9196,
+        "youden_threshold": 0.25518879294395447,
+        "sensitivity_youden": 0.8244,
+        "specificity_youden": 0.8848,
+        "sensitivity_at_90_specificity": 0.8052
+      }
+    },
+    {
+      "epoch": 90,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.07237924133181572,
+      "train_acc": 97.55,
+      "val_loss": 0.4790528414726257,
+      "val_acc": 85.24000000000001,
+      "val_auc": 0.9310107200000001,
+      "val_clinical": {
+        "auc_roc": 0.9310107200000001,
+        "sensitivity_0.5": 0.774,
+        "specificity_0.5": 0.9308,
+        "youden_threshold": 0.12581013143062592,
+        "sensitivity_youden": 0.8512,
+        "specificity_youden": 0.8648,
+        "sensitivity_at_90_specificity": 0.8116
+      }
+    },
+    {
+      "epoch": 91,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.06940789138257504,
+      "train_acc": 97.652,
+      "val_loss": 0.5343601376533508,
+      "val_acc": 84.24000000000001,
+      "val_auc": 0.9233904,
+      "val_clinical": {
+        "auc_roc": 0.9233904,
+        "sensitivity_0.5": 0.7404,
+        "specificity_0.5": 0.9444,
+        "youden_threshold": 0.14055414497852325,
+        "sensitivity_youden": 0.8208,
+        "specificity_youden": 0.8848,
+        "sensitivity_at_90_specificity": 0.8024
+      }
+    },
+    {
+      "epoch": 92,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.06684767020583153,
+      "train_acc": 97.712,
+      "val_loss": 0.5419936980247497,
+      "val_acc": 84.86,
+      "val_auc": 0.92226128,
+      "val_clinical": {
+        "auc_roc": 0.92226128,
+        "sensitivity_0.5": 0.762,
+        "specificity_0.5": 0.9352,
+        "youden_threshold": 0.15104541182518005,
+        "sensitivity_youden": 0.8236,
+        "specificity_youden": 0.8808,
+        "sensitivity_at_90_specificity": 0.8028
+      }
+    },
+    {
+      "epoch": 93,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.06496662506699562,
+      "train_acc": 97.83,
+      "val_loss": 0.5568011176109314,
+      "val_acc": 83.74000000000001,
+      "val_auc": 0.9126508,
+      "val_clinical": {
+        "auc_roc": 0.9126508,
+        "sensitivity_0.5": 0.7536,
+        "specificity_0.5": 0.9212,
+        "youden_threshold": 0.44846975803375244,
+        "sensitivity_youden": 0.7652,
+        "specificity_youden": 0.9172,
+        "sensitivity_at_90_specificity": 0.7764
+      }
+    },
+    {
+      "epoch": 94,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.06619667840480804,
+      "train_acc": 97.788,
+      "val_loss": 0.5055189273357391,
+      "val_acc": 84.84,
+      "val_auc": 0.92744768,
+      "val_clinical": {
+        "auc_roc": 0.92744768,
+        "sensitivity_0.5": 0.77,
+        "specificity_0.5": 0.9268,
+        "youden_threshold": 0.2740211486816406,
+        "sensitivity_youden": 0.8164,
+        "specificity_youden": 0.9012,
+        "sensitivity_at_90_specificity": 0.8176
+      }
+    },
+    {
+      "epoch": 95,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.06526425674676894,
+      "train_acc": 97.736,
+      "val_loss": 0.4989671259880066,
+      "val_acc": 85.22,
+      "val_auc": 0.9294696,
+      "val_clinical": {
+        "auc_roc": 0.9294696,
+        "sensitivity_0.5": 0.7768,
+        "specificity_0.5": 0.9276,
+        "youden_threshold": 0.1474044919013977,
+        "sensitivity_youden": 0.8416,
+        "specificity_youden": 0.8744,
+        "sensitivity_at_90_specificity": 0.8148
+      }
+    },
+    {
+      "epoch": 96,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.0624713612651825,
+      "train_acc": 97.92,
+      "val_loss": 0.5954509602546691,
+      "val_acc": 83.76,
+      "val_auc": 0.91787616,
+      "val_clinical": {
+        "auc_roc": 0.91787616,
+        "sensitivity_0.5": 0.7396,
+        "specificity_0.5": 0.9356,
+        "youden_threshold": 0.2266852855682373,
+        "sensitivity_youden": 0.7872,
+        "specificity_youden": 0.9012,
+        "sensitivity_at_90_specificity": 0.7872
+      }
+    },
+    {
+      "epoch": 97,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.06173988216161728,
+      "train_acc": 97.91,
+      "val_loss": 0.5436911710739136,
+      "val_acc": 84.54,
+      "val_auc": 0.92362808,
+      "val_clinical": {
+        "auc_roc": 0.92362808,
+        "sensitivity_0.5": 0.7532,
+        "specificity_0.5": 0.9376,
+        "youden_threshold": 0.10367445647716522,
+        "sensitivity_youden": 0.8444,
+        "specificity_youden": 0.8676,
+        "sensitivity_at_90_specificity": 0.8056
+      }
+    },
+    {
+      "epoch": 98,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.05952627139925957,
+      "train_acc": 97.978,
+      "val_loss": 0.5259980903625489,
+      "val_acc": 85.32,
+      "val_auc": 0.92361832,
+      "val_clinical": {
+        "auc_roc": 0.92361832,
+        "sensitivity_0.5": 0.7736,
+        "specificity_0.5": 0.9328,
+        "youden_threshold": 0.16215035319328308,
+        "sensitivity_youden": 0.8296,
+        "specificity_youden": 0.8832,
+        "sensitivity_at_90_specificity": 0.808
+      }
+    },
+    {
+      "epoch": 99,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.05686760189533234,
+      "train_acc": 98.08200000000001,
+      "val_loss": 0.5833452849388122,
+      "val_acc": 83.7,
+      "val_auc": 0.91960184,
+      "val_clinical": {
+        "auc_roc": 0.91960184,
+        "sensitivity_0.5": 0.7312,
+        "specificity_0.5": 0.9428,
+        "youden_threshold": 0.12185095250606537,
+        "sensitivity_youden": 0.814,
+        "specificity_youden": 0.8856,
+        "sensitivity_at_90_specificity": 0.7956
+      }
+    },
+    {
+      "epoch": 100,
+      "lr": 0.0010000000000000002,
+      "train_loss": 0.056296071248054504,
+      "train_acc": 98.086,
+      "val_loss": 0.5356337056159973,
+      "val_acc": 84.74000000000001,
+      "val_auc": 0.92103824,
+      "val_clinical": {
+        "auc_roc": 0.92103824,
+        "sensitivity_0.5": 0.7688,
+        "specificity_0.5": 0.926,
+        "youden_threshold": 0.30741050839424133,
+        "sensitivity_youden": 0.802,
+        "specificity_youden": 0.9064,
+        "sensitivity_at_90_specificity": 0.806
+      }
+    }
+  ]
+}

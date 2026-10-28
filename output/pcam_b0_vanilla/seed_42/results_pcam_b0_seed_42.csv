@@ -1,0 +1,2 @@
+Seed,Best_Epoch,Val_AUC,Test_AUC,Test_Acc,Sens@90%Spec,Train_Time,Git_Commit
+42,60,0.9497,0.8823,82.42%,76.33%,20m 18s,2e7acc1

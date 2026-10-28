@@ -1,0 +1,63 @@
+{
+  "dataset": "pcam",
+  "method": "B0_Vanilla",
+  "n_seeds": 3,
+  "seeds_included": [
+    7,
+    42,
+    2024
+  ],
+  "metrics_summary": {
+    "val_auc_mean": 0.9505,
+    "val_auc_std": 0.0016,
+    "test_auc_mean": 0.884,
+    "test_auc_std": 0.0046,
+    "test_accuracy_mean": 82.05,
+    "test_accuracy_std": 0.34,
+    "test_sens_at_90_spec_pct_mean": 75.08,
+    "test_sens_at_90_spec_pct_std": 1.09,
+    "best_epoch_mean": 62.0,
+    "best_epoch_std": 9.2
+  },
+  "formatted_text": {
+    "val_auc": "0.9505 \u00b1 0.0016",
+    "test_auc": "0.8840 \u00b1 0.0046",
+    "test_accuracy": "82.05 \u00b1 0.34%",
+    "test_sens_at_90_spec": "75.08 \u00b1 1.09%"
+  },
+  "individual_runs": [
+    {
+      "file": "/content/drive/MyDrive/pcam_b0_vanilla/seed_7/results_pcam_b0.json",
+      "seed": 7,
+      "best_epoch": 54,
+      "best_val_auc": 0.9494,
+      "test_auc": 0.8805,
+      "test_accuracy": 81.74,
+      "test_sens_at_90_spec": 0.7459,
+      "train_time": "19m 18s",
+      "git_commit": "2e7acc1"
+    },
+    {
+      "file": "/content/drive/MyDrive/pcam_b0_vanilla/seed_42/results_pcam_b0.json",
+      "seed": 42,
+      "best_epoch": 60,
+      "best_val_auc": 0.9497,
+      "test_auc": 0.8823,
+      "test_accuracy": 82.42,
+      "test_sens_at_90_spec": 0.7633,
+      "train_time": "20m 18s",
+      "git_commit": "2e7acc1"
+    },
+    {
+      "file": "/content/drive/MyDrive/pcam_b0_vanilla/seed_2024/results_pcam_b0.json",
+      "seed": 2024,
+      "best_epoch": 72,
+      "best_val_auc": 0.9523,
+      "test_auc": 0.8893,
+      "test_accuracy": 82.0,
+      "test_sens_at_90_spec": 0.7432,
+      "train_time": "19m 46s",
+      "git_commit": "2e7acc1"
+    }
+  ]
+}
