@@ -18,6 +18,7 @@ import os
 import sys
 import glob
 import json
+import csv
 import argparse
 import numpy as np
 
@@ -32,8 +33,10 @@ if sys.platform == "win32":
 def parse_args():
     parser = argparse.ArgumentParser(description="Tổng hợp kết quả đa seed cho PCAM B7 LightSplit")
     parser.add_argument("--b7-dir", type=str, default="./output/pcam_b7_k2048", help="Thư mục chứa kết quả B7")
-    parser.add_argument("--b0-summary", type=str, default="./output/pcam_b0_vanilla/summary_pcam_b0_multiseed.json", help="File tổng hợp B0")
-    parser.add_argument("--b0-attacks-dir", type=str, default="./output/pcam_m2_b0_attacks", help="Thư mục chứa kết quả M2 B0 attacks")
+    parser.add_argument("--b0-dir", type=str, default=None, help="Thư mục chứa kết quả B0 (tự động nạp summary hoặc các seed)")
+    parser.add_argument("--b0-summary", type=str, default=None, help="File JSON tổng hợp B0 (summary_pcam_b0_multiseed.json)")
+    parser.add_argument("--b0-attacks-dir", "--b0-m2-dir", dest="b0_attacks_dir", type=str, default=None, help="Thư mục chứa kết quả M2 B0 attacks")
+    parser.add_argument("--output-dir", type=str, default=None, help="Thư mục xuất kết quả tổng hợp")
     parser.add_argument("--output-json", type=str, default=None, help="Đường dẫn file JSON tổng hợp")
     return parser.parse_args()
 
@@ -75,6 +78,34 @@ def load_b7_seed_json(file_path):
         return None
 
 
+def load_b0_seed_json(file_path):
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        summary = data.get("summary_for_poc", {})
+        seed = summary.get("seed", data.get("seed"))
+        best_epoch = summary.get("best_epoch", data.get("best_epoch", 0))
+        best_val_auc = summary.get("best_val_auc", data.get("best_val_auc", 0.0))
+        test_auc = summary.get("test_auc", data.get("test_auc_roc", data.get("test_auc", 0.0)))
+        test_acc = summary.get("test_accuracy", data.get("test_acc", data.get("test_accuracy", 0.0)))
+        test_clin = data.get("clinical_metrics", {})
+        sens_90 = summary.get(
+            "test_sens_at_90_spec",
+            data.get("test_sens_at_90_spec", test_clin.get("sensitivity_at_90_specificity", 0.0))
+        )
+        return {
+            "file": file_path,
+            "seed": int(seed) if seed is not None else -1,
+            "best_epoch": int(best_epoch),
+            "best_val_auc": float(best_val_auc),
+            "test_auc": float(test_auc),
+            "test_accuracy": float(test_acc),
+            "test_sens_at_90_spec": float(sens_90)
+        }
+    except Exception:
+        return None
+
+
 def compute_sample_stats(values):
     """Tính Mean và Sample Std (chia n - 1, ddof=1)."""
     vals = np.array(values, dtype=float)
@@ -86,11 +117,12 @@ def compute_sample_stats(values):
 def main():
     args = parse_args()
 
-    # Tìm các file JSON kết quả B7
+    # 1. Tìm các file JSON kết quả B7
     patterns = [
         os.path.join(args.b7_dir, "results_pcam_b7_seed_*.json"),
         os.path.join(args.b7_dir, "**", "results_pcam_b7_seed_*.json"),
-        os.path.join(args.b7_dir, "**", "results_pcam_b7.json")
+        os.path.join(args.b7_dir, "**", "results_pcam_b7.json"),
+        os.path.join(args.b7_dir, "results_pcam_b7.json")
     ]
     candidate_files = []
     for pat in patterns:
@@ -100,6 +132,7 @@ def main():
 
     if not candidate_files:
         print(f"[LỖI] Không tìm thấy file JSON kết quả B7 nào trong {args.b7_dir}!")
+        print("Vui lòng kiểm tra lại đường dẫn --b7-dir.")
         sys.exit(1)
 
     records = []
@@ -158,32 +191,109 @@ def main():
         f"**{m_cssim:.4f} ± {s_cssim:.4f}** | **{m_mssim:.4f} ± {s_mssim:.4f}** | - |"
     )
 
-    # Đọc kết quả B0 để tạo bảng đối chiếu B0 vs B7 nếu có
+    # 2. Đọc kết quả B0 để tạo bảng đối chiếu B0 vs B7
     b0_summary = None
-    if os.path.isfile(args.b0_summary):
+    if args.b0_summary and os.path.isfile(args.b0_summary):
         try:
             with open(args.b0_summary, "r", encoding="utf-8") as f:
                 b0_summary = json.load(f)
         except Exception:
             pass
 
-    # Đọc kết quả M2 B0 attacks nếu có
-    b0_attacks = []
-    if os.path.isdir(args.b0_attacks_dir):
-        for fp in glob.glob(os.path.join(args.b0_attacks_dir, "results_pcam_b0_attacks_seed_*.json")):
-            try:
-                with open(fp, "r", encoding="utf-8") as f:
-                    b0_attacks.append(json.load(f).get("summary_for_poc", {}))
-            except Exception:
-                pass
+    if b0_summary is None and args.b0_dir:
+        cand_summaries = [
+            os.path.join(args.b0_dir, "summary_pcam_b0_multiseed.json"),
+            os.path.join(args.b0_dir, "pcam_b0_summary.json"),
+            os.path.join(args.b0_dir, "**", "summary_pcam_b0_multiseed.json"),
+        ]
+        for cs in cand_summaries:
+            matches = glob.glob(cs, recursive=True) if "**" in cs else ([cs] if os.path.isfile(cs) else [])
+            for m in matches:
+                if os.path.isfile(m):
+                    try:
+                        with open(m, "r", encoding="utf-8") as f:
+                            b0_summary = json.load(f)
+                            print(f"[THÔNG TIN] Đã tìm thấy file tổng hợp B0: {m}")
+                            break
+                    except Exception:
+                        pass
+            if b0_summary is not None:
+                break
 
+    # Nếu chưa có summary nhưng có thư mục b0_dir, tổng hợp trực tiếp từ các file seed
+    if b0_summary is None and args.b0_dir and os.path.isdir(args.b0_dir):
+        b0_patterns = [
+            os.path.join(args.b0_dir, "results_pcam_b0_seed_*.json"),
+            os.path.join(args.b0_dir, "**", "results_pcam_b0_seed_*.json"),
+            os.path.join(args.b0_dir, "**", "results_pcam_b0.json"),
+        ]
+        b0_files = []
+        for pat in b0_patterns:
+            for p in glob.glob(pat, recursive=True):
+                if p not in b0_files and not p.endswith("summary.json") and not p.endswith("multiseed.json"):
+                    b0_files.append(p)
+        if b0_files:
+            b0_recs = []
+            for fp in sorted(b0_files):
+                rec = load_b0_seed_json(fp)
+                if rec:
+                    b0_recs.append(rec)
+            if b0_recs:
+                print(f"[THÔNG TIN] Tự động tổng hợp {len(b0_recs)} runs B0 từ: {args.b0_dir}")
+                b0_accs = [r["test_accuracy"] for r in b0_recs]
+                b0_aucs = [r["test_auc"] for r in b0_recs]
+                b0_s90s = [r["test_sens_at_90_spec"] * 100.0 for r in b0_recs]
+                m_b0_acc, s_b0_acc = compute_sample_stats(b0_accs)
+                m_b0_auc, s_b0_auc = compute_sample_stats(b0_aucs)
+                m_b0_s90, s_b0_s90 = compute_sample_stats(b0_s90s)
+                b0_summary = {
+                    "metrics_summary": {
+                        "test_accuracy_mean": m_b0_acc,
+                        "test_accuracy_std": s_b0_acc,
+                        "test_auc_mean": m_b0_auc,
+                        "test_auc_std": s_b0_auc,
+                        "test_sens_at_90_spec_pct_mean": m_b0_s90,
+                        "test_sens_at_90_spec_pct_std": s_b0_s90,
+                    }
+                }
+
+    # 3. Đọc kết quả M2 B0 attacks nếu có
+    b0_attacks = []
+    atk_dir = args.b0_attacks_dir or (os.path.join(args.b0_dir, "pcam_m2_b0_attacks") if args.b0_dir else None)
+    if atk_dir and os.path.isdir(atk_dir):
+        atk_patterns = [
+            os.path.join(atk_dir, "results_pcam_b0_attacks_seed_*.json"),
+            os.path.join(atk_dir, "**", "results_pcam_b0_attacks_seed_*.json"),
+            os.path.join(atk_dir, "**", "results_pcam_b0_attacks.json")
+        ]
+        seen_atk_files = set()
+        for pat in atk_patterns:
+            for fp in glob.glob(pat, recursive=True):
+                if fp not in seen_atk_files:
+                    seen_atk_files.add(fp)
+                    try:
+                        with open(fp, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                            summ = data.get("summary_for_poc", {})
+                            if summ and ("fresh_conv_ssim" in summ or "fresh_mlp_ssim" in summ):
+                                b0_attacks.append(summ)
+                    except Exception:
+                        pass
+        if b0_attacks:
+            print(f"[THÔNG TIN] Đã tìm thấy {len(b0_attacks)} kết quả M2 Fresh Attackers cho B0.")
+
+    # 4. Hiển thị Bảng đối chiếu B0 vs B7
+    comparison_table_lines = []
     if b0_summary is not None:
         b0_m = b0_summary.get("metrics_summary", {})
         print("\n" + "-" * 110)
         print("BẢNG SO SÁNH TRỰC DIỆN: B0 (VANILLA) VS B7 (LIGHTSPLIT k=2048, MODE F) TRÊN PCAM")
         print("-" * 110)
-        print("| Phương Pháp | Dimension Cut-layer | Test Accuracy (%) | Test AUC-ROC | Sens @ 90% Spec (%) | Fresh Conv SSIM | Fresh MLP SSIM |")
-        print("|:---|:---:|:---:|:---:|:---:|:---:|:---:|")
+        header = "| Phương Pháp | Dimension Cut-layer | Test Accuracy (%) | Test AUC-ROC | Sens @ 90% Spec (%) | Fresh Conv SSIM | Fresh MLP SSIM |"
+        separator = "|:---|:---:|:---:|:---:|:---:|:---:|:---:|"
+        print(header)
+        print(separator)
+        comparison_table_lines.extend([header, separator])
 
         # B0 values
         b0_acc_str = f"{b0_m.get('test_accuracy_mean', 0.0):.2f} ± {b0_m.get('test_accuracy_std', 0.0):.2f}%"
@@ -202,13 +312,27 @@ def main():
                 mm, sm = compute_sample_stats(m_ssims)
                 b0_mssim_str = f"{mm:.4f} ± {sm:.4f}"
 
-        print(f"| **B0: Vanilla SL** | $D = 65,536$ | {b0_acc_str} | {b0_auc_str} | {b0_s90_str} | {b0_cssim_str} | {b0_mssim_str} |")
-        print(f"| **B7: LightSplit (Mode F)** | $k = 2,048$ | **{m_acc:.2f} ± {s_acc:.2f}%** | **{m_tauc:.4f} ± {s_tauc:.4f}** | **{m_s90:.2f} ± {s_s90:.2f}%** | **{m_cssim:.4f} ± {s_cssim:.4f}** | **{m_mssim:.4f} ± {s_mssim:.4f}** |")
-        print("-" * 110)
+        row_b0 = f"| **B0: Vanilla SL** | $D = 65,536$ | {b0_acc_str} | {b0_auc_str} | {b0_s90_str} | {b0_cssim_str} | {b0_mssim_str} |"
+        row_b7 = f"| **B7: LightSplit (Mode F)** | $k = 2,048$ | **{m_acc:.2f} ± {s_acc:.2f}%** | **{m_tauc:.4f} ± {s_tauc:.4f}** | **{m_s90:.2f} ± {s_s90:.2f}%** | **{m_cssim:.4f} ± {s_cssim:.4f}** | **{m_mssim:.4f} ± {s_mssim:.4f}** |"
 
-    # Lưu file JSON tổng hợp B7
-    out_json = args.output_json or os.path.join(args.b7_dir, "summary_pcam_b7_multiseed.json")
-    os.makedirs(os.path.dirname(os.path.abspath(out_json)), exist_ok=True)
+        print(row_b0)
+        print(row_b7)
+        print("-" * 110)
+        comparison_table_lines.extend([row_b0, row_b7])
+
+    # 5. Lưu file JSON & Markdown tổng hợp
+    if args.output_dir:
+        out_dir = args.output_dir
+    elif args.output_json:
+        out_dir = os.path.dirname(os.path.abspath(args.output_json))
+    else:
+        out_dir = args.b7_dir
+
+    os.makedirs(out_dir, exist_ok=True)
+    out_json = args.output_json or os.path.join(out_dir, "summary_pcam_b7_multiseed.json")
+    out_md = os.path.join(out_dir, "pcam_comparison_b0_vs_b7.md")
+    out_csv = os.path.join(out_dir, "pcam_comparison_b0_vs_b7.csv")
+
     summary_data = {
         "dataset": "pcam",
         "method": "B7_LightSplit",
@@ -249,7 +373,41 @@ def main():
     with open(out_json, "w", encoding="utf-8") as f:
         json.dump(summary_data, f, indent=2)
 
-    print(f"\n[XUẤT KẾT QUẢ] Đã lưu file tổng hợp tại: {out_json}")
+    # Xuất file Markdown nếu có bảng so sánh
+    if comparison_table_lines:
+        with open(out_md, "w", encoding="utf-8") as f:
+            f.write("# BÁO CÁO ĐỐI CHUẨN PCAM: B0 VANILLA VS B7 LIGHTSPLIT\n\n")
+            f.write("\n".join(comparison_table_lines) + "\n\n")
+            f.write("### Chi tiết từng Seed của B7 LightSplit:\n\n")
+            f.write("| Seed | Best Ep | Val AUC | Test AUC | Test Acc (%) | Sens@90%Spec (%) | Fresh Conv SSIM | Fresh MLP SSIM |\n")
+            f.write("|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|\n")
+            for r in records:
+                f.write(
+                    f"| `{r['seed']}` | {r['best_epoch']} | {r['best_val_auc']:.4f} | "
+                    f"**{r['test_auc']:.4f}** | **{r['test_accuracy']:.2f}%** | "
+                    f"**{r['test_sens_at_90_spec']*100:.2f}%** | "
+                    f"**{r['fresh_conv_ssim']:.4f}** ({r['fresh_conv_psnr']:.1f}dB) | "
+                    f"**{r['fresh_mlp_ssim']:.4f}** ({r['fresh_mlp_psnr']:.1f}dB) |\n"
+                )
+
+    # Xuất file CSV
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Seed", "Best_Epoch", "Val_AUC", "Test_AUC", "Test_Acc", "Sens_at_90_Spec", "Fresh_Conv_SSIM", "Fresh_Conv_PSNR", "Fresh_MLP_SSIM", "Fresh_MLP_PSNR", "Git_Commit"])
+        for r in records:
+            writer.writerow([
+                r["seed"], r["best_epoch"], f"{r['best_val_auc']:.4f}", f"{r['test_auc']:.4f}",
+                f"{r['test_accuracy']:.2f}", f"{r['test_sens_at_90_spec']*100:.2f}",
+                f"{r['fresh_conv_ssim']:.4f}", f"{r['fresh_conv_psnr']:.2f}",
+                f"{r['fresh_mlp_ssim']:.4f}", f"{r['fresh_mlp_psnr']:.2f}",
+                r["git_commit"]
+            ])
+
+    print(f"\n[XUẤT KẾT QUẢ] Đã lưu file tổng hợp tại:")
+    print(f"  - JSON:     {out_json}")
+    if comparison_table_lines:
+        print(f"  - Markdown: {out_md}")
+    print(f"  - CSV:      {out_csv}")
     print("=" * 110)
 
 
