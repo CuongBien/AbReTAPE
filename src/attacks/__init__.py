@@ -1,4 +1,5 @@
-from .decoder import Decoder
+# -*- coding: utf-8 -*-
+from .decoder import Decoder, TransposeLiftConvDecoder
 from .inversion import (
     train_inversion_epoch,
     evaluate_inversion,
@@ -26,6 +27,7 @@ from .fsha import (
 
 __all__ = [
     "Decoder",
+    "TransposeLiftConvDecoder",
     "train_inversion_epoch",
     "evaluate_inversion",
     "train_decoder_epoch",

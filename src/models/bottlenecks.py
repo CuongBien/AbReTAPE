@@ -169,12 +169,14 @@ class LearnedAdaptiveDecoder(nn.Module):
     """
     In-training Strong Adversary (~34M parameters):
     zt in R^{B x k} -> unprojector (Linear(k, 512) -> BN -> ReLU -> Linear(512, 65536) -> BN)
-    -> reshape (B, 64, 32, 32) -> ConvDecoder(64, 3) -> x_rec in R^{B x 3 x 32 x 32}
+    -> reshape (B, 64, 32, 32) -> ConvDecoder(64, 3) -> x_rec.
+    Hỗ trợ upscale_factor: 1 cho CIFAR 32x32, 2 cho PCAM 64x64.
     """
-    def __init__(self, k=1024, D=65536, hidden_dim=512, out_channels=3):
+    def __init__(self, k=1024, D=65536, hidden_dim=512, out_channels=3, upscale_factor=1):
         super().__init__()
         self.k = k
         self.D = D
+        self.upscale_factor = upscale_factor
         self.unprojector = nn.Sequential(
             nn.Linear(k, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
@@ -182,9 +184,15 @@ class LearnedAdaptiveDecoder(nn.Module):
             nn.Linear(hidden_dim, D),
             nn.BatchNorm1d(D)
         )
-        self.conv_decoder = Decoder(in_channels=64, out_channels=out_channels)
+        self.conv_decoder = Decoder(
+            in_channels=64,
+            out_channels=out_channels,
+            upscale_factor=upscale_factor
+        )
 
     def forward(self, zt):
+        if zt.dim() > 2:
+            zt = zt.view(zt.size(0), -1)
         b = zt.size(0)
         z_hat = self.unprojector(zt)
         z_hat_4d = z_hat.view(b, 64, 32, 32)
