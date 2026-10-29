@@ -408,6 +408,8 @@ def main():
 
     best_ckpt_p = os.path.join(ckpt_dir, "best_checkpoint.pt")
     last_ckpt_p = os.path.join(ckpt_dir, "last_checkpoint.pt")
+    best_client_p = os.path.join(ckpt_dir, "best_auc_artape_client.pt")
+    best_server_p = os.path.join(ckpt_dir, "best_auc_artape_server.pt")
 
     start_epoch = 1
     best_val_auc = 0.0
@@ -560,8 +562,6 @@ def main():
             if val_auc > best_val_auc:
                 best_val_auc = val_auc
                 best_epoch = epoch
-                best_client_p = os.path.join(ckpt_dir, "best_auc_artape_client.pt")
-                best_server_p = os.path.join(ckpt_dir, "best_auc_artape_server.pt")
 
                 torch.save(client.state_dict(), best_client_p)
                 torch.save(server.state_dict(), best_server_p)
@@ -592,6 +592,11 @@ def main():
         server.load_state_dict(ckpt_best["server_state_dict"])
         best_epoch = ckpt_best.get("epoch", 1)
         best_val_auc = ckpt_best.get("val_auc", 0.0)
+        # Đảm bảo best_client_p và best_server_p luôn sẵn sàng trên disk
+        if not os.path.isfile(best_client_p):
+            torch.save(client.state_dict(), best_client_p)
+        if not os.path.isfile(best_server_p):
+            torch.save(server.state_dict(), best_server_p)
         print(f"\n[TEST EVAL] Đã nạp thành công trọng số AR-TAPE tối ưu từ Epoch {best_epoch} (Val AUC: {best_val_auc:.4f}).")
 
     criterion_eval = nn.CrossEntropyLoss()
@@ -775,8 +780,15 @@ def main():
             # Phục hồi Client và Server về checkpoint sạch (Best Val AUC) trước khi chạy mỗi kịch bản Hijacking
             if os.path.isfile(best_client_p):
                 client.load_state_dict(torch.load(best_client_p, map_location=device, weights_only=False))
+            elif os.path.isfile(best_ckpt_p):
+                ckpt_b = torch.load(best_ckpt_p, map_location=device, weights_only=False)
+                client.load_state_dict(ckpt_b["client_state_dict"])
+
             if os.path.isfile(best_server_p):
                 server.load_state_dict(torch.load(best_server_p, map_location=device, weights_only=False))
+            elif os.path.isfile(best_ckpt_p):
+                ckpt_b = torch.load(best_ckpt_p, map_location=device, weights_only=False)
+                server.load_state_dict(ckpt_b["server_state_dict"])
 
             fsha_ckpt_p = os.path.join(args.output_dir, f"pcam_artape_{fsha_name}_seed_{args.seed}.pt")
             fsha_hist = []
