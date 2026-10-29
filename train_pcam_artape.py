@@ -173,6 +173,22 @@ def evaluate_split(client, server, data_loader, criterion, device, max_batches=N
     return mean_loss, accuracy, auc_roc, clin_metrics
 
 
+class FSHADecoderWrapper(nn.Module):
+    """
+    Wrapper kết nối Pilot Decoder trong FSHA để giải mã từ zt (B, k):
+    zt (B, k) -> Server Lift (R^T) -> zh (B, 64, 32, 32) -> Pilot Decoder -> x_rec (B, 3, 64, 64)
+    """
+    def __init__(self, pilot_ae, server):
+        super().__init__()
+        self.pilot_ae = pilot_ae
+        self.server = server
+
+    def forward(self, zt):
+        zh = self.server.lift(zt)
+        zh_tensor = zh.view(zt.size(0), 64, 32, 32)
+        return self.pilot_ae.decode(zh_tensor)
+
+
 @torch.no_grad()
 def evaluate_reconstruction_attacker(client, attacker, data_loader, device, mean, std, lpips_fn=None, max_batches=None):
     """Đánh giá PSNR, SSIM, MSE và LPIPS của kẻ tấn công tái tạo."""
@@ -721,7 +737,7 @@ def main():
         fsha_priv_loader = DataLoader(priv_set, batch_size=args.batch_size, shuffle=True, pin_memory=use_cuda)
         fsha_pub_loader = DataLoader(pub_set, batch_size=args.batch_size, shuffle=True, pin_memory=use_cuda)
 
-        # 1. Huấn luyện Pilot AutoEncoder trên 25k ảnh Public
+        # 1. Huấn luyện Pilot AutoEncoder trên 25k ảnh Public (có cơ chế cache checkpoint)
         pilot_ae = FSHAPilotAutoEncoder(
             in_channels=3,
             latent_channels=64,
@@ -729,19 +745,25 @@ def main():
             upscale_factor=2
         ).to(device)
 
-        print("[FSHA] Huấn luyện Pilot AutoEncoder trên tập dữ liệu Public (10 epochs)...")
-        fit_fsha_pilot(
-            pilot_ae=pilot_ae,
-            pilot_server=None,
-            pub_loader=fsha_pub_loader,
-            test_loader=test_loader,
-            epochs=10,
-            lr=1e-3,
-            device=device,
-            mean=mean,
-            std=std
-        )
-        print("[FSHA] Pilot AutoEncoder đã hội tụ.")
+        pilot_ckpt_p = os.path.join(args.output_dir, f"pcam_artape_pilot_ae_seed_{args.seed}.pt")
+        if args.resume and os.path.isfile(pilot_ckpt_p):
+            print(f"[RESUME] Đã tìm thấy checkpoint Pilot AutoEncoder tại: {pilot_ckpt_p}. Nạp trọng số...")
+            pilot_ae.load_state_dict(torch.load(pilot_ckpt_p, map_location=device, weights_only=False))
+        else:
+            print("[FSHA] Huấn luyện Pilot AutoEncoder trên tập dữ liệu Public (10 epochs)...")
+            fit_fsha_pilot(
+                pilot_ae=pilot_ae,
+                pilot_server=None,
+                pub_loader=fsha_pub_loader,
+                test_loader=test_loader,
+                epochs=10,
+                lr=1e-3,
+                device=device,
+                mean=mean,
+                std=std
+            )
+            torch.save(pilot_ae.state_dict(), pilot_ckpt_p)
+            print(f"[FSHA] Pilot AutoEncoder đã hội tụ và lưu tại: {pilot_ckpt_p}")
 
         for gs in [1.0, 5.0]:
             fsha_name = f"fsha_gs{gs}"
@@ -750,29 +772,49 @@ def main():
             print(f"Bắt đầu: {fsha_name.upper()} - {fsha_desc}")
             print("-" * 80)
 
+            # Phục hồi Client và Server về checkpoint sạch (Best Val AUC) trước khi chạy mỗi kịch bản Hijacking
+            if os.path.isfile(best_client_p):
+                client.load_state_dict(torch.load(best_client_p, map_location=device, weights_only=False))
+            if os.path.isfile(best_server_p):
+                server.load_state_dict(torch.load(best_server_p, map_location=device, weights_only=False))
+
             fsha_ckpt_p = os.path.join(args.output_dir, f"pcam_artape_{fsha_name}_seed_{args.seed}.pt")
             fsha_hist = []
             fsha_dur = 0.0
 
-            # Khởi tạo Discriminator và Server Adapter cho FSHA
-            discriminator = FSHADiscriminator(in_channels=args.k).to(device)
-            # Server adapter: nhận z_t (2048) -> lift R^T -> (64, 32, 32)
-            server_adapter = TransposeLiftConvDecoder(bottleneck_weight=client.get_bottleneck_weight(), upscale_factor=2).to(device)
+            # Khởi tạo Discriminator (in_channels=64 cho tensor 64x32x32) và FSHA Decoder Wrapper
+            discriminator = FSHADiscriminator(in_channels=64).to(device)
+            fsha_decoder = FSHADecoderWrapper(pilot_ae=pilot_ae, server=server).to(device)
 
             if args.resume and os.path.isfile(fsha_ckpt_p):
                 print(f"[RESUME] Đã tìm thấy checkpoint FSHA tại: {fsha_ckpt_p}. Nạp và đánh giá...")
                 fsha_ckpt_data = torch.load(fsha_ckpt_p, map_location=device, weights_only=False)
-                discriminator.load_state_dict(fsha_ckpt_data["discriminator"])
-                server_adapter.load_state_dict(fsha_ckpt_data["server_adapter"])
+                if "client" in fsha_ckpt_data:
+                    client.load_state_dict(fsha_ckpt_data["client"])
+                if "server" in fsha_ckpt_data:
+                    server.load_state_dict(fsha_ckpt_data["server"])
+                if "discriminator" in fsha_ckpt_data:
+                    discriminator.load_state_dict(fsha_ckpt_data["discriminator"])
             else:
+                client.train()
+                for p in client.parameters():
+                    p.requires_grad = True
+
+                server.train()
+                for p in server.parameters():
+                    p.requires_grad = True
+
                 opt_d = torch.optim.Adam(discriminator.parameters(), lr=1e-3)
                 opt_c = torch.optim.SGD(client.parameters(), lr=1e-4, momentum=0.9)
+                opt_s = torch.optim.SGD(server.parameters(), lr=1e-3, momentum=0.9)
+                criterion_task_fsha = nn.CrossEntropyLoss()
+
                 t_fsha0 = time.time()
 
                 for f_ep in range(1, total_atk_epochs + 1):
                     discriminator.train()
-                    server_adapter.train()
                     client.train()
+                    server.train()
 
                     d_loss_acc = 0.0
                     n_f_samples = 0
@@ -787,32 +829,43 @@ def main():
                             pub_iter = iter(fsha_pub_loader)
                             x_pub, _ = next(pub_iter)
 
-                        x_priv, x_pub = x_priv.to(device), x_pub.to(device)
+                        x_priv, y_priv = x_priv.to(device), y_priv.to(device)
+                        x_pub = x_pub.to(device)
 
-                        # 1. Update Discriminator: z_client vs z_pilot
+                        # 1. Update Discriminator: z_pilot vs z_client (sau khi nâng chiều W_lift = R^T về 64x32x32)
+                        opt_d.zero_grad()
                         with torch.no_grad():
-                            z_client = client(x_priv)
-                            z_pilot, _ = pilot_ae(x_pub)
-                            # z_pilot shape (B, 64, 32, 32) -> chiếu qua R: (B, 2048)
-                            z_pilot_flat = z_pilot.view(z_pilot.size(0), -1)
-                            z_pilot_k = torch.matmul(z_pilot_flat, client.R)
+                            zt_priv = client(x_priv)
+                            zh_priv = server.lift(zt_priv).view(zt_priv.size(0), 64, 32, 32)
+                            z_pub, _ = pilot_ae(x_pub)
 
-                        d_real = discriminator(z_pilot_k)
-                        d_fake = discriminator(z_client)
+                        d_real = discriminator(z_pub)
+                        d_fake = discriminator(zh_priv)
 
                         loss_d = F.softplus(-d_real).mean() + F.softplus(d_fake).mean()
-                        opt_d.zero_grad()
                         loss_d.backward()
                         opt_d.step()
 
-                        # 2. Adversarial Gradient Hijacking vào Client
-                        z_client_adv = client(x_priv)
-                        out_adv = discriminator(z_client_adv)
-                        loss_hijack = -out_adv.mean() * gs
-
+                        # 2. Adversarial Gradient Hijacking vào Client & thích ứng Server
                         opt_c.zero_grad()
+                        opt_s.zero_grad()
+
+                        zt_priv = client(x_priv)
+                        zh_priv = server.lift(zt_priv).view(zt_priv.size(0), 64, 32, 32)
+
+                        # Task loss hợp pháp từ Server
+                        logits = server.base_server(zh_priv)
+                        loss_task = criterion_task_fsha(logits, y_priv)
+
+                        # Adversarial hijack loss
+                        d_fake_adv = discriminator(zh_priv)
+                        loss_adv = - d_fake_adv.mean()
+
+                        loss_hijack = loss_task + gs * loss_adv
                         loss_hijack.backward()
+
                         opt_c.step()
+                        opt_s.step()
 
                         d_loss_acc += loss_d.item() * x_priv.size(0)
                         n_f_samples += x_priv.size(0)
@@ -823,11 +876,11 @@ def main():
                         # Đánh giá nhanh FSHA
                         client.eval()
                         server.eval()
-                        server_adapter.eval()
+                        fsha_decoder.eval()
                         pilot_ae.eval()
 
                         fsha_eval = evaluate_reconstruction_attacker(
-                            client, server_adapter, test_loader, device, mean, std, lpips_fn=None, max_batches=max_b
+                            client, fsha_decoder, test_loader, device, mean, std, lpips_fn=None, max_batches=max_b
                         )
                         # Đánh giá lại task acc bị ảnh hưởng bởi gradient hijacking
                         _, fsha_task_acc, _, _ = evaluate_split(client, server, test_loader, criterion_eval, device, max_batches=max_b)
@@ -848,22 +901,24 @@ def main():
                 fsha_dur = time.time() - t_fsha0
                 print(f"Huấn luyện {fsha_name.upper()} hoàn tất trong {fsha_dur/60:.1f} phút ({fsha_dur:.1f}s).")
                 torch.save({
-                    "discriminator": discriminator.state_dict(),
-                    "server_adapter": server_adapter.state_dict()
+                    "client": client.state_dict(),
+                    "server": server.state_dict(),
+                    "discriminator": discriminator.state_dict()
                 }, fsha_ckpt_p)
                 print(f"Đã lưu checkpoint {fsha_name.upper()} tại: {fsha_ckpt_p}")
 
             # Đánh giá chính thức FSHA tại epoch cuối 30
             client.eval()
             server.eval()
-            server_adapter.eval()
+            fsha_decoder.eval()
+            pilot_ae.eval()
             final_fsha_eval = evaluate_reconstruction_attacker(
-                client, server_adapter, test_loader, device, mean, std, lpips_fn=lpips_fn, max_batches=max_b
+                client, fsha_decoder, test_loader, device, mean, std, lpips_fn=lpips_fn, max_batches=max_b
             )
             _, final_fsha_acc, _, _ = evaluate_split(client, server, test_loader, criterion_eval, device, max_batches=max_b)
 
             grid_p = os.path.join(args.output_dir, f"recon_pcam_artape_{fsha_name}_seed_{args.seed}.png")
-            save_reconstruction_sample_grid(client, server_adapter, test_loader, device, mean, std, grid_p, num_images=16)
+            save_reconstruction_sample_grid(client, fsha_decoder, test_loader, device, mean, std, grid_p, num_images=16)
 
             attack_results[fsha_name] = {
                 "attacker_type": fsha_name,

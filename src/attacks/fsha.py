@@ -24,6 +24,7 @@ class FSHADiscriminator(nn.Module):
         super().__init__()
         sn = nn.utils.spectral_norm if use_spectral_norm else (lambda m: m)
 
+        self.in_channels = in_channels
         self.pixel_branch = nn.Sequential(
             sn(nn.Conv2d(in_channels, hidden_dim, kernel_size=1)),
             nn.LeakyReLU(0.2, inplace=True),
@@ -42,7 +43,28 @@ class FSHADiscriminator(nn.Module):
             sn(nn.Conv2d(hidden_dim * 2, 1, kernel_size=3, stride=1, padding=1)),
         )
 
+        # Nhánh phụ Spectral-Normalized MLP hỗ trợ vector 2D (B, in_channels)
+        self.mlp_branch = nn.Sequential(
+            sn(nn.Linear(in_channels, hidden_dim * 2)),
+            nn.LeakyReLU(0.2, inplace=True),
+            sn(nn.Linear(hidden_dim * 2, hidden_dim)),
+            nn.LeakyReLU(0.2, inplace=True),
+            sn(nn.Linear(hidden_dim, 1)),
+        )
+
     def forward_features(self, z):
+        if z.dim() == 2:
+            if z.size(1) == 65536 and self.in_channels == 64:
+                z = z.view(z.size(0), 64, 32, 32)
+            elif z.size(1) == self.in_channels:
+                score = self.mlp_branch(z)
+                return score, None
+            elif z.size(1) == 64 * 32 * 32:
+                z = z.view(z.size(0), 64, 32, 32)
+            else:
+                score = self.mlp_branch(z)
+                return score, None
+
         p_score = self.pixel_branch(z).mean(dim=[1, 2, 3], keepdim=False).unsqueeze(1)
         s_map = self.spatial_branch(z)
         s_score = s_map.mean(dim=[1, 2, 3], keepdim=False).unsqueeze(1)
