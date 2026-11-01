@@ -181,8 +181,9 @@ def evaluate_reconstruction_attacker(client, attacker, data_loader, device, mean
         total_ssim += s * x.size(0)
 
         if lpips_fn is not None:
-            lp = calculate_lpips(x_rec, x, mean=mean, std=std, lpips_fn=lpips_fn)
-            total_lpips += lp * x.size(0)
+            lp = calculate_lpips(x, x_rec, mean, std, lpips_fn)
+            if lp is not None:
+                total_lpips += lp * x.size(0)
 
         total_samples += x.size(0)
 

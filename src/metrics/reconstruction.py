@@ -76,14 +76,19 @@ def calculate_lpips(*args, **kwargs):
             lpips_fn, x, x_hat, mean, std = args
         else:
             x, x_hat, mean, std, lpips_fn = args
+    elif len(args) >= 2:
+        x, x_hat = args[0], args[1]
+        mean = kwargs.get("mean", args[2] if len(args) > 2 else None)
+        std = kwargs.get("std", args[3] if len(args) > 3 else None)
+        lpips_fn = kwargs.get("lpips_fn", args[4] if len(args) > 4 else None)
     elif "lpips_fn" in kwargs:
-        lpips_fn = kwargs["lpips_fn"]
-        x = kwargs["x"]
-        x_hat = kwargs["x_hat"]
-        mean = kwargs["mean"]
-        std = kwargs["std"]
+        lpips_fn = kwargs.get("lpips_fn")
+        x = kwargs.get("x")
+        x_hat = kwargs.get("x_hat")
+        mean = kwargs.get("mean")
+        std = kwargs.get("std")
     else:
-        raise ValueError(f"Không nhận diện được đối số cho calculate_lpips: {args}")
+        return None
 
     if lpips_fn is None:
         return None
