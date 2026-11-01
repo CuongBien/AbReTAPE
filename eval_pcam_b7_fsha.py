@@ -58,10 +58,14 @@ from src.metrics.clinical import compute_binary_clinical_metrics
 from src.metrics.reconstruction import psnr_ssim, calculate_lpips, get_lpips_fn, denormalize
 
 
+ORIGINAL_STDOUT = sys.__stdout__
+ORIGINAL_STDERR = sys.__stderr__
+
+
 class TeeLogger:
     """Tự động ghi đồng thời ra màn hình terminal và file log."""
     def __init__(self, log_path):
-        self.terminal = sys.stdout
+        self.terminal = ORIGINAL_STDOUT
         os.makedirs(os.path.dirname(os.path.abspath(log_path)), exist_ok=True)
         self.log_file = open(log_path, "a", encoding="utf-8")
 
@@ -86,6 +90,8 @@ class TeeLogger:
             self.log_file.close()
         except Exception:
             pass
+        sys.stdout = ORIGINAL_STDOUT
+        sys.stderr = ORIGINAL_STDERR
 
 
 def get_git_commit():
@@ -505,6 +511,11 @@ def run_fsha_for_seed(args, seed, train_loader, test_loader, meta, device):
                         "test_psnr": fsha_eval["psnr"],
                         "test_ssim": fsha_eval["ssim"]
                     })
+                else:
+                    print(
+                        f"  [FSHA Ep {f_ep:2d}/{total_atk_epochs:2d}] D Loss: {ep_d_loss:.4f} (đang tối ưu...)",
+                        flush=True
+                    )
 
             fsha_dur = time.time() - t_fsha0
             print(f"Huấn luyện {fsha_name.upper()} hoàn tất trong {fsha_dur/60:.1f} phút ({fsha_dur:.1f}s).")
@@ -583,6 +594,10 @@ def run_fsha_for_seed(args, seed, train_loader, test_loader, meta, device):
 def main():
     args = parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("\n" + "=" * 90)
+    print(f"[KHỞI ĐỘNG] Đánh giá FSHA trên B7 LightSplit (k={args.k}) | Thiết bị: {device}")
+    print(f"[DỮ LIỆU] Thư mục: {args.data_dir} | Seeds: {args.seeds} | Epochs: {args.fsha_epochs}")
+    print("=" * 90, flush=True)
 
     stats_p = os.path.join(args.data_dir, "pcam_stats.json")
     stats_dict = None
