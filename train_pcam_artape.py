@@ -322,6 +322,12 @@ def main():
 
     git_hash = get_git_commit()
 
+    json_seed_p = os.path.join(args.output_dir, f"results_pcam_artape_seed_{args.seed}.json")
+    if args.resume and not args.dry_run and os.path.isfile(json_seed_p):
+        print(f"[RESUME] Đã có kết quả hoàn chỉnh tại: {json_seed_p}. Bỏ qua Seed {args.seed}!", flush=True)
+        tee.close()
+        return
+
     print("=" * 90)
     print("M4: BẮT ĐẦU HUẤN LUYỆN AR-TAPE (TASK-AWARE PRIVACY ENGINE) TRÊN PCAM")
     print(f"Thiết bị: {device} | Seed: {args.seed} | Epochs: {args.epochs}")
@@ -423,22 +429,37 @@ def main():
     history = []
 
     # 4. Phục hồi từ Checkpoint nếu có
-    if args.resume and os.path.isfile(last_ckpt_p):
-        print(f"[RESUME] Đang nạp checkpoint cuối từ: {last_ckpt_p}...")
-        ckpt = torch.load(last_ckpt_p, map_location=device, weights_only=False)
-        client.load_state_dict(ckpt["client_state_dict"])
-        server.load_state_dict(ckpt["server_state_dict"])
-        if "adv_state_dict" in ckpt:
-            adv.load_state_dict(ckpt["adv_state_dict"])
-        optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-        scheduler.load_state_dict(ckpt["scheduler_state_dict"])
-        if "opt_adv_state_dict" in ckpt:
-            opt_adv.load_state_dict(ckpt["opt_adv_state_dict"])
-        start_epoch = ckpt["epoch"] + 1
-        best_val_auc = ckpt.get("best_val_auc", 0.0)
-        best_epoch = ckpt.get("best_epoch", 1)
-        history = ckpt.get("history", [])
-        print(f"[RESUME] Tiếp tục từ Epoch {start_epoch} (Best Epoch trước đó: {best_epoch}, Best Val AUC: {best_val_auc:.4f})")
+    if args.resume:
+        conv_ckpt_exists = os.path.isfile(os.path.join(args.output_dir, f"pcam_artape_conv_attacker_seed_{args.seed}.pt"))
+        mlp_ckpt_exists = os.path.isfile(os.path.join(args.output_dir, f"pcam_artape_mlp_attacker_seed_{args.seed}.pt"))
+        fsha1_ckpt_exists = os.path.isfile(os.path.join(args.output_dir, f"pcam_artape_fsha_gs1.0_seed_{args.seed}.pt"))
+        phase3_started = conv_ckpt_exists or mlp_ckpt_exists or fsha1_ckpt_exists
+
+        if os.path.isfile(best_ckpt_p):
+            b_ckpt = torch.load(best_ckpt_p, map_location="cpu", weights_only=False)
+            best_val_auc = max(best_val_auc, b_ckpt.get("val_auc", 0.0))
+            best_epoch = b_ckpt.get("best_epoch", b_ckpt.get("epoch", 1))
+
+        if phase3_started and os.path.isfile(best_ckpt_p):
+            start_epoch = total_epochs + 1
+            print(f"[RESUME] Phát hiện đã sang giai đoạn Attackers (Best Epoch: {best_epoch}, Best Val AUC: {best_val_auc:.4f}). Bỏ qua huấn luyện Task!")
+        elif os.path.isfile(last_ckpt_p):
+            print(f"[RESUME] Đang nạp checkpoint cuối từ: {last_ckpt_p}...")
+            ckpt = torch.load(last_ckpt_p, map_location=device, weights_only=False)
+            client.load_state_dict(ckpt["client_state_dict"])
+            server.load_state_dict(ckpt["server_state_dict"])
+            if "adv_state_dict" in ckpt:
+                adv.load_state_dict(ckpt["adv_state_dict"])
+            optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+            scheduler.load_state_dict(ckpt["scheduler_state_dict"])
+            if "opt_adv_state_dict" in ckpt:
+                opt_adv.load_state_dict(ckpt["opt_adv_state_dict"])
+            start_epoch = ckpt["epoch"] + 1
+            best_val_auc = max(best_val_auc, ckpt.get("best_val_auc", 0.0))
+            if ckpt.get("best_val_auc", 0.0) >= best_val_auc:
+                best_epoch = ckpt.get("best_epoch", best_epoch)
+            history = ckpt.get("history", [])
+            print(f"[RESUME] Tiếp tục từ Epoch {start_epoch} (Best Epoch trước đó: {best_epoch}, Best Val AUC: {best_val_auc:.4f})")
 
     # =========================================================================
     # PHẦN 1: HUẤN LUYỆN MIN-MAX AR-TAPE (SPLIT LEARNING)
@@ -548,21 +569,24 @@ def main():
                 "val_clinical": val_clin
             })
 
-            # Lưu checkpoint định kỳ sau mỗi epoch
-            torch.save({
-                "epoch": epoch,
-                "client_state_dict": client.state_dict(),
-                "server_state_dict": server.state_dict(),
-                "adv_state_dict": adv.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-                "scheduler_state_dict": scheduler.state_dict(),
-                "opt_adv_state_dict": opt_adv.state_dict(),
-                "val_auc": val_auc,
-                "val_acc": val_acc,
-                "best_val_auc": max(best_val_auc, val_auc),
-                "best_epoch": best_epoch if val_auc <= best_val_auc else epoch,
-                "history": history
-            }, last_ckpt_p)
+            # Lưu checkpoint định kỳ mỗi 5 epoch (hoặc epoch cuối) để tránh nghẽn đồng bộ Google Drive
+            if epoch % 5 == 0 or epoch == total_epochs:
+                tmp_last_p = last_ckpt_p + ".tmp"
+                torch.save({
+                    "epoch": epoch,
+                    "client_state_dict": client.state_dict(),
+                    "server_state_dict": server.state_dict(),
+                    "adv_state_dict": adv.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "scheduler_state_dict": scheduler.state_dict(),
+                    "opt_adv_state_dict": opt_adv.state_dict(),
+                    "val_auc": val_auc,
+                    "val_acc": val_acc,
+                    "best_val_auc": max(best_val_auc, val_auc),
+                    "best_epoch": best_epoch if val_auc <= best_val_auc else epoch,
+                    "history": history
+                }, tmp_last_p)
+                os.replace(tmp_last_p, last_ckpt_p)
 
             # Giữ riêng bản checkpoint có AUC Val cao nhất
             if val_auc > best_val_auc:
@@ -575,7 +599,6 @@ def main():
                     "epoch": epoch,
                     "client_state_dict": client.state_dict(),
                     "server_state_dict": server.state_dict(),
-                    "adv_state_dict": adv.state_dict(),
                     "val_auc": val_auc,
                     "val_acc": val_acc,
                     "best_val_auc": best_val_auc,
